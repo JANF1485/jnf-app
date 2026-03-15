@@ -1057,7 +1057,7 @@ async function readRUT(file){
     });
 
     const GEMINI_KEY = 'AIzaSyAOK9vI65YjTJt-jRoxhyLmE9Mc0q2hdlc';
-    const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos visibles. Responde SOLO con JSON válido, sin texto adicional ni backticks. Formato exacto: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}. Usa cadena vacia para campos no visibles.';
+    const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos. IMPORTANTE: Responde UNICAMENTE con el objeto JSON, sin ningun texto antes ni despues, sin backticks, sin markdown. Solo el JSON puro empezando con { y terminando con }. Formato: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}';
 
     const resp = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_KEY,
@@ -1065,77 +1065,71 @@ async function readRUT(file){
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              {inline_data: {mime_type: 'application/pdf', data: b64}},
-              {text: prompt}
-            ]
-          }],
-          generationConfig: {temperature: 0, maxOutputTokens: 1500}
+          contents: [{parts: [
+            {inline_data: {mime_type: 'application/pdf', data: b64}},
+            {text: prompt}
+          ]}],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 2000,
+            responseMimeType: 'application/json'
+          }
         })
       }
     );
 
     if(!resp.ok){
       const errText = await resp.text();
-      throw new Error('Error ' + resp.status + ': ' + errText.slice(0,150));
+      throw new Error('Error ' + resp.status + ': ' + errText.slice(0,200));
     }
 
     const data = await resp.json();
+    console.log('[RUT] Gemini response:', JSON.stringify(data).slice(0,300));
+
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if(!text) throw new Error('Respuesta vacia de Gemini');
 
-    // Parse JSON
+    console.log('[RUT] Text:', text.slice(0,200));
+
+    // Robust JSON extraction
     let parsed = null;
-    const clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-    const attempts = [clean, text, clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1)];
-    for(const attempt of attempts){
-      try{ parsed = JSON.parse(attempt); break; }catch(e){}
+    // Try 1: direct parse
+    try{ parsed = JSON.parse(text); }catch(e){}
+    // Try 2: extract between first { and last }
+    if(!parsed){
+      const start = text.indexOf('{');
+      const end2 = text.lastIndexOf('}');
+      if(start>=0 && end2>start){
+        try{ parsed = JSON.parse(text.slice(start, end2+1)); }catch(e){}
+      }
     }
-    if(!parsed) throw new Error('No se pudo parsear la respuesta');
+    // Try 3: remove markdown backticks
+    if(!parsed){
+      const clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+      try{ parsed = JSON.parse(clean); }catch(e){}
+      if(!parsed){
+        const s2 = clean.indexOf('{');
+        const e2 = clean.lastIndexOf('}');
+        if(s2>=0 && e2>s2){
+          try{ parsed = JSON.parse(clean.slice(s2,e2+1)); }catch(e){}
+        }
+      }
+    }
+
+    if(!parsed) throw new Error('No se pudo parsear: ' + text.slice(0,100));
 
     fillForm(parsed);
     ss('RUT leido correctamente — revisa y corrige si es necesario','ok');
 
   }catch(err){
     console.error('[RUT]', err);
-    ss('No se pudo leer el RUT: ' + err.message.slice(0,80) + '. Completa los datos manualmente.','err');
+    ss('No se pudo leer el RUT: ' + err.message.slice(0,100) + '. Completa los datos manualmente.','err');
   }finally{
     document.getElementById('rutZone').style.display='';
     document.getElementById('rutProcessing').style.display='none';
     document.getElementById('rutInput').value='';
   }
-}// ═══════════════════════════════════════════════════════
-// CONSOLIDADOR — inyectar datos del cliente en el HTML
-// ═══════════════════════════════════════════════════════
-function getConsolidadorHTML(client){
-  let html = CONSOLIDADOR_HTML;
-  const nombre = client.razon || 'Cliente';
-  const nit    = client.nit   || '';
-  const dv     = client.dv    ? '-'+client.dv : '';
-
-  // Inject client data as JS variable
-  const safeClient = JSON.stringify(client).replace(/<\/script>/gi,'<\\/script>');
-  const injection  = '\nconst CLIENTE_ACTIVO = ' + safeClient + ';\n';
-  html = html.replace('<scr'+'ipt>', '<scr'+'ipt>' + injection);
-
-  // Update title
-  const oldTitle = 'title>Prevalidador DIAN AG 2025 \u2014 JNF SAS<';
-  const newTitle = 'title>' + nombre + ' \u00b7 Ex\u00f3gena AG 2025<';
-  html = html.replace(oldTitle, newTitle);
-
-  // Update header subtitle
-  const oldSub = 'Consolidador de Informaci\u00f3n Prevalidador DIAN AG 2025 \u00b7 Res. 000227, 000233 y 000237 de 2025</div>';
-  const newSub = nombre + ' \u00a0\u00b7\u00a0 NIT: ' + nit + dv + ' \u00a0\u00b7\u00a0 Ex\u00f3gena AG 2025</div>';
-  html = html.replace(oldSub, newSub);
-
-  // Update NIT badge
-  html = html.replace('>NIT: 901.904.435-9<', '>' + nombre + ' \u00b7 ' + nit + dv + '<');
-
-
-  return html;
 }
-
 // Drag & drop on RUT zone
 const rz=document.getElementById('rutZone');
 rz.addEventListener('dragover',e=>{e.preventDefault();rz.classList.add('drag');});
