@@ -1056,32 +1056,25 @@ async function readRUT(file){
       r.readAsDataURL(file);
     });
 
+    const GEMINI_KEY = 'AIzaSyAOK9vI65YjTJt-jRoxhyLmE9Mc0q2hdlc';
     const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos visibles. Responde SOLO con JSON válido, sin texto adicional ni backticks. Formato exacto: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}. Usa cadena vacia para campos no visibles.';
 
-    const bodyObj = {
-      model:'claude-sonnet-4-20250514',
-      max_tokens:1500,
-      messages:[{role:'user',content:[
-        {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-        {type:'text',text:prompt}
-      ]}]
-    };
-
-    // Always use proxy when on https (GitHub Pages)
-    // Direct call only works from localhost
-    const isHttps = location.protocol === 'https:';
-    const apiUrl = isHttps
-      ? 'https://corsproxy.io/?url=https://api.anthropic.com/v1/messages'
-      : 'https://api.anthropic.com/v1/messages';
-
-    const resp = await fetch(apiUrl,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'anthropic-dangerous-allow-browser':'true'
-      },
-      body:JSON.stringify(bodyObj)
-    });
+    const resp = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY,
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {inline_data: {mime_type: 'application/pdf', data: b64}},
+              {text: prompt}
+            ]
+          }],
+          generationConfig: {temperature: 0, maxOutputTokens: 1500}
+        })
+      }
+    );
 
     if(!resp.ok){
       const errText = await resp.text();
@@ -1089,19 +1082,13 @@ async function readRUT(file){
     }
 
     const data = await resp.json();
-    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if(!text) throw new Error('Respuesta vacia de Gemini');
 
-    const text = (data.content||[]).map(x=>x.text||'').join('').trim();
-    if(!text) throw new Error('Respuesta vacia');
-
-    // Parse JSON - multiple strategies
+    // Parse JSON
     let parsed = null;
     const clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-    const attempts = [
-      clean,
-      text,
-      clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1),
-    ];
+    const attempts = [clean, text, clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1)];
     for(const attempt of attempts){
       try{ parsed = JSON.parse(attempt); break; }catch(e){}
     }
@@ -1112,14 +1099,13 @@ async function readRUT(file){
 
   }catch(err){
     console.error('[RUT]', err);
-    ss('No se pudo leer el RUT automaticamente. Completa los datos manualmente.','err');
+    ss('No se pudo leer el RUT: ' + err.message.slice(0,80) + '. Completa los datos manualmente.','err');
   }finally{
     document.getElementById('rutZone').style.display='';
     document.getElementById('rutProcessing').style.display='none';
     document.getElementById('rutInput').value='';
   }
-}
-// ═══════════════════════════════════════════════════════
+}// ═══════════════════════════════════════════════════════
 // CONSOLIDADOR — inyectar datos del cliente en el HTML
 // ═══════════════════════════════════════════════════════
 function getConsolidadorHTML(client){
@@ -1302,6 +1288,14 @@ function showLoginScreen(){
 
 function showApp(){
   document.getElementById('screen-login').style.display='none';
+  // Clear any leftover status messages
+  var sb = document.getElementById('stbar');
+  if(sb) { sb.style.display='none'; sb.textContent=''; }
+  // If user hasn't clicked through splash yet, keep splash showing
+  if(!sessionStorage.getItem('splashSeen')){
+    document.getElementById('screen-splash').style.display='flex';
+    return;
+  }
   document.getElementById('screen-splash').style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
@@ -1552,6 +1546,15 @@ window._CONS_B64=null;
   </div>
 </div>
 
-<script>window.addEventListener("load", function(){ document.getElementById("screen-splash").style.display="flex"; document.getElementById("screen-login").style.display="none"; initFirebase(); });</script>
+<script>window.addEventListener("load", function(){
+  // Always show splash on fresh page load
+  document.getElementById("screen-splash").style.display="flex";
+  document.getElementById("screen-login").style.display="none";
+  var app = document.getElementById("screen-app");
+  if(app) app.style.display="none";
+  // Mark that we need to go through splash
+  sessionStorage.removeItem('splashSeen');
+  initFirebase();
+});</script>
 </body>
 </html>
