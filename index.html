@@ -189,7 +189,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   </div>
 
   <!-- Logo como botón central -->
-  <button onclick="document.getElementById('screen-splash').style.display='none';document.getElementById('screen-app').style.display='';"
+  <button onclick="splashEnter()"
     style="background:none;border:none;cursor:pointer;padding:0;display:block;
     transition:transform .3s,filter .3s;"
     onmouseover="this.style.transform='scale(1.06)';this.style.filter='drop-shadow(0 0 8px #c9a227) drop-shadow(0 0 20px #c9a227) drop-shadow(0 0 45px #c9a227) drop-shadow(0 0 80px rgba(201,162,39,.55))'"
@@ -698,7 +698,6 @@ function confirmarAnio(){
 }
 
 function showScreen(name){
-  if(name !== 'splash') sessionStorage.setItem('splashSeen','1');
   SCREENS.forEach(s=>{
     document.getElementById('screen-'+s).style.display = s===name ? '' : 'none';
   });
@@ -947,7 +946,6 @@ function goBack(){
 }
 
 function goHome(){
-  sessionStorage.removeItem('splashSeen');
   document.getElementById('screen-app').style.display='none';
   document.getElementById('screen-splash').style.display='flex';
   activeClientId=null; activeYear=null;
@@ -1058,71 +1056,69 @@ async function readRUT(file){
       r.readAsDataURL(file);
     });
 
-    const prompt = `Eres un experto en tributación colombiana. Lee este RUT (Registro Único Tributario) de la DIAN y extrae TODOS los datos visibles en el formulario.
+    const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos visibles. Responde SOLO con JSON válido, sin texto adicional ni backticks. Formato exacto: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}. Usa cadena vacia para campos no visibles.';
 
-Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, sin backticks.
+    const bodyObj = {
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1500,
+      messages:[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+        {type:'text',text:prompt}
+      ]}]
+    };
 
-Formato exacto requerido:
-{"razon":"razón social o nombre completo campo 35","nit":"NIT sin DV solo dígitos campo 5","dv":"dígito verificación campo 6","sigla":"nombre comercial campo 36 o 37","tipo":"PJ si persona jurídica PN si persona natural","dir":"dirección principal campo 41","dpto":"departamento campo 39","ciudad":"ciudad municipio campo 40","cp":"código postal campo 43","tel":"teléfono campo 44","email":"correo campo 42","ciiu":"CIIU principal campo 46","ciiu2":"CIIU secundario campo 48","ciiu3":"otra actividad campo 50 primera","ciiu4":"otra actividad campo 50 segunda","seccional":"dirección seccional DIAN campo 12","regimen":"05","resps":["05","07","14"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cédula RL","rl_cargo":"cargo RL"}
+    // Always use proxy when on https (GitHub Pages)
+    // Direct call only works from localhost
+    const isHttps = location.protocol === 'https:';
+    const apiUrl = isHttps
+      ? 'https://corsproxy.io/?url=https://api.anthropic.com/v1/messages'
+      : 'https://api.anthropic.com/v1/messages';
 
-Usa "" para campos vacíos. Los códigos de resps son los números del campo 53.`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const resp = await fetch(apiUrl,{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-allow-browser':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:2000,
-        messages:[{role:'user',content:[
-          {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-          {type:'text',text:prompt}
-        ]}]
-      })
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-dangerous-allow-browser':'true'
+      },
+      body:JSON.stringify(bodyObj)
     });
 
     if(!resp.ok){
       const errText = await resp.text();
-      throw new Error('API error ' + resp.status + ': ' + errText.slice(0,200));
+      throw new Error('Error ' + resp.status + ': ' + errText.slice(0,150));
     }
 
     const data = await resp.json();
-    if(data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
 
     const text = (data.content||[]).map(x=>x.text||'').join('').trim();
-    if(!text) throw new Error('Respuesta vacía de la IA');
+    if(!text) throw new Error('Respuesta vacia');
 
-    // Clean and parse - try multiple strategies
+    // Parse JSON - multiple strategies
     let parsed = null;
+    const clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     const attempts = [
+      clean,
       text,
-      text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim(),
-      text.slice(text.indexOf('{'), text.lastIndexOf('}')+1),
+      clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1),
     ];
     for(const attempt of attempts){
       try{ parsed = JSON.parse(attempt); break; }catch(e){}
     }
-    if(!parsed) throw new Error('No se pudo parsear la respuesta: ' + text.slice(0,100));
+    if(!parsed) throw new Error('No se pudo parsear la respuesta');
 
     fillForm(parsed);
-    ss('✓ RUT leído — revisa y corrige si es necesario','ok');
+    ss('RUT leido correctamente — revisa y corrige si es necesario','ok');
 
   }catch(err){
     console.error('[RUT]', err);
-    let msg = 'No se pudo leer el RUT automáticamente.';
-    if(err.message && err.message.includes('Failed to fetch')){
-      msg += ' Verifica tu conexión a internet.';
-    } else if(err.message){
-      msg += ' Error: ' + err.message.slice(0,80);
-    }
-    msg += ' Completa los datos manualmente.';
-    ss(msg,'err');
+    ss('No se pudo leer el RUT automaticamente. Completa los datos manualmente.','err');
   }finally{
     document.getElementById('rutZone').style.display='';
     document.getElementById('rutProcessing').style.display='none';
     document.getElementById('rutInput').value='';
   }
 }
-
 // ═══════════════════════════════════════════════════════
 // CONSOLIDADOR — inyectar datos del cliente en el HTML
 // ═══════════════════════════════════════════════════════
@@ -1218,6 +1214,19 @@ var FB_CONFIG = {
   appId: "1:1083115526611:web:1248d3df30a5e692e67726"
 };
 
+
+function splashEnter(){
+  sessionStorage.setItem('splashSeen','1');
+  document.getElementById('screen-splash').style.display='none';
+  if(currentUser && currentPerfil){
+    // Already logged in - go straight to app
+    document.getElementById('screen-app').style.display='';
+  } else {
+    // Not logged in - show login
+    document.getElementById('screen-login').style.display='flex';
+  }
+}
+
 function initFirebase(){
   if(typeof firebase === 'undefined'){
     showFirebaseError();
@@ -1244,7 +1253,10 @@ function initFirebase(){
       } else {
         currentUser = null;
         currentPerfil = null;
-        showLoginScreen();
+        // Only show login if user already clicked through splash
+        if(sessionStorage.getItem('splashSeen')){
+          showLoginScreen();
+        }
       }
     });
   }catch(e){
@@ -1290,11 +1302,6 @@ function showLoginScreen(){
 
 function showApp(){
   document.getElementById('screen-login').style.display='none';
-  // Show splash first if first time this session
-  if(!sessionStorage.getItem('splashSeen')){
-    document.getElementById('screen-splash').style.display='flex';
-    return;
-  }
   document.getElementById('screen-splash').style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
@@ -1545,6 +1552,6 @@ window._CONS_B64=null;
   </div>
 </div>
 
-<script>window.addEventListener("load", function(){ initFirebase(); document.getElementById("screen-login").style.display="flex"; });</script>
+<script>window.addEventListener("load", function(){ document.getElementById("screen-splash").style.display="flex"; document.getElementById("screen-login").style.display="none"; initFirebase(); });</script>
 </body>
 </html>
