@@ -481,138 +481,6 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-/* ═══ F300 IVA MODULE ════════════════════════════════════ */
-
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Montserrat,sans-serif;background:#f0f2f8;color:#111827;min-height:100vh;}
-.hdr{background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;}
-.hdr-title{font-size:15px;font-weight:800;}
-.hdr-sub{font-size:11px;opacity:.7;margin-top:2px;}
-.main{max-width:960px;margin:28px auto;padding:0 20px;}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:20px;}
-.card-title{font-size:14px;font-weight:700;color:#1a2580;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.upload-zone{border:2px dashed #c7d2e8;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#f8faff;}
-.upload-zone:hover,.upload-zone.drag{border-color:#1a2580;background:#eef1ff;}
-.upload-title{font-size:14px;font-weight:700;color:#1a2580;}
-.upload-hint{font-size:11px;color:#6b7280;margin-top:4px;}
-.periodo-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
-.fi label{font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;}
-.fi select,.fi input{width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;}
-.fi select:focus,.fi input:focus{border-color:#1a2580;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
-.btn-primary{background:#1a2580;color:#fff;}
-.btn-primary:hover{background:#2535a8;}
-.btn-gold{background:#c9a227;color:#fff;}
-.btn-gold:hover{background:#b8911f;}
-.btn-outline{background:#fff;color:#1a2580;border:2px solid #1a2580;}
-.btn-outline:hover{background:#f0f2ff;}
-.btn:disabled{opacity:.5;cursor:default;}
-.sheets-detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.sheet-tag{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
-.sheet-tag.found{background:#d1fae5;color:#065f46;}
-.sheet-tag.missing{background:#fee2e2;color:#991b1b;}
-.sheet-tag.optional{background:#fef3c7;color:#92400e;}
-.f300{background:#fff;border:2px solid #1a2580;border-radius:8px;overflow:hidden;font-size:11px;}
-.f300-header{background:#1a2580;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
-.f300-num{font-size:28px;font-weight:900;color:#c9a227;}
-.f300-body{padding:16px;}
-.f300-section{margin-bottom:14px;}
-.f300-section-title{font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid #1a2580;padding-bottom:4px;margin-bottom:8px;}
-.f300-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.f300-row{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:5px;background:#f8faff;border:1px solid #e5e7f0;}
-.f300-row.highlight{background:#fff8e6;border-color:#c9a227;}
-.f300-row.total{background:#eef1ff;border-color:#1a2580;font-weight:700;}
-.f300-label{font-size:10px;color:#374151;flex:1;padding-right:8px;}
-.f300-casilla{font-size:9px;color:#9ca3af;min-width:18px;text-align:center;font-weight:700;}
-.f300-value{font-size:11px;font-weight:700;color:#1a2580;min-width:100px;text-align:right;}
-.f300-value.positive{color:#065f46;}
-.f300-value.negative{color:#991b1b;}
-.f300-value.zero{color:#9ca3af;}
-.st{display:none;padding:10px 16px;border-radius:8px;margin-bottom:14px;font-size:12px;font-weight:600;}
-.st.ok{background:#d1fae5;color:#065f46;display:block;}
-.st.err{background:#fee2e2;color:#991b1b;display:block;}
-.st.info{background:#dbeafe;color:#1e40af;display:block;}
-.summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
-.s-card{background:#f8faff;border:1px solid #e5e7f0;border-radius:10px;padding:14px;}
-.s-card-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-.s-card-value{font-size:16px;font-weight:800;color:#1a2580;}
-.s-card-value.green{color:#065f46;}
-.s-card-value.red{color:#991b1b;}
-.s-card-value.gold{color:#92400e;}
-.periodo-badge{display:inline-block;background:#1a2580;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
-.detalle-section{margin-top:12px;background:#f8faff;border-radius:8px;padding:12px;}
-.detalle-title{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
-.detalle-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #e5e7f0;}
-.detalle-row:last-child{border:none;font-weight:700;color:#1a2580;}
-.detalle-label{color:#374151;}
-.detalle-val{font-weight:600;color:#1a2580;}
-
-
-/* ═══ F310 INC MODULE ════════════════════════════════════ */
-
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Montserrat,sans-serif;background:#f0f2f8;color:#111827;min-height:100vh;}
-.hdr{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;}
-.hdr-title{font-size:15px;font-weight:800;}
-.hdr-sub{font-size:11px;opacity:.7;margin-top:2px;}
-.main{max-width:900px;margin:28px auto;padding:0 20px;}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:20px;}
-.card-title{font-size:14px;font-weight:700;color:#6d28d9;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.upload-zone{border:2px dashed #ddd6fe;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#faf5ff;}
-.upload-zone:hover,.upload-zone.drag{border-color:#7c3aed;background:#ede9fe;}
-.upload-title{font-size:14px;font-weight:700;color:#6d28d9;}
-.upload-hint{font-size:11px;color:#6b7280;margin-top:4px;}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
-.fi label{font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;}
-.fi select,.fi input{width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;}
-.fi select:focus,.fi input:focus{border-color:#7c3aed;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
-.btn-primary{background:#7c3aed;color:#fff;}
-.btn-primary:hover{background:#6d28d9;}
-.btn-gold{background:#c9a227;color:#fff;}
-.btn-outline{background:#fff;color:#7c3aed;border:2px solid #7c3aed;}
-.btn:disabled{opacity:.5;cursor:default;}
-.sheets-detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.sheet-tag{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
-.sheet-tag.found{background:#d1fae5;color:#065f46;}
-.sheet-tag.missing{background:#fee2e2;color:#991b1b;}
-.sheet-tag.optional{background:#fef3c7;color:#92400e;}
-.st{display:none;padding:10px 16px;border-radius:8px;margin-bottom:14px;font-size:12px;font-weight:600;}
-.st.ok{background:#d1fae5;color:#065f46;display:block;}
-.st.err{background:#fee2e2;color:#991b1b;display:block;}
-.st.info{background:#ede9fe;color:#5b21b6;display:block;}
-.summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
-.s-card{background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px;}
-.s-card-label{font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-.s-card-value{font-size:18px;font-weight:800;color:#6d28d9;}
-.s-card-value.green{color:#065f46;}
-.s-card-value.red{color:#991b1b;}
-.f310{background:#fff;border:2px solid #7c3aed;border-radius:8px;overflow:hidden;}
-.f310-header{background:#6d28d9;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
-.f310-num{font-size:28px;font-weight:900;color:#fbbf24;}
-.f310-body{padding:16px;}
-.f310-section{margin-bottom:14px;}
-.f310-section-title{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid #7c3aed;padding-bottom:4px;margin-bottom:8px;}
-.f310-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:6px;background:#faf5ff;border:1px solid #ede9fe;margin-bottom:4px;}
-.f310-row.total{background:#ede9fe;border-color:#7c3aed;font-weight:700;}
-.f310-row.highlight{background:#fef3c7;border-color:#f59e0b;}
-.f310-row.result-pay{background:#fee2e2;border-color:#f87171;}
-.f310-row.result-fav{background:#d1fae5;border-color:#34d399;}
-.f310-label{font-size:11px;color:#374151;flex:1;}
-.f310-casilla{font-size:9px;color:#9ca3af;min-width:24px;text-align:center;font-weight:700;}
-.f310-value{font-size:12px;font-weight:700;min-width:120px;text-align:right;}
-.f310-value.pos{color:#065f46;}
-.f310-value.neg{color:#991b1b;}
-.f310-value.zero{color:#9ca3af;}
-.periodo-badge{display:inline-block;background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
-.info-box{background:#ede9fe;border-radius:8px;padding:12px 16px;font-size:11px;color:#5b21b6;margin-bottom:16px;line-height:1.6;}
-.detalle-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px;}
-.detalle-table th{background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:6px 8px;text-align:left;border:1px solid #ddd6fe;}
-.detalle-table td{padding:5px 8px;border:1px solid #f0f0f0;}
-.detalle-table tr:last-child td{background:#ede9fe;font-weight:700;color:#5b21b6;}
-
 </style>
 
 <script>
@@ -1777,7 +1645,7 @@ function f300_handleFile(file){
         return;
       }
       f300_ss('Excel cargado ✓ — '+f300_wb.SheetNames.join(', '),'ok');
-      document.getElementById('f300-btnProcesar').disabled=false;
+      var f300bp=document.getElementById('f300-btnProcesar');if(f300bp){f300bp.disabled=false;f300bp.style.opacity='1';}
     }catch(e){f300_ss('Error leyendo Excel: '+e.message,'err');}
   };
   reader.readAsBinaryString(file);
@@ -2028,6 +1896,7 @@ function f300_procesar(){
     <div class="detalle-row"><span class="detalle-label">Total excluidos/exentos (casilla 54)</span><span class="detalle-val">$${f300_fmt(c54)}</span></div>
   `;
 
+  f300_renderCasilleros(window._f300Data);
   document.getElementById('f300-resultado').style.display='block';
   document.getElementById('f300-resultado').scrollIntoView({behavior:'smooth'});
   f300_ss('Formulario 300 liquidado correctamente ✓','ok');
@@ -2219,7 +2088,7 @@ function inc_handleFile(file){
       if(b8>=0) found.push('BASE 8%');
       if(i8>=0) found.push('IPO 8%');
       inc_ss('Excel cargado ✓ — Columnas encontradas: '+found.join(', '),'ok');
-      document.getElementById('inc-btnProcesar').disabled=false;
+      var incbp=document.getElementById('inc-btnProcesar');if(incbp){incbp.disabled=false;incbp.style.opacity='1';}
     }catch(e){inc_ss('Error leyendo Excel: '+e.message,'err');}
   };
   reader.readAsBinaryString(file);
@@ -2400,6 +2269,7 @@ function inc_procesar(){
       <tbody>${detalleRows}</tbody>
     </table>`;
 
+  inc_renderCasilleros(window._f310Data);
   document.getElementById('inc-resultado').style.display='block';
   document.getElementById('inc-resultado').scrollIntoView({behavior:'smooth'});
   inc_ss('Formulario 310 liquidado correctamente ✓','ok');
@@ -2564,6 +2434,7 @@ function f300_renderSaved(d){
     {l:(d.c82||0)>0?'Saldo a Pagar':'Saldo a Favor',v:(d.c82||0)>0?(d.c82||0):(d.c83||0),c:(d.c82||0)>0?'red':'green'},
     {l:'Ingresos Netos',v:d.c43||0,c:'gold'}
   ].map(function(s){return '<div class="s-card"><div class="s-card-label">'+s.l+'</div><div class="s-card-value '+s.c+'">$'+Math.round(s.v).toLocaleString('es-CO')+'</div></div>';}).join('');
+  f300_renderCasilleros(d);
   var fr=document.getElementById('f300-resultado');
   if(fr) fr.style.display='block';
 }
@@ -2610,6 +2481,7 @@ function inc_renderSaved(d){
     {l:'IPO Generado Neto',v:d.c56||0,c:''},
     {l:(d.c64||0)>0?'A Pagar':'A Favor',v:(d.c64||0)>0?(d.c64||0):(d.c65||0),c:(d.c64||0)>0?'red':'green'}
   ].map(function(s){return '<div class="s-card"><div class="s-card-label">'+s.l+'</div><div class="s-card-value '+s.c+'">$'+Math.round(s.v).toLocaleString('es-CO')+'</div></div>';}).join('');
+  inc_renderCasilleros(d);
   var fr=document.getElementById('inc-resultado');
   if(fr) fr.style.display='block';
 }
@@ -2648,313 +2520,292 @@ function openINC(){
   inc_loadSaved(c.id, yr);
 }
 
+
+function f300_renderCasilleros(d){
+  var rows=[
+    {label:'Operaciones gravadas 5%',cas:27,key:'c27'},
+    {label:'Operaciones gravadas 19%',cas:28,key:'c28'},
+    {label:'Operaciones exentas',cas:35,key:'c35'},
+    {label:'Operaciones excluidas',cas:39,key:'c39'},
+    {label:'Total ingresos brutos',cas:41,key:'c41',total:true},
+    {label:'Devoluciones en ventas',cas:42,key:'c42',hi:true},
+    {label:'Total ingresos netos (41-42)',cas:43,key:'c43',total:true},
+    null,
+    {label:'Compras bienes gravados 5%',cas:50,key:'c50'},
+    {label:'Compras bienes gravados 19%',cas:51,key:'c51'},
+    {label:'Servicios gravados 5%',cas:52,key:'c52'},
+    {label:'Servicios gravados 19%',cas:53,key:'c53'},
+    {label:'Excluidos/exentos (COSTOS+SERV PÚB+DOC SOP)',cas:54,key:'c54'},
+    {label:'Total compras brutas',cas:55,key:'c55',total:true},
+    {label:'Devoluciones en compras',cas:56,key:'c56',hi:true},
+    {label:'Total compras netas (55-56)',cas:57,key:'c57',total:true},
+    null,
+    {label:'IVA generado 5%',cas:58,key:'c58'},
+    {label:'IVA generado 19%',cas:59,key:'c59'},
+    {label:'Total impuesto generado',cas:67,key:'c67',total:true},
+    null,
+    {label:'IVA descontable compras 5%',cas:71,key:'c71'},
+    {label:'IVA descontable compras 19%',cas:72,key:'c72'},
+    {label:'IVA descontable servicios 5%',cas:74,key:'c74'},
+    {label:'IVA descontable servicios 19%',cas:75,key:'c75'},
+    {label:'Total impuesto pagado/facturado',cas:77,key:'c77'},
+    {label:'IVA resultante devoluciones ventas',cas:79,key:'c79',hi:true},
+    {label:'Total impuestos descontables',cas:81,key:'c81',total:true},
+    null,
+    {label:'Saldo a pagar por el período',cas:82,key:'c82',hi:true},
+    {label:'Saldo a favor del período',cas:83,key:'c83',hi:true},
+    {label:'Retenciones IVA practicadas',cas:85,key:'c85'},
+    {label:'Sanciones',cas:87,key:'c87'},
+    {label:'Total saldo a pagar',cas:88,key:'c88',total:true},
+    {label:'Total saldo a favor',cas:89,key:'c89',total:true},
+  ];
+  var html='';
+  rows.forEach(function(r){
+    if(!r){html+='<div style="height:6px;"></div>';return;}
+    var v=d[r.key]||0;
+    var bg=r.total?'#eef1ff':r.hi?'#fff8e6':'#f8faff';
+    var bc=r.total?'#1a2580':r.hi?'#c9a227':'#e5e7f0';
+    var vc=v>0?'#065f46':v<0?'#991b1b':'#9ca3af';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:'+bg+';border:1px solid '+bc+';border-radius:5px;margin-bottom:3px;">'
+      +'<span style="font-size:10px;color:#374151;flex:1;">'+r.label+'</span>'
+      +'<span style="font-size:9px;color:#9ca3af;min-width:20px;text-align:center;font-weight:700;">'+r.cas+'</span>'
+      +'<span id="f300-'+r.key+'" style="font-size:11px;font-weight:700;color:'+vc+';min-width:110px;text-align:right;">$'+Math.round(v).toLocaleString('es-CO')+'</span>'
+      +'</div>';
+  });
+  var el=document.getElementById('f300-casilleros');
+  if(el) el.innerHTML=html;
+}
+
+function inc_renderCasilleros(d){
+  var rows=[
+    {label:'Base gravable ventas 8%',cas:27,key:'c27'},
+    {label:'Devoluciones en ventas — base',cas:28,key:'c28',hi:true},
+    {label:'Base gravable neta (27-28)',cas:29,key:'c29',total:true},
+    null,
+    {label:'IPO generado a la tarifa del 8%',cas:48,key:'c48'},
+    {label:'IPO resultante devoluciones',cas:49,key:'c49',hi:true},
+    {label:'Total impuesto generado neto',cas:56,key:'c56',total:true},
+    null,
+    {label:'Saldo a favor período anterior',cas:60,key:'c60'},
+    {label:'Retenciones practicadas',cas:61,key:'c61'},
+    {label:'Sanciones',cas:63,key:'c63'},
+    {label:'Total saldo a pagar',cas:64,key:'c64',total:true,hi:true},
+    {label:'Total saldo a favor',cas:65,key:'c65',total:true},
+  ];
+  var html='';
+  rows.forEach(function(r){
+    if(!r){html+='<div style="height:6px;"></div>';return;}
+    var v=d[r.key]||0;
+    var bg=r.total?'#ede9fe':r.hi?'#fef3c7':'#faf5ff';
+    var bc=r.total?'#7c3aed':r.hi?'#f59e0b':'#ede9fe';
+    var vc=v>0?'#065f46':v<0?'#991b1b':'#9ca3af';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:'+bg+';border:1px solid '+bc+';border-radius:5px;margin-bottom:3px;">'
+      +'<span style="font-size:10px;color:#374151;flex:1;">'+r.label+'</span>'
+      +'<span style="font-size:9px;color:#9ca3af;min-width:20px;text-align:center;font-weight:700;">'+r.cas+'</span>'
+      +'<span id="inc-'+r.key+'" style="font-size:11px;font-weight:700;color:'+vc+';min-width:110px;text-align:right;">$'+Math.round(v).toLocaleString('es-CO')+'</span>'
+      +'</div>';
+  });
+  var el=document.getElementById('inc-casilleros');
+  if(el) el.innerHTML=html;
+}
+
+
+function openModulos(){
+  showScreen('contabilidad');
+}
+
 </script>
 
 <!-- ═══ PANTALLA F300 IVA ════════════════════════════════ -->
 <div id="screen-f300" style="display:none;min-height:100vh;background:#f0f2f8;">
   <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
-    <button onclick="goBack()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;">← Volver</button>
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">← Módulos</button>
     <div>
       <div style="font-size:13px;font-weight:800;">Formulario 300 — Declaración IVA</div>
       <div style="font-size:10px;opacity:.7;" id="f300-cliente-info">—</div>
     </div>
   </div>
   <div style="max-width:960px;margin:0 auto;padding:20px;">
-    <div class="hdr">
-  <div>
-    <div class="hdr-title">Formulario 300 — Declaración IVA</div>
-    <div class="hdr-sub">Liquidación automática desde Excel · VENTAS · COSTOS · SERV PÚBLICOS · DOC SOPORTE</div>
+    
+<div id="f300-stbar" class="st" style="margin-bottom:14px;"></div>
+
+<!-- Configuración período -->
+<div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    Configuración del período
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Año gravable</label>
+      <input type="number" id="f300-anio" value="2025" min="2020" max="2030" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;"/>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Periodicidad</label>
+      <select id="f300-periodicidad" onchange="f300_updatePeriodos()" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">
+        <option value="cuatrimestral">Cuatrimestral</option>
+        <option value="bimestral">Bimestral</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Período</label>
+      <select id="f300-periodo" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;"></select>
+    </div>
   </div>
 </div>
 
-<div class="main">
-  <div id="f300-stbar" class="st"></div>
-
-  <div class="card">
-    <div class="card-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      Configuración del período
-    </div>
-    <div class="periodo-row">
-      <div class="fi"><label>Año gravable</label><input type="number" id="f300-anio" value="2025" min="2020" max="2030"/></div>
-      <div class="fi"><label>Periodicidad</label>
-        <select id="f300-periodicidad" onchange="f300_updatePeriodos()">
-          <option value="cuatrimestral">Cuatrimestral</option>
-          <option value="bimestral">Bimestral</option>
-        </select>
-      </div>
-      <div class="fi"><label>Período</label><select id="f300-periodo"></select></div>
-    </div>
+<!-- Subir Excel -->
+<div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:14px;">📂 Archivo Excel de facturación</div>
+  <div id="f300-dropZone" onclick="document.getElementById('f300-fileInput').click()"
+    ondragover="event.preventDefault();this.style.borderColor='#1a2580'"
+    ondragleave="this.style.borderColor='#c7d2e8'"
+    ondrop="event.preventDefault();this.style.borderColor='#c7d2e8';f300_handleFile(event.dataTransfer.files[0])"
+    style="border:2px dashed #c7d2e8;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#f8faff;">
+    <div style="font-size:13px;font-weight:700;color:#1a2580;">Arrastra tu Excel aquí o haz clic</div>
+    <div style="font-size:11px;color:#6b7280;margin-top:4px;">Pestañas: VENTAS · COSTOS · DEV VENTAS · DEV COSTOS · SERV PÚBLICOS · DOC SOPORTE</div>
+    <div id="f300-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#1a2580;font-weight:600;"></div>
   </div>
-
-  <div class="card">
-    <div class="card-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Archivo Excel de facturación
-    </div>
-    <div class="upload-zone" id="f300-dropZone" onclick="document.getElementById('fileInput').click()"
-      ondragover="event.preventDefault();this.classList.add('drag')"
-      ondragleave="this.classList.remove('drag')"
-      ondrop="event.preventDefault();this.classList.remove('drag');f300_f300_handleFile(event.dataTransfer.files[0])">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;color:#1a2580"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <div class="upload-title">Arrastra tu Excel aquí o haz clic</div>
-      <div class="upload-hint">Pestañas requeridas: VENTAS · COSTOS<br>Opcionales: DEV VENTAS/DEV EN VENTAS · DEV COSTOS/DV COSTOS · SERV PUBLICOS · DOC. SOPORTE</div>
-      <div id="f300-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#1a2580;font-weight:600;"></div>
-    </div>
-    <input type="file" id="f300-fileInput" accept=".xlsx,.xls" style="display:none" onchange="f300_handleFile(this.files[0])"/>
-    <div id="f300-sheetsDetected" class="sheets-detected"></div>
-    <div style="margin-top:12px;text-align:center;">
-      <button class="btn btn-primary" onclick="f300_procesar()" id="f300-btnProcesar" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Liquidar Formulario 300
-      </button>
-    </div>
+  <input type="file" id="f300-fileInput" accept=".xlsx,.xls" style="display:none" onchange="f300_handleFile(this.files[0])"/>
+  <div id="f300-sheetsDetected" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+  <div style="margin-top:14px;text-align:center;">
+    <button id="f300-btnProcesar" onclick="f300_procesar()" disabled
+      style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;opacity:.5;">
+      ⚡ Liquidar Formulario 300
+    </button>
   </div>
+</div>
 
-  <div id="f300-resultado" style="display:none;">
-    <div id="f300-summaryCards" class="summary-cards"></div>
-    <div class="card">
-      <div id="f300-periodoBadge" class="periodo-badge"></div>
-      <div class="card-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Formulario 300 — Vista previa
-      </div>
-      <div class="f300">
-        <div class="f300-header">
-          <div>
-            <div style="font-size:12px;font-weight:700;">Declaración del Impuesto sobre las Ventas - IVA</div>
-            <div style="font-size:10px;opacity:.8;margin-top:2px;" id="f300-periodoInfo">—</div>
-          </div>
-          <div class="f300-num">300</div>
+<!-- Resultado -->
+<div id="f300-resultado" style="display:none;">
+  <div id="f300-summaryCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+  <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;">
+    <div id="f300-periodoBadge" style="display:inline-block;background:#1a2580;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;"></div>
+    <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:14px;">📋 Formulario 300 — Vista previa</div>
+    <!-- Casilleros -->
+    <div style="border:2px solid #1a2580;border-radius:8px;overflow:hidden;">
+      <div style="background:#1a2580;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:12px;font-weight:700;">Declaración del Impuesto sobre las Ventas - IVA</div>
+          <div style="font-size:10px;opacity:.8;" id="f300-periodoInfo">—</div>
         </div>
-        <div class="f300-body">
-          <div class="f300-section">
-            <div class="f300-section-title">Datos del período</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-              <div class="f300-row"><span class="f300-label">Año</span><span class="f300-casilla">1</span><span class="f300-value" id="c1">—</span></div>
-              <div class="f300-row"><span class="f300-label">Período</span><span class="f300-casilla">3</span><span class="f300-value" id="c3">—</span></div>
-              <div class="f300-row"><span class="f300-label">Periodicidad</span><span class="f300-casilla">24</span><span class="f300-value" id="c24">—</span></div>
-            </div>
-          </div>
-          <div class="f300-section">
-            <div class="f300-section-title">Ingresos</div>
-            <div class="f300-grid">
-              <div class="f300-row"><span class="f300-label">Operaciones gravadas 5%</span><span class="f300-casilla">27</span><span class="f300-value" id="c27">0</span></div>
-              <div class="f300-row"><span class="f300-label">Operaciones gravadas 19%</span><span class="f300-casilla">28</span><span class="f300-value" id="c28">0</span></div>
-              <div class="f300-row"><span class="f300-label">Operaciones exentas</span><span class="f300-casilla">35</span><span class="f300-value" id="c35">0</span></div>
-              <div class="f300-row"><span class="f300-label">Operaciones excluidas</span><span class="f300-casilla">39</span><span class="f300-value" id="c39">0</span></div>
-              <div class="f300-row total"><span class="f300-label">Total ingresos brutos</span><span class="f300-casilla">41</span><span class="f300-value" id="c41">0</span></div>
-              <div class="f300-row highlight"><span class="f300-label">Devoluciones en ventas</span><span class="f300-casilla">42</span><span class="f300-value" id="c42">0</span></div>
-              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total ingresos netos (41 - 42)</span><span class="f300-casilla">43</span><span class="f300-value" id="c43">0</span></div>
-            </div>
-          </div>
-          <div class="f300-section">
-            <div class="f300-section-title">Compras</div>
-            <div class="f300-grid">
-              <div class="f300-row"><span class="f300-label">Bienes gravados 5%</span><span class="f300-casilla">50</span><span class="f300-value" id="c50">0</span></div>
-              <div class="f300-row"><span class="f300-label">Bienes gravados 19%</span><span class="f300-casilla">51</span><span class="f300-value" id="c51">0</span></div>
-              <div class="f300-row"><span class="f300-label">Servicios gravados 5%</span><span class="f300-casilla">52</span><span class="f300-value" id="c52">0</span></div>
-              <div class="f300-row"><span class="f300-label">Servicios gravados 19%</span><span class="f300-casilla">53</span><span class="f300-value" id="c53">0</span></div>
-              <div class="f300-row"><span class="f300-label">Excluidos / exentos (incl. SERV PÚB + DOC SOP)</span><span class="f300-casilla">54</span><span class="f300-value" id="c54">0</span></div>
-              <div class="f300-row total"><span class="f300-label">Total compras brutas</span><span class="f300-casilla">55</span><span class="f300-value" id="c55">0</span></div>
-              <div class="f300-row highlight"><span class="f300-label">Devoluciones en compras</span><span class="f300-casilla">56</span><span class="f300-value" id="c56">0</span></div>
-              <div class="f300-row total"><span class="f300-label">Total compras netas (55 - 56)</span><span class="f300-casilla">57</span><span class="f300-value" id="c57">0</span></div>
-            </div>
-          </div>
-          <div class="f300-section">
-            <div class="f300-section-title">Impuesto generado</div>
-            <div class="f300-grid">
-              <div class="f300-row"><span class="f300-label">IVA generado 5%</span><span class="f300-casilla">58</span><span class="f300-value" id="c58">0</span></div>
-              <div class="f300-row"><span class="f300-label">IVA generado tarifa general (19%)</span><span class="f300-casilla">59</span><span class="f300-value" id="c59">0</span></div>
-              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total impuesto generado</span><span class="f300-casilla">67</span><span class="f300-value" id="c67">0</span></div>
-            </div>
-          </div>
-          <div class="f300-section">
-            <div class="f300-section-title">Impuesto descontable</div>
-            <div class="f300-grid">
-              <div class="f300-row"><span class="f300-label">IVA descontable compras 5%</span><span class="f300-casilla">71</span><span class="f300-value" id="c71">0</span></div>
-              <div class="f300-row"><span class="f300-label">IVA descontable compras 19%</span><span class="f300-casilla">72</span><span class="f300-value" id="c72">0</span></div>
-              <div class="f300-row"><span class="f300-label">IVA descontable servicios 5%</span><span class="f300-casilla">74</span><span class="f300-value" id="c74">0</span></div>
-              <div class="f300-row"><span class="f300-label">IVA descontable servicios 19%</span><span class="f300-casilla">75</span><span class="f300-value" id="c75">0</span></div>
-              <div class="f300-row total"><span class="f300-label">Total impuesto pagado/facturado</span><span class="f300-casilla">77</span><span class="f300-value" id="c77">0</span></div>
-              <div class="f300-row highlight"><span class="f300-label">IVA resultante dev. en ventas</span><span class="f300-casilla">79</span><span class="f300-value" id="c79">0</span></div>
-              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total impuestos descontables</span><span class="f300-casilla">81</span><span class="f300-value" id="c81">0</span></div>
-            </div>
-          </div>
-          <div class="f300-section">
-            <div class="f300-section-title">Resultado</div>
-            <div class="f300-grid">
-              <div class="f300-row highlight"><span class="f300-label">Saldo a pagar por el período</span><span class="f300-casilla">82</span><span class="f300-value" id="c82">0</span></div>
-              <div class="f300-row highlight"><span class="f300-label">Saldo a favor del período</span><span class="f300-casilla">83</span><span class="f300-value" id="c83">0</span></div>
-              <div class="f300-row"><span class="f300-label">Retenciones IVA practicadas</span><span class="f300-casilla">85</span><span class="f300-value" id="c85">0</span></div>
-              <div class="f300-row"><span class="f300-label">Sanciones</span><span class="f300-casilla">87</span><span class="f300-value" id="c87">0</span></div>
-              <div class="f300-row total highlight" style="grid-column:1/-1"><span class="f300-label">Total saldo a pagar (82-84-85+87)</span><span class="f300-casilla">88</span><span class="f300-value" id="c88">0</span></div>
-              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total saldo a favor (83+84+85-87)</span><span class="f300-casilla">89</span><span class="f300-value" id="c89">0</span></div>
-            </div>
-          </div>
+        <div style="font-size:26px;font-weight:900;color:#c9a227;">300</div>
+      </div>
+      <div style="padding:16px;">
+        <!-- Datos período -->
+        <div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;border-bottom:2px solid #1a2580;padding-bottom:4px;margin-bottom:8px;">Datos del período</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f8faff;border:1px solid #e5e7f0;border-radius:5px;"><span style="font-size:10px;">Año</span><span style="font-size:9px;color:#9ca3af;">1</span><span id="f300-c1" style="font-size:11px;font-weight:700;color:#1a2580;">—</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f8faff;border:1px solid #e5e7f0;border-radius:5px;"><span style="font-size:10px;">Período</span><span style="font-size:9px;color:#9ca3af;">3</span><span id="f300-c3" style="font-size:11px;font-weight:700;color:#1a2580;">—</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f8faff;border:1px solid #e5e7f0;border-radius:5px;"><span style="font-size:10px;">Periodicidad</span><span style="font-size:9px;color:#9ca3af;">24</span><span id="f300-c24" style="font-size:11px;font-weight:700;color:#1a2580;">—</span></div>
         </div>
+        <!-- Secciones -->
+        <div id="f300-casilleros"></div>
       </div>
-
-      <!-- Detalle de fuentes -->
-      <div class="detalle-section" id="f300-detalleSection"></div>
-
-      <div class="actions">
-        <button class="btn btn-gold" onclick="f300_descargarPDF()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Descargar PDF Formulario 300
-        </button>
-        <button class="btn btn-outline" onclick="f300_limpiar()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-          Nueva liquidación
-        </button>
-      </div>
+    </div>
+    <div id="f300-detalleSection" style="margin-top:12px;background:#f8faff;border-radius:8px;padding:12px;"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+      <button onclick="f300_descargarPDF()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">⬇ Descargar PDF Formulario 300</button>
+      <button onclick="openModulos()" style="background:#fff;color:#1a2580;border:2px solid #1a2580;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">← Volver a Módulos</button>
     </div>
   </div>
 </div>
 
-
   </div>
 </div>
-
 <!-- ═══ PANTALLA INC F310 ════════════════════════════════ -->
 <div id="screen-inc" style="display:none;min-height:100vh;background:#f0f2f8;">
   <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
-    <button onclick="goBack()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;">← Volver</button>
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">← Módulos</button>
     <div>
       <div style="font-size:13px;font-weight:800;">Formulario 310 — Impuesto Nacional al Consumo</div>
       <div style="font-size:10px;opacity:.7;" id="inc-cliente-info">—</div>
     </div>
   </div>
   <div style="max-width:900px;margin:0 auto;padding:20px;">
-    <div class="hdr">
-  <div>
-    <div class="hdr-title">Formulario 310 — Impuesto Nacional al Consumo (INC)</div>
-    <div class="hdr-sub">Liquidación automática desde Excel · BASE 8% · IPO 8%</div>
+    
+<div id="inc-stbar" class="st" style="margin-bottom:14px;"></div>
+
+<div style="background:#ede9fe;border-radius:8px;padding:12px 16px;font-size:11px;color:#5b21b6;margin-bottom:16px;line-height:1.6;">
+  <strong>¿Qué es el INC?</strong> El Impuesto Nacional al Consumo (art. 512-1 ET) aplica al 8% sobre servicios de restaurante y similares. La BASE 8% es el valor del servicio sin impuesto y el IPO 8% es el impuesto generado.
+</div>
+
+<!-- Configuración período -->
+<div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:14px;">⏱ Configuración del período</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Año gravable</label>
+      <input type="number" id="inc-anio" value="2025" min="2020" max="2030" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;"/>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Periodicidad</label>
+      <select id="inc-periodicidad" onchange="inc_updatePeriodos()" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">
+        <option value="cuatrimestral">Cuatrimestral</option>
+        <option value="bimestral">Bimestral</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Período</label>
+      <select id="inc-periodo" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;"></select>
+    </div>
   </div>
 </div>
 
-<div class="main">
-  <div id="inc-stbar" class="st"></div>
-
-  <div class="info-box">
-    <strong>¿Qué es el INC?</strong> El Impuesto Nacional al Consumo (art. 512-1 ET) aplica al 8% sobre servicios de restaurante, bares y similares. Se declara en el formulario 310 con la misma periodicidad que el IVA (bimestral o cuatrimestral). La BASE 8% corresponde al valor del servicio sin impuesto, y el IPO 8% es el impuesto generado.
+<!-- Subir Excel -->
+<div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:14px;">📂 Archivo Excel de facturación</div>
+  <div id="inc-dropZone" onclick="document.getElementById('inc-fileInput').click()"
+    ondragover="event.preventDefault();this.style.borderColor='#7c3aed'"
+    ondragleave="this.style.borderColor='#ddd6fe'"
+    ondrop="event.preventDefault();this.style.borderColor='#ddd6fe';inc_handleFile(event.dataTransfer.files[0])"
+    style="border:2px dashed #ddd6fe;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#faf5ff;">
+    <div style="font-size:13px;font-weight:700;color:#6d28d9;">Arrastra tu Excel aquí o haz clic</div>
+    <div style="font-size:11px;color:#6b7280;margin-top:4px;">Requiere columnas BASE 8% e IPO 8% en pestaña VENTAS</div>
+    <div id="inc-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#7c3aed;font-weight:600;"></div>
   </div>
-
-  <div class="card">
-    <div class="card-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      Configuración del período
-    </div>
-    <div class="row3">
-      <div class="fi"><label>Año gravable</label><input type="number" id="inc-anio" value="2025" min="2020" max="2030"/></div>
-      <div class="fi"><label>Periodicidad</label>
-        <select id="inc-periodicidad" onchange="inc_updatePeriodos()">
-          <option value="cuatrimestral">Cuatrimestral</option>
-          <option value="bimestral">Bimestral</option>
-        </select>
-      </div>
-      <div class="fi"><label>Período</label><select id="inc-periodo"></select></div>
-    </div>
+  <input type="file" id="inc-fileInput" accept=".xlsx,.xls" style="display:none" onchange="inc_handleFile(this.files[0])"/>
+  <div id="inc-sheetsDetected" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+  <div style="margin-top:14px;text-align:center;">
+    <button id="inc-btnProcesar" onclick="inc_procesar()" disabled
+      style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;opacity:.5;">
+      ⚡ Liquidar Formulario 310
+    </button>
   </div>
+</div>
 
-  <div class="card">
-    <div class="card-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Archivo Excel de facturación
-    </div>
-    <div class="upload-zone" id="inc-dropZone" onclick="document.getElementById('fileInput').click()"
-      ondragover="event.preventDefault();this.classList.add('drag')"
-      ondragleave="this.classList.remove('drag')"
-      ondrop="event.preventDefault();this.classList.remove('drag');inc_inc_handleFile(event.dataTransfer.files[0])">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;color:#7c3aed"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <div class="upload-title">Arrastra tu Excel aquí o haz clic</div>
-      <div class="upload-hint">Requiere columnas BASE 8% e IPO 8% en la pestaña VENTAS<br>Opcional: columnas BASE IPO e IPO 8% en DEV VENTAS</div>
-      <div id="inc-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#7c3aed;font-weight:600;"></div>
-    </div>
-    <input type="file" id="inc-fileInput" accept=".xlsx,.xls" style="display:none" onchange="inc_handleFile(this.files[0])"/>
-    <div id="inc-sheetsDetected" class="sheets-detected"></div>
-    <div style="margin-top:12px;text-align:center;">
-      <button class="btn btn-primary" onclick="inc_procesar()" id="inc-btnProcesar" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Liquidar Formulario 310
-      </button>
-    </div>
-  </div>
-
-  <div id="inc-resultado" style="display:none;">
-    <div id="inc-summaryCards" class="summary-cards"></div>
-    <div class="card">
-      <div id="inc-periodoBadge" class="periodo-badge"></div>
-      <div class="card-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Formulario 310 — Vista previa
-      </div>
-
-      <div class="f310">
-        <div class="f310-header">
-          <div>
-            <div style="font-size:12px;font-weight:700;">Declaración del Impuesto Nacional al Consumo — INC</div>
-            <div style="font-size:10px;opacity:.8;margin-top:2px;" id="inc-periodoInfo">—</div>
-          </div>
-          <div class="f310-num">310</div>
+<!-- Resultado -->
+<div id="inc-resultado" style="display:none;">
+  <div id="inc-summaryCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
+  <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;">
+    <div id="inc-periodoBadge" style="display:inline-block;background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;"></div>
+    <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:14px;">📋 Formulario 310 — Vista previa</div>
+    <div style="border:2px solid #7c3aed;border-radius:8px;overflow:hidden;">
+      <div style="background:#6d28d9;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:12px;font-weight:700;">Declaración del Impuesto Nacional al Consumo — INC</div>
+          <div style="font-size:10px;opacity:.8;" id="inc-periodoInfo">—</div>
         </div>
-        <div class="f310-body">
-
-          <div class="f310-section">
-            <div class="f310-section-title">Datos del período</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-              <div class="f310-row"><span class="f310-label">Año</span><span class="f310-casilla">1</span><span class="f310-value" id="c1">—</span></div>
-              <div class="f310-row"><span class="f310-label">Período</span><span class="f310-casilla">3</span><span class="f310-value" id="c3">—</span></div>
-              <div class="f310-row"><span class="f310-label">Periodicidad</span><span class="f310-casilla">24</span><span class="f310-value" id="c24">—</span></div>
-            </div>
-          </div>
-
-          <div class="f310-section">
-            <div class="f310-section-title">Ingresos por servicios gravados con INC 8%</div>
-            <div class="f310-row"><span class="f310-label">Base gravable ventas — servicios al 8%</span><span class="f310-casilla">27</span><span class="f310-value" id="c27">0</span></div>
-            <div class="f310-row highlight"><span class="f310-label">Devoluciones en ventas — base</span><span class="f310-casilla">28</span><span class="f310-value" id="c28">0</span></div>
-            <div class="f310-row total"><span class="f310-label">Base gravable neta (27 - 28)</span><span class="f310-casilla">29</span><span class="f310-value" id="c29">0</span></div>
-          </div>
-
-          <div class="f310-section">
-            <div class="f310-section-title">Liquidación privada — Impuesto generado</div>
-            <div class="f310-row"><span class="f310-label">IPO generado a la tarifa del 8%</span><span class="f310-casilla">48</span><span class="f310-value" id="c48">0</span></div>
-            <div class="f310-row highlight"><span class="f310-label">IPO devoluciones en ventas (8%)</span><span class="f310-casilla">49</span><span class="f310-value" id="c49">0</span></div>
-            <div class="f310-row total"><span class="f310-label">Total impuesto generado neto</span><span class="f310-casilla">56</span><span class="f310-value" id="c56">0</span></div>
-          </div>
-
-          <div class="f310-section">
-            <div class="f310-section-title">Resultado</div>
-            <div class="f310-row"><span class="f310-label">Saldo a favor período anterior</span><span class="f310-casilla">60</span><span class="f310-value" id="c60">0</span></div>
-            <div class="f310-row"><span class="f310-label">Retenciones practicadas</span><span class="f310-casilla">61</span><span class="f310-value" id="c61">0</span></div>
-            <div class="f310-row"><span class="f310-label">Sanciones</span><span class="f310-casilla">63</span><span class="f310-value" id="c63">0</span></div>
-            <div class="f310-row result-pay"><span class="f310-label">Total saldo a pagar</span><span class="f310-casilla">64</span><span class="f310-value" id="c64">0</span></div>
-            <div class="f310-row result-fav"><span class="f310-label">Total saldo a favor</span><span class="f310-casilla">65</span><span class="f310-value" id="c65">0</span></div>
-          </div>
-
+        <div style="font-size:26px;font-weight:900;color:#fbbf24;">310</div>
+      </div>
+      <div style="padding:16px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#faf5ff;border:1px solid #ede9fe;border-radius:5px;"><span style="font-size:10px;">Año</span><span style="font-size:9px;color:#9ca3af;">1</span><span id="inc-c1" style="font-size:11px;font-weight:700;color:#6d28d9;">—</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#faf5ff;border:1px solid #ede9fe;border-radius:5px;"><span style="font-size:10px;">Período</span><span style="font-size:9px;color:#9ca3af;">3</span><span id="inc-c3" style="font-size:11px;font-weight:700;color:#6d28d9;">—</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#faf5ff;border:1px solid #ede9fe;border-radius:5px;"><span style="font-size:10px;">Periodicidad</span><span style="font-size:9px;color:#9ca3af;">24</span><span id="inc-c24" style="font-size:11px;font-weight:700;color:#6d28d9;">—</span></div>
         </div>
+        <div id="inc-casilleros"></div>
       </div>
-
-      <!-- Detalle por mes -->
-      <div id="inc-detalleSection" style="margin-top:16px;"></div>
-
-      <div class="actions">
-        <button class="btn btn-gold" onclick="inc_descargarPDF()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Descargar PDF Formulario 310
-        </button>
-        <button class="btn btn-outline" onclick="inc_limpiar()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-          Nueva liquidación
-        </button>
-      </div>
+    </div>
+    <div id="inc-detalleSection" style="margin-top:12px;overflow-x:auto;"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+      <button onclick="inc_descargarPDF()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">⬇ Descargar PDF Formulario 310</button>
+      <button onclick="openModulos()" style="background:#fff;color:#7c3aed;border:2px solid #7c3aed;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">← Volver a Módulos</button>
     </div>
   </div>
 </div>
 
-
   </div>
 </div>
-
 </body>
 </html>l>l>
