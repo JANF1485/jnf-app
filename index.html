@@ -698,6 +698,7 @@ function confirmarAnio(){
 }
 
 function showScreen(name){
+  if(name !== 'splash') sessionStorage.setItem('splashSeen','1');
   SCREENS.forEach(s=>{
     document.getElementById('screen-'+s).style.display = s===name ? '' : 'none';
   });
@@ -946,6 +947,7 @@ function goBack(){
 }
 
 function goHome(){
+  sessionStorage.removeItem('splashSeen');
   document.getElementById('screen-app').style.display='none';
   document.getElementById('screen-splash').style.display='flex';
   activeClientId=null; activeYear=null;
@@ -1288,6 +1290,11 @@ function showLoginScreen(){
 
 function showApp(){
   document.getElementById('screen-login').style.display='none';
+  // Show splash first if first time this session
+  if(!sessionStorage.getItem('splashSeen')){
+    document.getElementById('screen-splash').style.display='flex';
+    return;
+  }
   document.getElementById('screen-splash').style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
