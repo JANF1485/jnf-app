@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>JNF — Gestión de Clientes · Prevalidador DIAN AG 2025</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
@@ -479,6 +480,139 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   padding:3px 8px;border-radius:20px;background:#f1f5f9;color:#94a3b8;}
 
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ═══ F300 IVA MODULE ════════════════════════════════════ */
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Montserrat,sans-serif;background:#f0f2f8;color:#111827;min-height:100vh;}
+.hdr{background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;}
+.hdr-title{font-size:15px;font-weight:800;}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:2px;}
+.main{max-width:960px;margin:28px auto;padding:0 20px;}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:20px;}
+.card-title{font-size:14px;font-weight:700;color:#1a2580;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.upload-zone{border:2px dashed #c7d2e8;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#f8faff;}
+.upload-zone:hover,.upload-zone.drag{border-color:#1a2580;background:#eef1ff;}
+.upload-title{font-size:14px;font-weight:700;color:#1a2580;}
+.upload-hint{font-size:11px;color:#6b7280;margin-top:4px;}
+.periodo-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
+.fi label{font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;}
+.fi select,.fi input{width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;}
+.fi select:focus,.fi input:focus{border-color:#1a2580;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn-primary{background:#1a2580;color:#fff;}
+.btn-primary:hover{background:#2535a8;}
+.btn-gold{background:#c9a227;color:#fff;}
+.btn-gold:hover{background:#b8911f;}
+.btn-outline{background:#fff;color:#1a2580;border:2px solid #1a2580;}
+.btn-outline:hover{background:#f0f2ff;}
+.btn:disabled{opacity:.5;cursor:default;}
+.sheets-detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.sheet-tag{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.sheet-tag.found{background:#d1fae5;color:#065f46;}
+.sheet-tag.missing{background:#fee2e2;color:#991b1b;}
+.sheet-tag.optional{background:#fef3c7;color:#92400e;}
+.f300{background:#fff;border:2px solid #1a2580;border-radius:8px;overflow:hidden;font-size:11px;}
+.f300-header{background:#1a2580;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+.f300-num{font-size:28px;font-weight:900;color:#c9a227;}
+.f300-body{padding:16px;}
+.f300-section{margin-bottom:14px;}
+.f300-section-title{font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid #1a2580;padding-bottom:4px;margin-bottom:8px;}
+.f300-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.f300-row{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:5px;background:#f8faff;border:1px solid #e5e7f0;}
+.f300-row.highlight{background:#fff8e6;border-color:#c9a227;}
+.f300-row.total{background:#eef1ff;border-color:#1a2580;font-weight:700;}
+.f300-label{font-size:10px;color:#374151;flex:1;padding-right:8px;}
+.f300-casilla{font-size:9px;color:#9ca3af;min-width:18px;text-align:center;font-weight:700;}
+.f300-value{font-size:11px;font-weight:700;color:#1a2580;min-width:100px;text-align:right;}
+.f300-value.positive{color:#065f46;}
+.f300-value.negative{color:#991b1b;}
+.f300-value.zero{color:#9ca3af;}
+.st{display:none;padding:10px 16px;border-radius:8px;margin-bottom:14px;font-size:12px;font-weight:600;}
+.st.ok{background:#d1fae5;color:#065f46;display:block;}
+.st.err{background:#fee2e2;color:#991b1b;display:block;}
+.st.info{background:#dbeafe;color:#1e40af;display:block;}
+.summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.s-card{background:#f8faff;border:1px solid #e5e7f0;border-radius:10px;padding:14px;}
+.s-card-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.s-card-value{font-size:16px;font-weight:800;color:#1a2580;}
+.s-card-value.green{color:#065f46;}
+.s-card-value.red{color:#991b1b;}
+.s-card-value.gold{color:#92400e;}
+.periodo-badge{display:inline-block;background:#1a2580;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+.detalle-section{margin-top:12px;background:#f8faff;border-radius:8px;padding:12px;}
+.detalle-title{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.detalle-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #e5e7f0;}
+.detalle-row:last-child{border:none;font-weight:700;color:#1a2580;}
+.detalle-label{color:#374151;}
+.detalle-val{font-weight:600;color:#1a2580;}
+
+
+/* ═══ F310 INC MODULE ════════════════════════════════════ */
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Montserrat,sans-serif;background:#f0f2f8;color:#111827;min-height:100vh;}
+.hdr{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;}
+.hdr-title{font-size:15px;font-weight:800;}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:2px;}
+.main{max-width:900px;margin:28px auto;padding:0 20px;}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:20px;}
+.card-title{font-size:14px;font-weight:700;color:#6d28d9;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.upload-zone{border:2px dashed #ddd6fe;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#faf5ff;}
+.upload-zone:hover,.upload-zone.drag{border-color:#7c3aed;background:#ede9fe;}
+.upload-title{font-size:14px;font-weight:700;color:#6d28d9;}
+.upload-hint{font-size:11px;color:#6b7280;margin-top:4px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
+.fi label{font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;}
+.fi select,.fi input{width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;}
+.fi select:focus,.fi input:focus{border-color:#7c3aed;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;border:none;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn-primary{background:#7c3aed;color:#fff;}
+.btn-primary:hover{background:#6d28d9;}
+.btn-gold{background:#c9a227;color:#fff;}
+.btn-outline{background:#fff;color:#7c3aed;border:2px solid #7c3aed;}
+.btn:disabled{opacity:.5;cursor:default;}
+.sheets-detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.sheet-tag{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.sheet-tag.found{background:#d1fae5;color:#065f46;}
+.sheet-tag.missing{background:#fee2e2;color:#991b1b;}
+.sheet-tag.optional{background:#fef3c7;color:#92400e;}
+.st{display:none;padding:10px 16px;border-radius:8px;margin-bottom:14px;font-size:12px;font-weight:600;}
+.st.ok{background:#d1fae5;color:#065f46;display:block;}
+.st.err{background:#fee2e2;color:#991b1b;display:block;}
+.st.info{background:#ede9fe;color:#5b21b6;display:block;}
+.summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.s-card{background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px;}
+.s-card-label{font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.s-card-value{font-size:18px;font-weight:800;color:#6d28d9;}
+.s-card-value.green{color:#065f46;}
+.s-card-value.red{color:#991b1b;}
+.f310{background:#fff;border:2px solid #7c3aed;border-radius:8px;overflow:hidden;}
+.f310-header{background:#6d28d9;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+.f310-num{font-size:28px;font-weight:900;color:#fbbf24;}
+.f310-body{padding:16px;}
+.f310-section{margin-bottom:14px;}
+.f310-section-title{font-size:10px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid #7c3aed;padding-bottom:4px;margin-bottom:8px;}
+.f310-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:6px;background:#faf5ff;border:1px solid #ede9fe;margin-bottom:4px;}
+.f310-row.total{background:#ede9fe;border-color:#7c3aed;font-weight:700;}
+.f310-row.highlight{background:#fef3c7;border-color:#f59e0b;}
+.f310-row.result-pay{background:#fee2e2;border-color:#f87171;}
+.f310-row.result-fav{background:#d1fae5;border-color:#34d399;}
+.f310-label{font-size:11px;color:#374151;flex:1;}
+.f310-casilla{font-size:9px;color:#9ca3af;min-width:24px;text-align:center;font-weight:700;}
+.f310-value{font-size:12px;font-weight:700;min-width:120px;text-align:right;}
+.f310-value.pos{color:#065f46;}
+.f310-value.neg{color:#991b1b;}
+.f310-value.zero{color:#9ca3af;}
+.periodo-badge{display:inline-block;background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+.info-box{background:#ede9fe;border-radius:8px;padding:12px 16px;font-size:11px;color:#5b21b6;margin-bottom:16px;line-height:1.6;}
+.detalle-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px;}
+.detalle-table th{background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:6px 8px;text-align:left;border:1px solid #ddd6fe;}
+.detalle-table td{padding:5px 8px;border:1px solid #f0f0f0;}
+.detalle-table tr:last-child td{background:#ede9fe;font-weight:700;color:#5b21b6;}
+
 </style>
 
 <script>
@@ -714,6 +848,20 @@ const MODULES = [
     active:true, action:'openExogena()'
   },
   {
+    id:'f300',icon:'🧾',iconBg:'#e8f5e9',
+    title:'Declaración IVA — Formulario 300',
+    desc:'Liquida la declaración de IVA desde el Excel de facturación. Calcula bases, impuesto generado, descontable y resultado.',
+    tags:['Base 5%','Base 19%','SERV Públicos','Doc Soporte'],
+    active:true, action:'openF300()'
+  },
+  {
+    id:'inc',icon:'🍽️',iconBg:'#ede9fe',
+    title:'Declaración INC — Formulario 310',
+    desc:'Liquida el Impuesto Nacional al Consumo (8%) para restaurantes y servicios. Genera el PDF del formulario 310.',
+    tags:['Base 8%','IPO 8%','Devoluciones'],
+    active:true, action:'openINC()'
+  },
+  {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
     title:'Documentos y Soportes',
     desc:'Gestión y archivo de documentos contables y soportes del cliente.',
@@ -929,11 +1077,11 @@ function loadSavedResults(clientId, year){
 }
 
 function goBack(){
-  const screens=['consolidador','contabilidad','anio','clientes'];
+  const screens=['consolidador','f300','inc','contabilidad','anio','clientes'];
   for(const s of screens){
     const el=document.getElementById('screen-'+s);
     if(el && el.style.display!=='none'){
-      if(s==='consolidador'){
+      if(s==='consolidador'||s==='f300'||s==='inc'){
         showScreen('contabilidad');
         // Refresh saved results panel after returning from consolidador
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
@@ -1056,7 +1204,7 @@ async function readRUT(file){
       r.readAsDataURL(file);
     });
 
-    const GEMINI_KEY = 'AIzaSyCyL5KC34aDIYSTfNldYcI4Ql6y5f45B1Y';
+    const GEMINI_KEY = 'PEGA_TU_NUEVA_API_KEY_AQUI';
     const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos. IMPORTANTE: Responde UNICAMENTE con el objeto JSON, sin ningun texto antes ni despues, sin backticks, sin markdown. Solo el JSON puro empezando con { y terminando con }. Formato: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}';
 
     const resp = await fetch(
@@ -1344,6 +1492,8 @@ function fbDeleteResult(key){
 // ── ADMIN: USUARIOS ──────────────────────────────────────
 var MODULOS_LIST = [
   {id:'exogena', lbl:'Información Exógena AG 2025'},
+  {id:'f300',    lbl:'Declaración IVA — Formulario 300'},
+  {id:'inc',     lbl:'Declaración INC — Formulario 310'},
   {id:'docs',    lbl:'Documentos y Soportes'},
   {id:'estados', lbl:'Estados Financieros'},
   {id:'nomina',  lbl:'Nómina'},
@@ -1549,6 +1699,1262 @@ window._CONS_B64=null;
   // Mark that we need to go through splash
   sessionStorage.removeItem('splashSeen');
   initFirebase();
-});</script>
+});
+// ════════════════════════════════════════════════════
+// F300 IVA MODULE
+// ════════════════════════════════════════════════════
+
+const f300_PERIODOS = {
+  cuatrimestral:[
+    {cod:'01',label:'1° Cuatrimestre (Enero–Abril)',meses:['ENERO','FEBRERO','MARZO','ABRIL']},
+    {cod:'02',label:'2° Cuatrimestre (Mayo–Agosto)',meses:['MAYO','JUNIO','JULIO','AGOSTO']},
+    {cod:'03',label:'3° Cuatrimestre (Septiembre–Diciembre)',meses:['SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']},
+  ],
+  bimestral:[
+    {cod:'01',label:'1° Bimestre (Enero–Febrero)',meses:['ENERO','FEBRERO']},
+    {cod:'02',label:'2° Bimestre (Marzo–Abril)',meses:['MARZO','ABRIL']},
+    {cod:'03',label:'3° Bimestre (Mayo–Junio)',meses:['MAYO','JUNIO']},
+    {cod:'04',label:'4° Bimestre (Julio–Agosto)',meses:['JULIO','AGOSTO']},
+    {cod:'05',label:'5° Bimestre (Septiembre–Octubre)',meses:['SEPTIEMBRE','OCTUBRE']},
+    {cod:'06',label:'6° Bimestre (Noviembre–Diciembre)',meses:['NOVIEMBRE','DICIEMBRE']},
+  ]
+};
+
+// Month name to column index mapping for pivot sheets
+const f300_MES_COLS = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function f300_updatePeriodos(){
+  const t=document.getElementById('f300-periodicidad').value;
+  const s=document.getElementById('f300-periodo');
+  s.innerHTML=f300_PERIODOS[t].map(p=>`<option value="${p.cod}">${p.label}</option>`).join('');
+}
+
+let f300_wb=null, sheetMap={};
+
+// Find sheet by possible names
+function f300_findSheet(names){
+  for(const n of names){
+    for(const sn of Object.keys(f300_wb.Sheets)){
+      if(sn.trim().toUpperCase()===n.toUpperCase()) return sn;
+    }
+  }
+  return null;
+}
+
+function f300_handleFile(file){
+  if(!file) return;
+  document.getElementById('f300-fileNameDisplay').textContent='📄 '+file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      f300_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      // Map sheet names
+      sheetMap={
+        ventas:     f300_findSheet(['VENTAS','INGRESOS']),
+        dvVentas:   f300_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']),
+        costos:     f300_findSheet(['COSTOS','COMPRAS','EGRESOS']),
+        dvCostos:   f300_findSheet(['DEV COSTOS','DV COSTOS.','DV COSTOS','DEVOLUCIONES COSTOS']),
+        servPub:    f300_findSheet(['SERV PUBLICOS','SERV. PUBLICOS','SERVICIOS PUBLICOS','SERV PUB']),
+        docSoporte: f300_findSheet(['DOC. SOPORTE','DOC SOPORTE','DOCUMENTO SOPORTE','DOC.SOPORTE']),
+      };
+      // Show detected sheets
+      const tags=[
+        {key:'ventas',label:'VENTAS',req:true},
+        {key:'dvVentas',label:'DEV VENTAS',req:false},
+        {key:'costos',label:'COSTOS',req:true},
+        {key:'dvCostos',label:'DEV COSTOS',req:false},
+        {key:'servPub',label:'SERV PÚBLICOS',req:false},
+        {key:'docSoporte',label:'DOC. SOPORTE',req:false},
+      ];
+      document.getElementById('f300-sheetsDetected').innerHTML=tags.map(t=>{
+        const found=!!sheetMap[t.key];
+        const cls=found?'found':t.req?'missing':'optional';
+        return `<span class="sheet-tag ${cls}">${found?'✓':'✗'} ${t.label}</span>`;
+      }).join('');
+      if(!sheetMap.ventas||!sheetMap.costos){
+        f300_ss('Faltan pestañas obligatorias: VENTAS y COSTOS','err');
+        document.getElementById('f300-btnProcesar').disabled=true;
+        return;
+      }
+      f300_ss('Excel cargado ✓ — '+f300_wb.SheetNames.join(', '),'ok');
+      document.getElementById('f300-btnProcesar').disabled=false;
+    }catch(e){f300_ss('Error leyendo Excel: '+e.message,'err');}
+  };
+  reader.readAsBinaryString(file);
+}
+
+function f300_ss(msg,t){
+  const e=document.getElementById('f300-stbar');
+  e.textContent=msg; e.className='st '+t;
+  setTimeout(()=>e.className='st',6000);
+}
+
+function f300_toN(v){return typeof v==='number'?v:(parseFloat(String(v||'0').replace(/[^0-9.-]/g,''))||0);}
+function f300_fmt(n){return n===0?'0':Math.round(n).toLocaleString('es-CO');}
+function f300_rdMil(n){return Math.round(n/1000)*1000;}
+
+// Find header row (first row where cols count > 3)
+function f300_findHeaderRow(ws){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  for(let r=range.s.r;r<=Math.min(range.s.r+5,range.e.r);r++){
+    let cnt=0;
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell&&cell.v) cnt++;
+    }
+    if(cnt>=4) return r;
+  }
+  return 0;
+}
+
+// Get column index by name, starting from header row
+function colIdxFrom(ws, colName, headerRow){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  const name=colName.trim().toUpperCase();
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:headerRow,c})];
+    if(cell&&String(cell.v||'').trim().toUpperCase()===name) return c;
+  }
+  // Try partial match
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:headerRow,c})];
+    if(cell&&String(cell.v||'').trim().toUpperCase().includes(name)) return c;
+  }
+  return -1;
+}
+
+// Sum column filtered by month (normal transaction sheets)
+function sumByMes(sheetName, colNames, mesColNames, meses){
+  if(!sheetName||!f300_wb.Sheets[sheetName]) return 0;
+  const ws=f300_wb.Sheets[sheetName];
+  const hrow=f300_findHeaderRow(ws);
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+
+  // Find column indices - try multiple column names
+  let ci=-1;
+  for(const cn of (Array.isArray(colNames)?colNames:[colNames])){
+    ci=colIdxFrom(ws,cn,hrow);
+    if(ci>=0) break;
+  }
+  if(ci<0) return 0;
+
+  // Find month column
+  let mi=-1;
+  for(const mn of (Array.isArray(mesColNames)?mesColNames:[mesColNames])){
+    mi=colIdxFrom(ws,mn,hrow);
+    if(mi>=0) break;
+  }
+
+  let total=0;
+  for(let r=hrow+1;r<=range.e.r;r++){
+    if(mi>=0&&meses&&meses.length>0){
+      const mc=ws[XLSX.utils.encode_cell({r,c:mi})];
+      if(!mc) continue;
+      const mv=String(mc.v||'').trim().toUpperCase();
+      if(!meses.includes(mv)) continue;
+    }
+    const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
+    if(cell&&typeof cell.v==='number') total+=cell.v;
+  }
+  return total;
+}
+
+// Sum pivot sheet (SERV PUBLICOS / DOC. SOPORTE) - rows=providers, cols=months
+function sumPivot(sheetName, meses){
+  if(!sheetName||!f300_wb.Sheets[sheetName]) return 0;
+  const ws=f300_wb.Sheets[sheetName];
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+
+  // Find header row with month names
+  let hrow=-1;
+  let mesColMap={};
+  for(let r=range.s.r;r<=Math.min(range.s.r+5,range.e.r);r++){
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell&&f300_MES_COLS.includes(String(cell.v||'').trim().toUpperCase())){
+        hrow=r; break;
+      }
+    }
+    if(hrow>=0) break;
+  }
+  if(hrow<0) return 0;
+
+  // Map month names to column indices
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:hrow,c})];
+    if(cell){
+      const mv=String(cell.v||'').trim().toUpperCase();
+      if(f300_MES_COLS.includes(mv)) mesColMap[mv]=c;
+    }
+  }
+
+  // Sum values for requested months
+  let total=0;
+  for(const mes of meses){
+    const mc=mesColMap[mes];
+    if(mc===undefined) continue;
+    for(let r=hrow+1;r<=range.e.r;r++){
+      const cell=ws[XLSX.utils.encode_cell({r,c:mc})];
+      if(cell&&typeof cell.v==='number') total+=cell.v;
+    }
+  }
+  return total;
+}
+
+function f300_procesar(){
+  if(!f300_wb){f300_ss('Carga primero el archivo Excel','err');return;}
+  const anio=document.getElementById('f300-anio').value;
+  const tipo=document.getElementById('f300-periodicidad').value;
+  const pCod=document.getElementById('f300-periodo').value;
+  const pObj=f300_PERIODOS[tipo].find(p=>p.cod===pCod);
+  const meses=pObj.meses;
+
+  const mesColsV=['FECHA','MES','MES.','FECHA EMISION'];
+  const mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
+
+  // ── VENTAS ────────────────────────────────────────────────
+  const v_b5   =sumByMes(sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
+  const v_b19  =sumByMes(sheetMap.ventas,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsV,meses);
+  const v_i5   =sumByMes(sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
+  const v_i19  =sumByMes(sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
+  const v_exen =sumByMes(sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
+
+  // ── DEV VENTAS ────────────────────────────────────────────
+  const dv_b5  =sumByMes(sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
+  const dv_b19 =sumByMes(sheetMap.dvVentas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
+  const dv_i5  =sumByMes(sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
+  const dv_i19 =sumByMes(sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
+  const dv_exen=sumByMes(sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
+
+  // ── COSTOS ────────────────────────────────────────────────
+  const c_b5   =sumByMes(sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
+  const c_b19  =sumByMes(sheetMap.costos,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsC,meses);
+  const c_i5   =sumByMes(sheetMap.costos,['IVA 5%','IVA5','IVA 5.','IVA5%'],mesColsC,meses);
+  const c_i19  =sumByMes(sheetMap.costos,['IVA 19%','IVA19','IVA19%','IVA19%.'],mesColsC,meses);
+  const c_exen =sumByMes(sheetMap.costos,['EXENTO','EXENTA','EXENTOS'],mesColsC,meses);
+
+  // ── DEV COSTOS ────────────────────────────────────────────
+  const dc_b5  =sumByMes(sheetMap.dvCostos,['BASE 5','BASE5'],mesColsC,meses);
+  const dc_b19 =sumByMes(sheetMap.dvCostos,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
+  const dc_i5  =sumByMes(sheetMap.dvCostos,['IVA 5%','IVA5'],mesColsC,meses);
+  const dc_i19 =sumByMes(sheetMap.dvCostos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
+  const dc_exen=sumByMes(sheetMap.dvCostos,['EXENTO','EXENTA'],mesColsC,meses);
+
+  // ── SERV PUBLICOS (pivot) — van a excluidos casilla 54 ────
+  const sp_total=sumPivot(sheetMap.servPub,meses);
+
+  // ── DOC SOPORTE (pivot) — van a excluidos casilla 54 ─────
+  const ds_total=sumPivot(sheetMap.docSoporte,meses);
+
+  // ── CASILLEROS F300 ───────────────────────────────────────
+  const c27=f300_rdMil(v_b5);
+  const c28=f300_rdMil(v_b19);
+  const c35=f300_rdMil(v_exen);
+  const c39=0;
+  const c41=f300_rdMil(c27+c28+c35+c39);
+  const c42=f300_rdMil(dv_b5+dv_b19+dv_exen);
+  const c43=Math.max(0,c41-c42);
+
+  const c50=f300_rdMil(c_b5-dc_b5);
+  const c51=f300_rdMil(c_b19-dc_b19);
+  const c52=0;
+  const c53=0;
+  const c54=f300_rdMil((c_exen-dc_exen)+sp_total+ds_total);
+  const c55=f300_rdMil(c50+c51+c52+c53+c54);
+  const c56=f300_rdMil(dc_b5+dc_b19+dc_exen);
+  const c57=Math.max(0,c55);
+
+  const c58=f300_rdMil(v_i5-dv_i5);
+  const c59=f300_rdMil(v_i19-dv_i19);
+  const c67=f300_rdMil(c58+c59);
+
+  const c71=f300_rdMil(c_i5-dc_i5);
+  const c72=f300_rdMil(c_i19-dc_i19);
+  const c74=0;
+  const c75=0;
+  const c77=f300_rdMil(c71+c72+c74+c75);
+  const c79=f300_rdMil(dv_i5+dv_i19);
+  const c81=f300_rdMil(c77+c79);
+
+  const c82=Math.max(0,f300_rdMil(c67-c81));
+  const c83=Math.max(0,f300_rdMil(c81-c67));
+  const c84=0;
+  const c85=0;
+  const c87=0;
+  const c88=Math.max(0,c82-c84-c85+c87);
+  const c89=Math.max(0,c83+c84+c85-c87);
+
+  window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
+    c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
+    c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
+    sp_total,ds_total,v_b5,v_b19,v_exen,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
+
+  // Render
+  document.getElementById('c1').textContent=anio;
+  document.getElementById('c3').textContent=pCod;
+  document.getElementById('c24').textContent=tipo==='bimestral'?'Bimestral':'Cuatrimestral';
+  document.getElementById('f300-periodoInfo').textContent=pObj.label+' · Año '+anio;
+  document.getElementById('f300-periodoBadge').textContent='Período: '+pObj.label+' · '+anio;
+
+  const sv=(id,val)=>{
+    const el=document.getElementById(id);
+    el.textContent='$'+f300_fmt(val);
+    el.className='f300-value'+(val>0?' positive':val<0?' negative':' zero');
+  };
+  sv('c27',c27);sv('c28',c28);sv('c35',c35);sv('c39',c39);
+  sv('c41',c41);sv('c42',c42);sv('c43',c43);
+  sv('c50',c50);sv('c51',c51);sv('c52',c52);sv('c53',c53);
+  sv('c54',c54);sv('c55',c55);sv('c56',c56);sv('c57',c57);
+  sv('c58',c58);sv('c59',c59);sv('c67',c67);
+  sv('c71',c71);sv('c72',c72);sv('c74',c74);sv('c75',c75);
+  sv('c79',c79);sv('c81',c81);
+  sv('c82',c82);sv('c83',c83);sv('c85',c85);sv('c87',c87);
+  sv('c88',c88);sv('c89',c89);
+
+  // Summary cards
+  document.getElementById('f300-summaryCards').innerHTML=[
+    {label:'IVA Generado',val:c67,cls:''},
+    {label:'IVA Descontable',val:c81,cls:''},
+    {label:c82>0?'Saldo a Pagar':'Saldo a Favor',val:c82>0?c82:c83,cls:c82>0?'red':'green'},
+    {label:'Ingresos Netos',val:c43,cls:'gold'},
+  ].map(s=>`<div class="s-card"><div class="s-card-label">${s.label}</div><div class="s-card-value ${s.cls}">$${f300_fmt(s.val)}</div></div>`).join('');
+
+  // Detalle de fuentes
+  document.getElementById('f300-detalleSection').innerHTML=`
+    <div class="detalle-title">Detalle por fuente — Compras (casilla 54 excluidos)</div>
+    <div class="detalle-row"><span class="detalle-label">Compras excluidas/exentas (COSTOS)</span><span class="detalle-val">$${f300_fmt(c_exen-dc_exen)}</span></div>
+    <div class="detalle-row"><span class="detalle-label">Servicios públicos (SERV PÚBLICOS)</span><span class="detalle-val">$${f300_fmt(sp_total)}</span></div>
+    <div class="detalle-row"><span class="detalle-label">Documentos soporte (DOC. SOPORTE)</span><span class="detalle-val">$${f300_fmt(ds_total)}</span></div>
+    <div class="detalle-row"><span class="detalle-label">Total excluidos/exentos (casilla 54)</span><span class="detalle-val">$${f300_fmt(c54)}</span></div>
+  `;
+
+  document.getElementById('f300-resultado').style.display='block';
+  document.getElementById('f300-resultado').scrollIntoView({behavior:'smooth'});
+  f300_ss('Formulario 300 liquidado correctamente ✓','ok');
+  try{var _k='jnf_f300_'+activeClientId+'_'+f300_anio+'_'+f300_pCod;
+  if(window.fbSaveResult)window.fbSaveResult(_k,window._f300Data);}catch(e){}
+}
+
+async function f300_descargarPDF(){
+  const d=window._f300Data;
+  if(!d){f300_ss('Primero liquida el formulario','err');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  const W=216,H=279;
+  const blue=[26,37,128],gold=[201,162,39],gray=[100,100,100];
+  const lBlue=[238,241,255],lGold=[255,248,230];
+
+  doc.setFillColor(...blue);doc.rect(0,0,W,22,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('Declaración del Impuesto sobre las Ventas - IVA',14,9);
+  doc.setFontSize(9);doc.text(d.pLabel+' · Año '+d.anio,14,15);
+  doc.setFontSize(28);doc.setTextColor(...gold);doc.text('300',W-14,16,{align:'right'});
+
+  doc.setFillColor(...lBlue);doc.setDrawColor(...blue);
+  doc.roundedRect(10,25,W-20,14,2,2,'FD');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...blue);
+  doc.text('Año: '+d.anio+'   |   Período: '+d.pCod+'   |   Periodicidad: '+(d.tipo==='bimestral'?'Bimestral':'Cuatrimestral'),14,31);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...gray);
+  doc.text('Meses: '+d.meses.join(', '),14,36);
+
+  let y=44;const lH=7;
+  function sec(title,yy){
+    doc.setFillColor(...blue);doc.rect(10,yy,W-20,6,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
+    doc.text(title.toUpperCase(),14,yy+4.5);return yy+6;
+  }
+  function row(label,cas,val,yy,hi){
+    const bg=hi?lGold:(yy%14<7?[248,250,255]:[255,255,255]);
+    doc.setFillColor(...bg);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setDrawColor(220,225,240);doc.rect(10,yy,W-20,lH-1,'S');
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(55,65,81);
+    doc.text(label,14,yy+4.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...blue);
+    doc.text(String(cas),W-50,yy+4.5,{align:'center'});
+    doc.setFont('helvetica','bold');doc.setFontSize(8);
+    doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
+    doc.text('$ '+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.5,{align:'right'});
+    return yy+lH;
+  }
+
+  y=sec('Ingresos',y);
+  y=row('Por operaciones gravadas al 5%',27,d.c27,y,false);
+  y=row('Por operaciones gravadas a la tarifa general (19%)',28,d.c28,y,false);
+  y=row('Por operaciones exentas',35,d.c35,y,false);
+  y=row('Por operaciones excluidas',39,d.c39,y,false);
+  y=row('Total ingresos brutos (27+28+35+39)',41,d.c41,y,true);
+  y=row('Devoluciones en ventas',42,d.c42,y,false);
+  y=row('Total ingresos netos (41 - 42)',43,d.c43,y,true);y+=2;
+
+  y=sec('Compras',y);
+  y=row('De bienes gravados a la tarifa del 5%',50,d.c50,y,false);
+  y=row('De bienes gravados a la tarifa general (19%)',51,d.c51,y,false);
+  y=row('De servicios gravados a la tarifa del 5%',52,d.c52,y,false);
+  y=row('De servicios gravados a la tarifa general (19%)',53,d.c53,y,false);
+  y=row('Excluidos/exentos (COSTOS + SERV PÚB + DOC SOP)',54,d.c54,y,false);
+  y=row('Total compras brutas',55,d.c55,y,true);
+  y=row('Devoluciones en compras',56,d.c56,y,false);
+  y=row('Total compras netas (55 - 56)',57,d.c57,y,true);y+=2;
+
+  y=sec('Impuesto generado',y);
+  y=row('A la tarifa del 5%',58,d.c58,y,false);
+  y=row('A la tarifa general (19%)',59,d.c59,y,false);
+  y=row('Total impuesto generado',67,d.c67,y,true);y+=2;
+
+  y=sec('Impuesto descontable',y);
+  y=row('Por compras de bienes gravados al 5%',71,d.c71,y,false);
+  y=row('Por compras de bienes gravados al 19%',72,d.c72,y,false);
+  y=row('Por servicios gravados al 5%',74,d.c74,y,false);
+  y=row('Por servicios gravados al 19%',75,d.c75,y,false);
+  y=row('Total impuesto pagado o facturado',77,d.c77,y,false);
+  y=row('IVA resultante devoluciones en ventas',79,d.c79,y,false);
+  y=row('Total impuestos descontables',81,d.c81,y,true);y+=2;
+
+  y=sec('Resultado',y);
+  y=row('Saldo a pagar por el período fiscal',82,d.c82,y,d.c82>0);
+  y=row('Saldo a favor del período fiscal',83,d.c83,y,d.c83>0);
+  y=row('Retenciones por IVA que le practicaron',85,d.c85,y,false);
+  y=row('Sanciones',87,d.c87,y,false);
+  y=row('Total saldo a pagar',88,d.c88,y,d.c88>0);
+  y=row('Total saldo a favor',89,d.c89,y,d.c89>0);y+=4;
+
+  // Detalle fuentes
+  y=sec('Detalle — Compras excluidas (casilla 54)',y);
+  y=row('COSTOS excluidos/exentos','-',d.c_exen-d.dc_b5-d.dc_b19,y,false);
+  y=row('SERV PÚBLICOS','-',d.sp_total,y,false);
+  y=row('DOC. SOPORTE','-',d.ds_total,y,false);
+  y=row('Total casilla 54',54,d.c54,y,true);
+
+  doc.setFillColor(...blue);doc.rect(0,H-14,W,14,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
+  doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9 · '+new Date().toLocaleString('es-CO'),W/2,H-8,{align:'center'});
+  doc.text('Documento de apoyo — No reemplaza el formulario oficial de la DIAN',W/2,H-4,{align:'center'});
+
+  const fn='F300_IVA_'+d.anio+'_P'+d.pCod+'_'+(d.tipo==='bimestral'?'B':'C')+'.pdf';
+  doc.save(fn);
+  f300_ss('PDF descargado: '+fn,'ok');
+}
+
+function f300_limpiar(){
+  f300_wb=null;sheetMap={};
+  document.getElementById('f300-fileNameDisplay').textContent='';
+  document.getElementById('f300-sheetsDetected').innerHTML='';
+  document.getElementById('f300-btnProcesar').disabled=true;
+  document.getElementById('f300-resultado').style.display='none';
+  window._f300Data=null;
+}
+
+
+// ════════════════════════════════════════════════════
+// INC F310 MODULE  
+// ════════════════════════════════════════════════════
+
+const inc_PERIODOS={
+  cuatrimestral:[
+    {cod:'01',label:'1° Cuatrimestre (Enero–Abril)',meses:['ENERO','FEBRERO','MARZO','ABRIL']},
+    {cod:'02',label:'2° Cuatrimestre (Mayo–Agosto)',meses:['MAYO','JUNIO','JULIO','AGOSTO']},
+    {cod:'03',label:'3° Cuatrimestre (Septiembre–Diciembre)',meses:['SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']},
+  ],
+  bimestral:[
+    {cod:'01',label:'1° Bimestre (Enero–Febrero)',meses:['ENERO','FEBRERO']},
+    {cod:'02',label:'2° Bimestre (Marzo–Abril)',meses:['MARZO','ABRIL']},
+    {cod:'03',label:'3° Bimestre (Mayo–Junio)',meses:['MAYO','JUNIO']},
+    {cod:'04',label:'4° Bimestre (Julio–Agosto)',meses:['JULIO','AGOSTO']},
+    {cod:'05',label:'5° Bimestre (Septiembre–Octubre)',meses:['SEPTIEMBRE','OCTUBRE']},
+    {cod:'06',label:'6° Bimestre (Noviembre–Diciembre)',meses:['NOVIEMBRE','DICIEMBRE']},
+  ]
+};
+
+function inc_updatePeriodos(){
+  const t=document.getElementById('inc-periodicidad').value;
+  const s=document.getElementById('inc-periodo');
+  s.innerHTML=inc_PERIODOS[t].map(p=>`<option value="${p.cod}">${p.label}</option>`).join('');
+}
+
+let inc_wb=null,sheetVentas=null,sheetDevVentas=null;
+
+function inc_findSheet(names){
+  if(!inc_wb) return null;
+  for(const n of names){
+    for(const sn of inc_wb.SheetNames){
+      if(sn.trim().toUpperCase()===n.toUpperCase()) return sn;
+    }
+  }
+  return null;
+}
+
+function inc_handleFile(file){
+  if(!file) return;
+  document.getElementById('inc-fileNameDisplay').textContent='📄 '+file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      inc_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      sheetVentas=inc_findSheet(['VENTAS','INGRESOS']);
+      sheetDevVentas=inc_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']);
+
+      const tags=[
+        {name:sheetVentas,label:'VENTAS',req:true},
+        {name:sheetDevVentas,label:'DEV VENTAS',req:false},
+      ];
+      document.getElementById('inc-sheetsDetected').innerHTML=tags.map(t=>{
+        const cls=t.name?'found':t.req?'missing':'optional';
+        return `<span class="sheet-tag ${cls}">${t.name?'✓':'✗'} ${t.label}</span>`;
+      }).join('');
+
+      if(!sheetVentas){inc_ss('No se encontró la pestaña VENTAS','err');return;}
+
+      // Verify IPO columns exist
+      const ws=inc_wb.Sheets[sheetVentas];
+      const hrow=inc_findHeaderRow(ws);
+      const b8=colIdx(ws,'BASE 8%',hrow);
+      const i8=colIdx(ws,'IPO 8%',hrow);
+      if(b8<0&&i8<0){
+        inc_ss('No se encontraron columnas BASE 8% e IPO 8% en VENTAS','err');
+        document.getElementById('inc-btnProcesar').disabled=true;
+        return;
+      }
+
+      let found=[];
+      if(b8>=0) found.push('BASE 8%');
+      if(i8>=0) found.push('IPO 8%');
+      inc_ss('Excel cargado ✓ — Columnas encontradas: '+found.join(', '),'ok');
+      document.getElementById('inc-btnProcesar').disabled=false;
+    }catch(e){inc_ss('Error leyendo Excel: '+e.message,'err');}
+  };
+  reader.readAsBinaryString(file);
+}
+
+function inc_ss(msg,t){
+  const e=document.getElementById('inc-stbar');
+  e.textContent=msg; e.className='st '+t;
+  setTimeout(()=>e.className='st',6000);
+}
+
+function inc_toN(v){return typeof v==='number'?v:(parseFloat(String(v||'0').replace(/[^0-9.-]/g,''))||0);}
+function inc_fmt(n){return n===0?'0':Math.round(n).toLocaleString('es-CO');}
+function inc_rdMil(n){return Math.round(n/1000)*1000;}
+
+function inc_findHeaderRow(ws){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  for(let r=range.s.r;r<=Math.min(range.s.r+5,range.e.r);r++){
+    let cnt=0;
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell&&cell.v) cnt++;
+    }
+    if(cnt>=4) return r;
+  }
+  return 0;
+}
+
+function colIdx(ws,colName,headerRow){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  const name=colName.trim().toUpperCase();
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:headerRow,c})];
+    if(cell&&String(cell.v||'').trim().toUpperCase()===name) return c;
+  }
+  // Partial match
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:headerRow,c})];
+    if(cell&&String(cell.v||'').trim().toUpperCase().replace(/\s/g,'').includes(name.replace(/\s/g,''))) return c;
+  }
+  return -1;
+}
+
+function sumByMesMultiCol(sheetName,colNames,mesColNames,meses){
+  if(!sheetName||!inc_wb||!inc_wb.Sheets[sheetName]) return {total:0,byMes:{}};
+  const ws=inc_wb.Sheets[sheetName];
+  const hrow=inc_findHeaderRow(ws);
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+
+  let ci=-1;
+  for(const cn of (Array.isArray(colNames)?colNames:[colNames])){
+    ci=colIdx(ws,cn,hrow);
+    if(ci>=0) break;
+  }
+  if(ci<0) return {total:0,byMes:{}};
+
+  let mi=-1;
+  for(const mn of (Array.isArray(mesColNames)?mesColNames:[mesColNames])){
+    mi=colIdx(ws,mn,hrow);
+    if(mi>=0) break;
+  }
+
+  let total=0;
+  const byMes={};
+  for(let r=hrow+1;r<=range.e.r;r++){
+    let mesOk=true;
+    let mesVal='';
+    if(mi>=0&&meses&&meses.length>0){
+      const mc=ws[XLSX.utils.encode_cell({r,c:mi})];
+      if(!mc){mesOk=false;}else{
+        mesVal=String(mc.v||'').trim().toUpperCase();
+        mesOk=meses.includes(mesVal);
+      }
+    }
+    if(!mesOk) continue;
+    const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
+    if(cell&&typeof cell.v==='number'){
+      total+=cell.v;
+      if(mesVal) byMes[mesVal]=(byMes[mesVal]||0)+cell.v;
+    }
+  }
+  return {total,byMes};
+}
+
+function inc_procesar(){
+  if(!inc_wb){inc_ss('Carga primero el archivo Excel','err');return;}
+  const anio=document.getElementById('inc-anio').value;
+  const tipo=document.getElementById('inc-periodicidad').value;
+  const pCod=document.getElementById('inc-periodo').value;
+  const pObj=inc_PERIODOS[tipo].find(p=>p.cod===pCod);
+  const meses=pObj.meses;
+  const mesOpts=['MES','FECHA','MES.','FECHA EMISION'];
+
+  // VENTAS — BASE 8% e IPO 8%
+  const vB8=sumByMesMultiCol(sheetVentas,['BASE 8%','BASE8%','BASE 8','BASE8'],mesOpts,meses);
+  const vI8=sumByMesMultiCol(sheetVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
+
+  // DEV VENTAS — BASE IPO e IPO 8%
+  const dvB8=sumByMesMultiCol(sheetDevVentas,['BASE IPO','BASE 8%','BASE8%','BASE IPO 8'],mesOpts,meses);
+  const dvI8=sumByMesMultiCol(sheetDevVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
+
+  // Casilleros F310
+  const c27=inc_rdMil(vB8.total);
+  const c28=inc_rdMil(dvB8.total);
+  const c29=Math.max(0,c27-c28);
+  const c48=inc_rdMil(vI8.total);
+  const c49=inc_rdMil(dvI8.total);
+  const c56=Math.max(0,c48-c49);
+  const c60=0; // saldo favor anterior
+  const c61=0; // retenciones
+  const c63=0; // sanciones
+  const c64=Math.max(0,c56-c60-c61+c63);
+  const c65=Math.max(0,(c60+c61)-c56-c63);
+
+  window._f310Data={anio,tipo,pCod,pLabel:pObj.label,meses,
+    c27,c28,c29,c48,c49,c56,c60,c61,c63,c64,c65,
+    vB8:vB8.byMes,vI8:vI8.byMes,dvB8:dvB8.byMes,dvI8:dvI8.byMes};
+
+  // Render casilleros
+  document.getElementById('c1').textContent=anio;
+  document.getElementById('c3').textContent=pCod;
+  document.getElementById('c24').textContent=tipo==='bimestral'?'Bimestral':'Cuatrimestral';
+  document.getElementById('inc-periodoInfo').textContent=pObj.label+' · Año '+anio;
+  document.getElementById('inc-periodoBadge').textContent='Período: '+pObj.label+' · '+anio;
+
+  const sv=(id,val)=>{
+    const el=document.getElementById(id);
+    el.textContent='$'+inc_fmt(val);
+    el.className='f310-value'+(val>0?' pos':val<0?' neg':' zero');
+  };
+  sv('c27',c27);sv('c28',c28);sv('c29',c29);
+  sv('c48',c48);sv('c49',c49);sv('c56',c56);
+  sv('c60',c60);sv('c61',c61);sv('c63',c63);
+  sv('c64',c64);sv('c65',c65);
+
+  // Summary cards
+  document.getElementById('inc-summaryCards').innerHTML=[
+    {label:'Base Gravable Neta',val:c29,cls:''},
+    {label:'IPO Generado Neto',val:c56,cls:''},
+    {label:c64>0?'A Pagar':'A Favor',val:c64>0?c64:c65,cls:c64>0?'red':'green'},
+  ].map(s=>`<div class="s-card"><div class="s-card-label">${s.label}</div><div class="s-card-value ${s.cls}">$${inc_fmt(s.val)}</div></div>`).join('');
+
+  // Detalle por mes
+  const allMeses=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  let detalleRows='';
+  let totB=0,totI=0,totDB=0,totDI=0;
+  for(const m of meses){
+    const b=(vB8.byMes[m]||0);
+    const i=(vI8.byMes[m]||0);
+    const db=(dvB8.byMes[m]||0);
+    const di=(dvI8.byMes[m]||0);
+    totB+=b;totI+=i;totDB+=db;totDI+=di;
+    detalleRows+=`<tr>
+      <td>${m}</td>
+      <td style="text-align:right">$${inc_fmt(b)}</td>
+      <td style="text-align:right">$${inc_fmt(i)}</td>
+      <td style="text-align:right">$${inc_fmt(db)}</td>
+      <td style="text-align:right">$${inc_fmt(di)}</td>
+      <td style="text-align:right;font-weight:700;color:#6d28d9">$${inc_fmt(i-di)}</td>
+    </tr>`;
+  }
+  detalleRows+=`<tr>
+    <td>TOTAL</td>
+    <td style="text-align:right">$${inc_fmt(totB)}</td>
+    <td style="text-align:right">$${inc_fmt(totI)}</td>
+    <td style="text-align:right">$${inc_fmt(totDB)}</td>
+    <td style="text-align:right">$${inc_fmt(totDI)}</td>
+    <td style="text-align:right">$${inc_fmt(totI-totDI)}</td>
+  </tr>`;
+
+  document.getElementById('inc-detalleSection').innerHTML=`
+    <table class="detalle-table">
+      <thead><tr>
+        <th>Mes</th><th style="text-align:right">Base 8%</th><th style="text-align:right">IPO 8%</th>
+        <th style="text-align:right">Dev. Base</th><th style="text-align:right">Dev. IPO</th>
+        <th style="text-align:right">IPO Neto</th>
+      </tr></thead>
+      <tbody>${detalleRows}</tbody>
+    </table>`;
+
+  document.getElementById('inc-resultado').style.display='block';
+  document.getElementById('inc-resultado').scrollIntoView({behavior:'smooth'});
+  inc_ss('Formulario 310 liquidado correctamente ✓','ok');
+  try{var _k='jnf_inc_'+activeClientId+'_'+inc_anio+'_'+inc_pCod;
+  if(window.fbSaveResult)window.fbSaveResult(_k,window._f310Data);}catch(e){}
+}
+
+async function inc_descargarPDF(){
+  const d=window._f310Data;
+  if(!d){inc_ss('Primero liquida el formulario','err');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  const W=216,H=279;
+  const purple=[109,40,217],gold=[201,162,39],gray=[100,100,100];
+  const lPurple=[237,233,254],lGold=[255,248,230];
+
+  doc.setFillColor(...purple);doc.rect(0,0,W,22,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('Declaración del Impuesto Nacional al Consumo — INC',14,9);
+  doc.setFontSize(9);doc.text(d.pLabel+' · Año '+d.anio,14,15);
+  doc.setFontSize(28);doc.setTextColor(...gold);doc.text('310',W-14,16,{align:'right'});
+
+  doc.setFillColor(...lPurple);doc.setDrawColor(...purple);
+  doc.roundedRect(10,25,W-20,14,2,2,'FD');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...purple);
+  doc.text('Año: '+d.anio+'   |   Período: '+d.pCod+'   |   Periodicidad: '+(d.tipo==='bimestral'?'Bimestral':'Cuatrimestral'),14,31);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...gray);
+  doc.text('Meses: '+d.meses.join(', ')+'   |   Tarifa aplicada: 8%',14,36);
+
+  let y=44;const lH=7;
+  function sec(title,yy){
+    doc.setFillColor(...purple);doc.rect(10,yy,W-20,6,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
+    doc.text(title.toUpperCase(),14,yy+4.5);return yy+6;
+  }
+  function row(label,cas,val,yy,hi){
+    const bg=hi?lGold:(yy%14<7?[248,245,255]:[255,255,255]);
+    doc.setFillColor(...bg);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setDrawColor(221,214,254);doc.rect(10,yy,W-20,lH-1,'S');
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(55,65,81);
+    doc.text(label,14,yy+4.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+    doc.text(String(cas),W-50,yy+4.5,{align:'center'});
+    doc.setFont('helvetica','bold');doc.setFontSize(8);
+    doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
+    doc.text('$ '+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.5,{align:'right'});
+    return yy+lH;
+  }
+
+  y=sec('Ingresos por servicios gravados con INC 8%',y);
+  y=row('Base gravable ventas — servicios al 8%',27,d.c27,y,false);
+  y=row('Devoluciones en ventas — base gravable',28,d.c28,y,false);
+  y=row('Base gravable neta (27 - 28)',29,d.c29,y,true);y+=3;
+
+  y=sec('Liquidación privada — Impuesto generado',y);
+  y=row('IPO generado a la tarifa del 8%',48,d.c48,y,false);
+  y=row('IPO resultante devoluciones en ventas',49,d.c49,y,false);
+  y=row('Total impuesto generado neto (48 - 49)',56,d.c56,y,true);y+=3;
+
+  y=sec('Resultado',y);
+  y=row('Saldo a favor período fiscal anterior',60,d.c60,y,false);
+  y=row('Retenciones practicadas',61,d.c61,y,false);
+  y=row('Sanciones',63,d.c63,y,false);
+  y=row('Total saldo a pagar',64,d.c64,y,d.c64>0);
+  y=row('Total saldo a favor',65,d.c65,y,d.c65>0);y+=5;
+
+  // Detalle por mes
+  y=sec('Detalle por mes',y);
+  const cols=[10,55,100,130,160,185];
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+  ['Mes','Base 8%','IPO 8%','Dev Base','Dev IPO','IPO Neto'].forEach((h,i)=>{
+    doc.text(h,cols[i],y+5);
+  });
+  y+=7;
+
+  for(const m of d.meses){
+    const b=d.vB8[m]||0;const iv=d.vI8[m]||0;
+    const db=d.dvB8[m]||0;const di=d.dvI8[m]||0;
+    const neto=iv-di;
+    const bg=y%14<7?[248,245,255]:[255,255,255];
+    doc.setFillColor(...bg);doc.rect(10,y,W-20,6,'F');
+    doc.setDrawColor(221,214,254);doc.rect(10,y,W-20,6,'S');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(55,65,81);
+    doc.text(m,cols[0],y+4);
+    doc.text('$'+inc_fmt(b),cols[1]+35,y+4,{align:'right'});
+    doc.text('$'+inc_fmt(iv),cols[2]+25,y+4,{align:'right'});
+    doc.text('$'+inc_fmt(db),cols[3]+25,y+4,{align:'right'});
+    doc.text('$'+inc_fmt(di),cols[4]+20,y+4,{align:'right'});
+    doc.setTextColor(...purple);doc.setFont('helvetica','bold');
+    doc.text('$'+inc_fmt(neto),W-12,y+4,{align:'right'});
+    y+=6;
+  }
+  // Total row
+  doc.setFillColor(...lPurple);doc.rect(10,y,W-20,6,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+  doc.text('TOTAL IPO NETO',14,y+4);
+  doc.text('$'+inc_fmt(d.c56),W-12,y+4,{align:'right'});
+
+  doc.setFillColor(...purple);doc.rect(0,H-14,W,14,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
+  doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9 · '+new Date().toLocaleString('es-CO'),W/2,H-8,{align:'center'});
+  doc.text('Documento de apoyo — No reemplaza el formulario oficial de la DIAN',W/2,H-4,{align:'center'});
+
+  const fn='F310_INC_'+d.anio+'_P'+d.pCod+'_'+(d.tipo==='bimestral'?'B':'C')+'.pdf';
+  doc.save(fn);
+  inc_ss('PDF descargado: '+fn,'ok');
+}
+
+function inc_limpiar(){
+  inc_wb=null;sheetVentas=null;sheetDevVentas=null;
+  document.getElementById('inc-fileNameDisplay').textContent='';
+  document.getElementById('inc-sheetsDetected').innerHTML='';
+  document.getElementById('inc-btnProcesar').disabled=true;
+  document.getElementById('inc-resultado').style.display='none';
+  window._f310Data=null;
+}
+
+
+
+// ── F300 Load/Render Saved ────────────────────────────────
+function f300_loadSaved(clientId, year){
+  if(!db) return;
+  ['01','02','03'].forEach(function(p){
+    var key = ('jnf_f300_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    db.collection('resultados').doc(key).get().then(function(doc){
+      if(doc.exists){
+        try{ f300_renderSaved(JSON.parse(doc.data().data||'{}')); }catch(e){}
+      }
+    }).catch(function(){});
+  });
+}
+
+function f300_renderSaved(d){
+  if(!d||!d.c67) return;
+  window._f300Data=d;
+  var pa=document.getElementById('f300-anio');
+  var pp=document.getElementById('f300-periodicidad');
+  var pr=document.getElementById('f300-periodo');
+  if(pa) pa.value=d.anio;
+  if(pp){ pp.value=d.tipo; f300_updatePeriodos(); }
+  if(pr) pr.value=d.pCod;
+  var pb=document.getElementById('f300-periodoBadge');
+  if(pb) pb.textContent='Período: '+d.pLabel+' · '+d.anio+' (guardado ✓)';
+  var pi=document.getElementById('f300-periodoInfo');
+  if(pi) pi.textContent=d.pLabel+' · Año '+d.anio;
+  var c1=document.getElementById('f300-c1'); if(c1) c1.textContent=d.anio;
+  var c3=document.getElementById('f300-c3'); if(c3) c3.textContent=d.pCod;
+  var c24=document.getElementById('f300-c24'); if(c24) c24.textContent=d.tipo==='bimestral'?'Bimestral':'Cuatrimestral';
+  ['c27','c28','c35','c39','c41','c42','c43','c50','c51','c52','c53','c54','c55','c56','c57',
+   'c58','c59','c67','c71','c72','c74','c75','c79','c81','c82','c83','c85','c87','c88','c89'
+  ].forEach(function(k){
+    var el=document.getElementById('f300-'+k);
+    if(!el) return;
+    var val=d[k]||0;
+    el.textContent='$'+Math.round(val).toLocaleString('es-CO');
+    el.className='f300-value'+(val>0?' positive':val<0?' negative':' zero');
+  });
+  var sm=document.getElementById('f300-summaryCards');
+  if(sm) sm.innerHTML=[
+    {l:'IVA Generado',v:d.c67||0,c:''},
+    {l:'IVA Descontable',v:d.c81||0,c:''},
+    {l:(d.c82||0)>0?'Saldo a Pagar':'Saldo a Favor',v:(d.c82||0)>0?(d.c82||0):(d.c83||0),c:(d.c82||0)>0?'red':'green'},
+    {l:'Ingresos Netos',v:d.c43||0,c:'gold'}
+  ].map(function(s){return '<div class="s-card"><div class="s-card-label">'+s.l+'</div><div class="s-card-value '+s.c+'">$'+Math.round(s.v).toLocaleString('es-CO')+'</div></div>';}).join('');
+  var fr=document.getElementById('f300-resultado');
+  if(fr) fr.style.display='block';
+}
+
+// ── INC Load/Render Saved ─────────────────────────────────
+function inc_loadSaved(clientId, year){
+  if(!db) return;
+  ['01','02','03'].forEach(function(p){
+    var key = ('jnf_inc_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    db.collection('resultados').doc(key).get().then(function(doc){
+      if(doc.exists){
+        try{ inc_renderSaved(JSON.parse(doc.data().data||'{}')); }catch(e){}
+      }
+    }).catch(function(){});
+  });
+}
+
+function inc_renderSaved(d){
+  if(!d||!d.c56) return;
+  window._f310Data=d;
+  var pa=document.getElementById('inc-anio');
+  var pp=document.getElementById('inc-periodicidad');
+  var pr=document.getElementById('inc-periodo');
+  if(pa) pa.value=d.anio;
+  if(pp){ pp.value=d.tipo; inc_updatePeriodos(); }
+  if(pr) pr.value=d.pCod;
+  var pb=document.getElementById('inc-periodoBadge');
+  if(pb) pb.textContent='Período: '+d.pLabel+' · '+d.anio+' (guardado ✓)';
+  var pi=document.getElementById('inc-periodoInfo');
+  if(pi) pi.textContent=d.pLabel+' · Año '+d.anio;
+  var c1=document.getElementById('inc-c1'); if(c1) c1.textContent=d.anio;
+  var c3=document.getElementById('inc-c3'); if(c3) c3.textContent=d.pCod;
+  var c24=document.getElementById('inc-c24'); if(c24) c24.textContent=d.tipo==='bimestral'?'Bimestral':'Cuatrimestral';
+  ['c27','c28','c29','c48','c49','c56','c60','c61','c63','c64','c65'].forEach(function(k){
+    var el=document.getElementById('inc-'+k);
+    if(!el) return;
+    var val=d[k]||0;
+    el.textContent='$'+Math.round(val).toLocaleString('es-CO');
+    el.className='f310-value'+(val>0?' pos':val<0?' neg':' zero');
+  });
+  var sm=document.getElementById('inc-summaryCards');
+  if(sm) sm.innerHTML=[
+    {l:'Base Gravable Neta',v:d.c29||0,c:''},
+    {l:'IPO Generado Neto',v:d.c56||0,c:''},
+    {l:(d.c64||0)>0?'A Pagar':'A Favor',v:(d.c64||0)>0?(d.c64||0):(d.c65||0),c:(d.c64||0)>0?'red':'green'}
+  ].map(function(s){return '<div class="s-card"><div class="s-card-label">'+s.l+'</div><div class="s-card-value '+s.c+'">$'+Math.round(s.v).toLocaleString('es-CO')+'</div></div>';}).join('');
+  var fr=document.getElementById('inc-resultado');
+  if(fr) fr.style.display='block';
+}
+
+
+// ── Module open/close functions ───────────────────────────
+function openF300(){
+  var c = clients.find(function(x){return x.id===activeClientId;});
+  if(!c) return;
+  var yr = activeYear||new Date().getFullYear();
+  var ci = document.getElementById('f300-cliente-info');
+  if(ci) ci.textContent = (c.razon||c.nit) + ' · Año ' + yr;
+  showScreen('f300');
+  f300_updatePeriodos();
+  var fa=document.getElementById('f300-anio'); if(fa) fa.value=yr;
+  var ff=document.getElementById('f300-fileNameDisplay'); if(ff) ff.textContent='';
+  var fb=document.getElementById('f300-btnProcesar'); if(fb) fb.disabled=true;
+  var fr=document.getElementById('f300-resultado'); if(fr) fr.style.display='none';
+  f300_wb=null; f300_sheetMap={};
+  f300_loadSaved(c.id, yr);
+}
+
+function openINC(){
+  var c = clients.find(function(x){return x.id===activeClientId;});
+  if(!c) return;
+  var yr = activeYear||new Date().getFullYear();
+  var ci = document.getElementById('inc-cliente-info');
+  if(ci) ci.textContent = (c.razon||c.nit) + ' · Año ' + yr;
+  showScreen('inc');
+  inc_updatePeriodos();
+  var ia=document.getElementById('inc-anio'); if(ia) ia.value=yr;
+  var ifd=document.getElementById('inc-fileNameDisplay'); if(ifd) ifd.textContent='';
+  var ib=document.getElementById('inc-btnProcesar'); if(ib) ib.disabled=true;
+  var ir=document.getElementById('inc-resultado'); if(ir) ir.style.display='none';
+  inc_wb=null; inc_sheetVentas=null; inc_sheetDevVentas=null;
+  inc_loadSaved(c.id, yr);
+}
+
+</script>
+
+<!-- ═══ PANTALLA F300 IVA ════════════════════════════════ -->
+<div id="screen-f300" style="display:none;min-height:100vh;background:#f0f2f8;">
+  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="goBack()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;">← Volver</button>
+    <div>
+      <div style="font-size:13px;font-weight:800;">Formulario 300 — Declaración IVA</div>
+      <div style="font-size:10px;opacity:.7;" id="f300-cliente-info">—</div>
+    </div>
+  </div>
+  <div style="max-width:960px;margin:0 auto;padding:20px;">
+    <div class="hdr">
+  <div>
+    <div class="hdr-title">Formulario 300 — Declaración IVA</div>
+    <div class="hdr-sub">Liquidación automática desde Excel · VENTAS · COSTOS · SERV PÚBLICOS · DOC SOPORTE</div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="f300-stbar" class="st"></div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Configuración del período
+    </div>
+    <div class="periodo-row">
+      <div class="fi"><label>Año gravable</label><input type="number" id="f300-anio" value="2025" min="2020" max="2030"/></div>
+      <div class="fi"><label>Periodicidad</label>
+        <select id="f300-periodicidad" onchange="f300_updatePeriodos()">
+          <option value="cuatrimestral">Cuatrimestral</option>
+          <option value="bimestral">Bimestral</option>
+        </select>
+      </div>
+      <div class="fi"><label>Período</label><select id="f300-periodo"></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Archivo Excel de facturación
+    </div>
+    <div class="upload-zone" id="f300-dropZone" onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="event.preventDefault();this.classList.remove('drag');f300_f300_handleFile(event.dataTransfer.files[0])">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;color:#1a2580"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="upload-title">Arrastra tu Excel aquí o haz clic</div>
+      <div class="upload-hint">Pestañas requeridas: VENTAS · COSTOS<br>Opcionales: DEV VENTAS/DEV EN VENTAS · DEV COSTOS/DV COSTOS · SERV PUBLICOS · DOC. SOPORTE</div>
+      <div id="f300-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#1a2580;font-weight:600;"></div>
+    </div>
+    <input type="file" id="f300-fileInput" accept=".xlsx,.xls" style="display:none" onchange="f300_handleFile(this.files[0])"/>
+    <div id="f300-sheetsDetected" class="sheets-detected"></div>
+    <div style="margin-top:12px;text-align:center;">
+      <button class="btn btn-primary" onclick="f300_procesar()" id="f300-btnProcesar" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Liquidar Formulario 300
+      </button>
+    </div>
+  </div>
+
+  <div id="f300-resultado" style="display:none;">
+    <div id="f300-summaryCards" class="summary-cards"></div>
+    <div class="card">
+      <div id="f300-periodoBadge" class="periodo-badge"></div>
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Formulario 300 — Vista previa
+      </div>
+      <div class="f300">
+        <div class="f300-header">
+          <div>
+            <div style="font-size:12px;font-weight:700;">Declaración del Impuesto sobre las Ventas - IVA</div>
+            <div style="font-size:10px;opacity:.8;margin-top:2px;" id="f300-periodoInfo">—</div>
+          </div>
+          <div class="f300-num">300</div>
+        </div>
+        <div class="f300-body">
+          <div class="f300-section">
+            <div class="f300-section-title">Datos del período</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <div class="f300-row"><span class="f300-label">Año</span><span class="f300-casilla">1</span><span class="f300-value" id="c1">—</span></div>
+              <div class="f300-row"><span class="f300-label">Período</span><span class="f300-casilla">3</span><span class="f300-value" id="c3">—</span></div>
+              <div class="f300-row"><span class="f300-label">Periodicidad</span><span class="f300-casilla">24</span><span class="f300-value" id="c24">—</span></div>
+            </div>
+          </div>
+          <div class="f300-section">
+            <div class="f300-section-title">Ingresos</div>
+            <div class="f300-grid">
+              <div class="f300-row"><span class="f300-label">Operaciones gravadas 5%</span><span class="f300-casilla">27</span><span class="f300-value" id="c27">0</span></div>
+              <div class="f300-row"><span class="f300-label">Operaciones gravadas 19%</span><span class="f300-casilla">28</span><span class="f300-value" id="c28">0</span></div>
+              <div class="f300-row"><span class="f300-label">Operaciones exentas</span><span class="f300-casilla">35</span><span class="f300-value" id="c35">0</span></div>
+              <div class="f300-row"><span class="f300-label">Operaciones excluidas</span><span class="f300-casilla">39</span><span class="f300-value" id="c39">0</span></div>
+              <div class="f300-row total"><span class="f300-label">Total ingresos brutos</span><span class="f300-casilla">41</span><span class="f300-value" id="c41">0</span></div>
+              <div class="f300-row highlight"><span class="f300-label">Devoluciones en ventas</span><span class="f300-casilla">42</span><span class="f300-value" id="c42">0</span></div>
+              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total ingresos netos (41 - 42)</span><span class="f300-casilla">43</span><span class="f300-value" id="c43">0</span></div>
+            </div>
+          </div>
+          <div class="f300-section">
+            <div class="f300-section-title">Compras</div>
+            <div class="f300-grid">
+              <div class="f300-row"><span class="f300-label">Bienes gravados 5%</span><span class="f300-casilla">50</span><span class="f300-value" id="c50">0</span></div>
+              <div class="f300-row"><span class="f300-label">Bienes gravados 19%</span><span class="f300-casilla">51</span><span class="f300-value" id="c51">0</span></div>
+              <div class="f300-row"><span class="f300-label">Servicios gravados 5%</span><span class="f300-casilla">52</span><span class="f300-value" id="c52">0</span></div>
+              <div class="f300-row"><span class="f300-label">Servicios gravados 19%</span><span class="f300-casilla">53</span><span class="f300-value" id="c53">0</span></div>
+              <div class="f300-row"><span class="f300-label">Excluidos / exentos (incl. SERV PÚB + DOC SOP)</span><span class="f300-casilla">54</span><span class="f300-value" id="c54">0</span></div>
+              <div class="f300-row total"><span class="f300-label">Total compras brutas</span><span class="f300-casilla">55</span><span class="f300-value" id="c55">0</span></div>
+              <div class="f300-row highlight"><span class="f300-label">Devoluciones en compras</span><span class="f300-casilla">56</span><span class="f300-value" id="c56">0</span></div>
+              <div class="f300-row total"><span class="f300-label">Total compras netas (55 - 56)</span><span class="f300-casilla">57</span><span class="f300-value" id="c57">0</span></div>
+            </div>
+          </div>
+          <div class="f300-section">
+            <div class="f300-section-title">Impuesto generado</div>
+            <div class="f300-grid">
+              <div class="f300-row"><span class="f300-label">IVA generado 5%</span><span class="f300-casilla">58</span><span class="f300-value" id="c58">0</span></div>
+              <div class="f300-row"><span class="f300-label">IVA generado tarifa general (19%)</span><span class="f300-casilla">59</span><span class="f300-value" id="c59">0</span></div>
+              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total impuesto generado</span><span class="f300-casilla">67</span><span class="f300-value" id="c67">0</span></div>
+            </div>
+          </div>
+          <div class="f300-section">
+            <div class="f300-section-title">Impuesto descontable</div>
+            <div class="f300-grid">
+              <div class="f300-row"><span class="f300-label">IVA descontable compras 5%</span><span class="f300-casilla">71</span><span class="f300-value" id="c71">0</span></div>
+              <div class="f300-row"><span class="f300-label">IVA descontable compras 19%</span><span class="f300-casilla">72</span><span class="f300-value" id="c72">0</span></div>
+              <div class="f300-row"><span class="f300-label">IVA descontable servicios 5%</span><span class="f300-casilla">74</span><span class="f300-value" id="c74">0</span></div>
+              <div class="f300-row"><span class="f300-label">IVA descontable servicios 19%</span><span class="f300-casilla">75</span><span class="f300-value" id="c75">0</span></div>
+              <div class="f300-row total"><span class="f300-label">Total impuesto pagado/facturado</span><span class="f300-casilla">77</span><span class="f300-value" id="c77">0</span></div>
+              <div class="f300-row highlight"><span class="f300-label">IVA resultante dev. en ventas</span><span class="f300-casilla">79</span><span class="f300-value" id="c79">0</span></div>
+              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total impuestos descontables</span><span class="f300-casilla">81</span><span class="f300-value" id="c81">0</span></div>
+            </div>
+          </div>
+          <div class="f300-section">
+            <div class="f300-section-title">Resultado</div>
+            <div class="f300-grid">
+              <div class="f300-row highlight"><span class="f300-label">Saldo a pagar por el período</span><span class="f300-casilla">82</span><span class="f300-value" id="c82">0</span></div>
+              <div class="f300-row highlight"><span class="f300-label">Saldo a favor del período</span><span class="f300-casilla">83</span><span class="f300-value" id="c83">0</span></div>
+              <div class="f300-row"><span class="f300-label">Retenciones IVA practicadas</span><span class="f300-casilla">85</span><span class="f300-value" id="c85">0</span></div>
+              <div class="f300-row"><span class="f300-label">Sanciones</span><span class="f300-casilla">87</span><span class="f300-value" id="c87">0</span></div>
+              <div class="f300-row total highlight" style="grid-column:1/-1"><span class="f300-label">Total saldo a pagar (82-84-85+87)</span><span class="f300-casilla">88</span><span class="f300-value" id="c88">0</span></div>
+              <div class="f300-row total" style="grid-column:1/-1"><span class="f300-label">Total saldo a favor (83+84+85-87)</span><span class="f300-casilla">89</span><span class="f300-value" id="c89">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detalle de fuentes -->
+      <div class="detalle-section" id="f300-detalleSection"></div>
+
+      <div class="actions">
+        <button class="btn btn-gold" onclick="f300_descargarPDF()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar PDF Formulario 300
+        </button>
+        <button class="btn btn-outline" onclick="f300_limpiar()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Nueva liquidación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  </div>
+</div>
+
+<!-- ═══ PANTALLA INC F310 ════════════════════════════════ -->
+<div id="screen-inc" style="display:none;min-height:100vh;background:#f0f2f8;">
+  <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="goBack()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;">← Volver</button>
+    <div>
+      <div style="font-size:13px;font-weight:800;">Formulario 310 — Impuesto Nacional al Consumo</div>
+      <div style="font-size:10px;opacity:.7;" id="inc-cliente-info">—</div>
+    </div>
+  </div>
+  <div style="max-width:900px;margin:0 auto;padding:20px;">
+    <div class="hdr">
+  <div>
+    <div class="hdr-title">Formulario 310 — Impuesto Nacional al Consumo (INC)</div>
+    <div class="hdr-sub">Liquidación automática desde Excel · BASE 8% · IPO 8%</div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="inc-stbar" class="st"></div>
+
+  <div class="info-box">
+    <strong>¿Qué es el INC?</strong> El Impuesto Nacional al Consumo (art. 512-1 ET) aplica al 8% sobre servicios de restaurante, bares y similares. Se declara en el formulario 310 con la misma periodicidad que el IVA (bimestral o cuatrimestral). La BASE 8% corresponde al valor del servicio sin impuesto, y el IPO 8% es el impuesto generado.
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Configuración del período
+    </div>
+    <div class="row3">
+      <div class="fi"><label>Año gravable</label><input type="number" id="inc-anio" value="2025" min="2020" max="2030"/></div>
+      <div class="fi"><label>Periodicidad</label>
+        <select id="inc-periodicidad" onchange="inc_updatePeriodos()">
+          <option value="cuatrimestral">Cuatrimestral</option>
+          <option value="bimestral">Bimestral</option>
+        </select>
+      </div>
+      <div class="fi"><label>Período</label><select id="inc-periodo"></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Archivo Excel de facturación
+    </div>
+    <div class="upload-zone" id="inc-dropZone" onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="event.preventDefault();this.classList.remove('drag');inc_inc_handleFile(event.dataTransfer.files[0])">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;color:#7c3aed"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="upload-title">Arrastra tu Excel aquí o haz clic</div>
+      <div class="upload-hint">Requiere columnas BASE 8% e IPO 8% en la pestaña VENTAS<br>Opcional: columnas BASE IPO e IPO 8% en DEV VENTAS</div>
+      <div id="inc-fileNameDisplay" style="margin-top:8px;font-size:11px;color:#7c3aed;font-weight:600;"></div>
+    </div>
+    <input type="file" id="inc-fileInput" accept=".xlsx,.xls" style="display:none" onchange="inc_handleFile(this.files[0])"/>
+    <div id="inc-sheetsDetected" class="sheets-detected"></div>
+    <div style="margin-top:12px;text-align:center;">
+      <button class="btn btn-primary" onclick="inc_procesar()" id="inc-btnProcesar" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Liquidar Formulario 310
+      </button>
+    </div>
+  </div>
+
+  <div id="inc-resultado" style="display:none;">
+    <div id="inc-summaryCards" class="summary-cards"></div>
+    <div class="card">
+      <div id="inc-periodoBadge" class="periodo-badge"></div>
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Formulario 310 — Vista previa
+      </div>
+
+      <div class="f310">
+        <div class="f310-header">
+          <div>
+            <div style="font-size:12px;font-weight:700;">Declaración del Impuesto Nacional al Consumo — INC</div>
+            <div style="font-size:10px;opacity:.8;margin-top:2px;" id="inc-periodoInfo">—</div>
+          </div>
+          <div class="f310-num">310</div>
+        </div>
+        <div class="f310-body">
+
+          <div class="f310-section">
+            <div class="f310-section-title">Datos del período</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <div class="f310-row"><span class="f310-label">Año</span><span class="f310-casilla">1</span><span class="f310-value" id="c1">—</span></div>
+              <div class="f310-row"><span class="f310-label">Período</span><span class="f310-casilla">3</span><span class="f310-value" id="c3">—</span></div>
+              <div class="f310-row"><span class="f310-label">Periodicidad</span><span class="f310-casilla">24</span><span class="f310-value" id="c24">—</span></div>
+            </div>
+          </div>
+
+          <div class="f310-section">
+            <div class="f310-section-title">Ingresos por servicios gravados con INC 8%</div>
+            <div class="f310-row"><span class="f310-label">Base gravable ventas — servicios al 8%</span><span class="f310-casilla">27</span><span class="f310-value" id="c27">0</span></div>
+            <div class="f310-row highlight"><span class="f310-label">Devoluciones en ventas — base</span><span class="f310-casilla">28</span><span class="f310-value" id="c28">0</span></div>
+            <div class="f310-row total"><span class="f310-label">Base gravable neta (27 - 28)</span><span class="f310-casilla">29</span><span class="f310-value" id="c29">0</span></div>
+          </div>
+
+          <div class="f310-section">
+            <div class="f310-section-title">Liquidación privada — Impuesto generado</div>
+            <div class="f310-row"><span class="f310-label">IPO generado a la tarifa del 8%</span><span class="f310-casilla">48</span><span class="f310-value" id="c48">0</span></div>
+            <div class="f310-row highlight"><span class="f310-label">IPO devoluciones en ventas (8%)</span><span class="f310-casilla">49</span><span class="f310-value" id="c49">0</span></div>
+            <div class="f310-row total"><span class="f310-label">Total impuesto generado neto</span><span class="f310-casilla">56</span><span class="f310-value" id="c56">0</span></div>
+          </div>
+
+          <div class="f310-section">
+            <div class="f310-section-title">Resultado</div>
+            <div class="f310-row"><span class="f310-label">Saldo a favor período anterior</span><span class="f310-casilla">60</span><span class="f310-value" id="c60">0</span></div>
+            <div class="f310-row"><span class="f310-label">Retenciones practicadas</span><span class="f310-casilla">61</span><span class="f310-value" id="c61">0</span></div>
+            <div class="f310-row"><span class="f310-label">Sanciones</span><span class="f310-casilla">63</span><span class="f310-value" id="c63">0</span></div>
+            <div class="f310-row result-pay"><span class="f310-label">Total saldo a pagar</span><span class="f310-casilla">64</span><span class="f310-value" id="c64">0</span></div>
+            <div class="f310-row result-fav"><span class="f310-label">Total saldo a favor</span><span class="f310-casilla">65</span><span class="f310-value" id="c65">0</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Detalle por mes -->
+      <div id="inc-detalleSection" style="margin-top:16px;"></div>
+
+      <div class="actions">
+        <button class="btn btn-gold" onclick="inc_descargarPDF()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar PDF Formulario 310
+        </button>
+        <button class="btn btn-outline" onclick="inc_limpiar()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Nueva liquidación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  </div>
+</div>
+
 </body>
-</html>
+</html>l>l>
