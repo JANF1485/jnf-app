@@ -1167,10 +1167,12 @@ rz.addEventListener('drop',e=>{e.preventDefault();rz.classList.remove('drag');
   const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')readRUT(f);});
 
 // Close modal on bg click
-document.getElementById('modalAdd').addEventListener('click',function(e){
+var _mAdd=document.getElementById('modalAdd');
+if(_mAdd) _mAdd.addEventListener('click',function(e){
   if(e.target===this)closeModal('add');
 });
-document.getElementById('modalConsolidador').addEventListener('click',function(e){
+var _mCons=document.getElementById('modalConsolidador');
+if(_mCons) _mCons.addEventListener('click',function(e){
   if(e.target===this)closeModal('consolidador');
 });
 
@@ -2631,6 +2633,7 @@ function openModulos(){
 
 // ── Ficha técnica cliente ─────────────────────────────────
 function openFicha(clientId){
+  window._fichaClientId = clientId||activeClientId;
   var c = clients.find(function(x){return x.id===(clientId||activeClientId);});
   if(!c) return;
 
@@ -2725,7 +2728,7 @@ function openFicha(clientId){
 
     // Botones acción
     + '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid #f3f4f6;">'
-    + '<button onclick="editClient('' + c.id + '');closeFicha();" style="background:#1a2580;color:#fff;border:none;'
+    + '<button onclick="openFicha_edit();" style="background:#1a2580;color:#fff;border:none;'
     + 'border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">✏️ Editar cliente</button>'
     + '<button onclick="closeFicha();" style="background:#f3f4f6;color:#374151;border:none;'
     + 'border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cerrar</button>'
@@ -2736,10 +2739,11 @@ function closeFicha(){
   document.getElementById('modal-ficha').style.display='none';
 }
 
-// Close on background click
-document.getElementById('modal-ficha').addEventListener('click', function(e){
-  if(e.target===this) closeFicha();
-});
+// Close on background click - wrapped in DOMContentLoaded safety
+(function(){
+  var mf = document.getElementById('modal-ficha');
+  if(mf) mf.addEventListener('click', function(e){ if(e.target===this) closeFicha(); });
+})();
 
 
 function openGuardado(){
@@ -2753,6 +2757,12 @@ function openGuardado(){
     const sr = document.getElementById('savedResults');
     if(sr){ sr.style.display='block'; sr.scrollIntoView({behavior:'smooth'}); }
   }, 100);
+}
+
+
+function openFicha_edit(){
+  var c = clients.find(function(x){return x.id===activeClientId||x.id===window._fichaClientId;});
+  if(c){ closeFicha(); editClient(c.id); }
 }
 
 </script>
