@@ -1222,7 +1222,7 @@ var currentUser   = null;
 var currentPerfil = null;
 
 var FB_CONFIG = {
-  apiKey: "AIzaSyDQdSWjbz38MsoysDczXCkmgmIdYVP56uU",
+  apiKey: "AIzaSyBLkxxPWhhF7zmUUjAZbu3C_zBnPy3rIo8",
   authDomain: "jnf-app-3e464.firebaseapp.com",
   projectId: "jnf-app-3e464",
   storageBucket: "jnf-app-3e464.firebasestorage.app",
@@ -1713,24 +1713,49 @@ function colIdxFrom(ws, colName, headerRow){
 }
 
 // Sum column filtered by month (normal transaction sheets)
+// Map month number to Spanish name
+const MESES_NUM = ['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+                   'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function f300_getMesFromCell(cell){
+  if(!cell) return '';
+  var v = cell.v;
+  // If it's a Date object
+  if(v instanceof Date){
+    return MESES_NUM[v.getMonth()+1]||'';
+  }
+  var s = String(v||'').trim();
+  // Format DD-MM-YYYY or DD/MM/YYYY
+  var m1 = s.match(/^\d{2}[-\/](\d{2})[-\/]\d{4}/);
+  if(m1){ return MESES_NUM[parseInt(m1[1],10)]||''; }
+  // Format YYYY-MM-DD
+  var m2 = s.match(/^\d{4}-(\d{2})-\d{2}/);
+  if(m2){ return MESES_NUM[parseInt(m2[1],10)]||''; }
+  // Format with time: DD-MM-YYYY HH:MM
+  var m3 = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+  if(m3){ return MESES_NUM[parseInt(m3[2],10)]||''; }
+  // Already a month name
+  return s.toUpperCase();
+}
+
 function sumByMes(sheetName, colNames, mesColNames, meses){
   if(!sheetName||!f300_wb.Sheets[sheetName]) return 0;
   const ws=f300_wb.Sheets[sheetName];
   const hrow=f300_findHeaderRow(ws);
   const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
 
-  // Find column indices - try multiple column names
+  // Find value column
   let ci=-1;
   for(const cn of (Array.isArray(colNames)?colNames:[colNames])){
-    ci=colIdxFrom(ws,cn,hrow);
+    ci=f300_colIdxFrom(ws,cn,hrow);
     if(ci>=0) break;
   }
   if(ci<0) return 0;
 
-  // Find month column
+  // Find month/date column - prioritize 'Fecha Emisión' for VENTAS
   let mi=-1;
   for(const mn of (Array.isArray(mesColNames)?mesColNames:[mesColNames])){
-    mi=colIdxFrom(ws,mn,hrow);
+    mi=f300_colIdxFrom(ws,mn,hrow);
     if(mi>=0) break;
   }
 
@@ -1739,7 +1764,8 @@ function sumByMes(sheetName, colNames, mesColNames, meses){
     if(mi>=0&&meses&&meses.length>0){
       const mc=ws[XLSX.utils.encode_cell({r,c:mi})];
       if(!mc) continue;
-      const mv=String(mc.v||'').trim().toUpperCase();
+      // Extract month name from date or use direct value
+      const mv = f300_getMesFromCell(mc);
       if(!meses.includes(mv)) continue;
     }
     const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
@@ -1798,7 +1824,7 @@ function f300_procesar(){
   const pObj=f300_PERIODOS[tipo].find(p=>p.cod===pCod);
   const meses=pObj.meses;
 
-  const mesColsV=['FECHA','MES','MES.','FECHA EMISION'];
+  const mesColsV=['Fecha Emisión','FECHA EMISION','FECHA','MES','MES.'];
   const mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
 
   // ── VENTAS ────────────────────────────────────────────────
@@ -1807,6 +1833,7 @@ function f300_procesar(){
   const v_i5   =sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
   const v_i19  =sumByMes(f300_sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
   const v_exen =sumByMes(f300_sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
+  const v_excl =sumByMes(f300_sheetMap.ventas,['EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
 
   // ── DEV VENTAS ────────────────────────────────────────────
   const dv_b5  =sumByMes(f300_sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
@@ -1814,6 +1841,7 @@ function f300_procesar(){
   const dv_i5  =sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
   const dv_i19 =sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
   const dv_exen=sumByMes(f300_sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
+  const dv_excl=sumByMes(f300_sheetMap.dvVentas,['EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
 
   // ── COSTOS ────────────────────────────────────────────────
   const c_b5   =sumByMes(f300_sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
@@ -1839,7 +1867,7 @@ function f300_procesar(){
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
   const c35=f300_rdMil(v_exen);
-  const c39=0;
+  const c39=rdMil((v_excl||0)-(dv_excl||0));
   const c41=f300_rdMil(c27+c28+c35+c39);
   const c42=f300_rdMil(dv_b5+dv_b19+dv_exen);
   const c43=Math.max(0,c41-c42);
@@ -1876,7 +1904,7 @@ function f300_procesar(){
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
     c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,v_b5,v_b19,v_exen,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
+    sp_total,ds_total,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
 
   // Render
   document.getElementById('f300-c1').textContent=anio;
@@ -1935,32 +1963,32 @@ async function f300_descargarPDF(){
   const blue=[26,37,128],gold=[201,162,39],gray=[100,100,100];
   const lBlue=[238,241,255],lGold=[255,248,230];
 
-  doc.setFillColor(...blue);doc.rect(0,0,W,22,'F');
+  doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,0,W,22,'F');
   doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
   doc.text('Declaración del Impuesto sobre las Ventas - IVA',14,9);
   doc.setFontSize(9);doc.text(d.pLabel+' · Año '+d.anio,14,15);
-  doc.setFontSize(28);doc.setTextColor(...gold);doc.text('300',W-14,16,{align:'right'});
+  doc.setFontSize(28);doc.setTextColor(gold[0],gold[1],gold[2]);doc.text('300',W-14,16,{align:'right'});
 
-  doc.setFillColor(...lBlue);doc.setDrawColor(...blue);
+  doc.setFillColor(lBlue[0],lBlue[1],lBlue[2]);doc.setDrawColor(blue[0],blue[1],blue[2]);
   doc.roundedRect(10,25,W-20,14,2,2,'FD');
-  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...blue);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(blue[0],blue[1],blue[2]);
   doc.text('Año: '+d.anio+'   |   Período: '+d.pCod+'   |   Periodicidad: '+(d.tipo==='bimestral'?'Bimestral':'Cuatrimestral'),14,31);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...gray);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(gray[0],gray[1],gray[2]);
   doc.text('Meses: '+d.meses.join(', '),14,36);
 
   let y=44;const lH=7;
   function sec(title,yy){
-    doc.setFillColor(...blue);doc.rect(10,yy,W-20,6,'F');
+    doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(10,yy,W-20,6,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
     doc.text(title.toUpperCase(),14,yy+4.5);return yy+6;
   }
   function row(label,cas,val,yy,hi){
     const bg=hi?lGold:(yy%14<7?[248,250,255]:[255,255,255]);
-    doc.setFillColor(...bg);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(10,yy,W-20,lH-1,'F');
     doc.setDrawColor(220,225,240);doc.rect(10,yy,W-20,lH-1,'S');
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(55,65,81);
     doc.text(label,14,yy+4.5);
-    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...blue);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(blue[0],blue[1],blue[2]);
     doc.text(String(cas),W-50,yy+4.5,{align:'center'});
     doc.setFont('helvetica','bold');doc.setFontSize(8);
     doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
@@ -2016,7 +2044,7 @@ async function f300_descargarPDF(){
   y=row('DOC. SOPORTE','-',d.ds_total,y,false);
   y=row('Total casilla 54',54,d.c54,y,true);
 
-  doc.setFillColor(...blue);doc.rect(0,H-14,W,14,'F');
+  doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,H-14,W,14,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
   doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9 · '+new Date().toLocaleString('es-CO'),W/2,H-8,{align:'center'});
   doc.text('Documento de apoyo — No reemplaza el formulario oficial de la DIAN',W/2,H-4,{align:'center'});
@@ -2308,32 +2336,32 @@ async function inc_descargarPDF(){
   const purple=[109,40,217],gold=[201,162,39],gray=[100,100,100];
   const lPurple=[237,233,254],lGold=[255,248,230];
 
-  doc.setFillColor(...purple);doc.rect(0,0,W,22,'F');
+  doc.setFillColor(purple[0],purple[1],purple[2]);doc.rect(0,0,W,22,'F');
   doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
   doc.text('Declaración del Impuesto Nacional al Consumo — INC',14,9);
   doc.setFontSize(9);doc.text(d.pLabel+' · Año '+d.anio,14,15);
-  doc.setFontSize(28);doc.setTextColor(...gold);doc.text('310',W-14,16,{align:'right'});
+  doc.setFontSize(28);doc.setTextColor(gold[0],gold[1],gold[2]);doc.text('310',W-14,16,{align:'right'});
 
-  doc.setFillColor(...lPurple);doc.setDrawColor(...purple);
+  doc.setFillColor(lPurple[0],lPurple[1],lPurple[2]);doc.setDrawColor(purple[0],purple[1],purple[2]);
   doc.roundedRect(10,25,W-20,14,2,2,'FD');
-  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...purple);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(purple[0],purple[1],purple[2]);
   doc.text('Año: '+d.anio+'   |   Período: '+d.pCod+'   |   Periodicidad: '+(d.tipo==='bimestral'?'Bimestral':'Cuatrimestral'),14,31);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...gray);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(gray[0],gray[1],gray[2]);
   doc.text('Meses: '+d.meses.join(', ')+'   |   Tarifa aplicada: 8%',14,36);
 
   let y=44;const lH=7;
   function sec(title,yy){
-    doc.setFillColor(...purple);doc.rect(10,yy,W-20,6,'F');
+    doc.setFillColor(purple[0],purple[1],purple[2]);doc.rect(10,yy,W-20,6,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
     doc.text(title.toUpperCase(),14,yy+4.5);return yy+6;
   }
   function row(label,cas,val,yy,hi){
     const bg=hi?lGold:(yy%14<7?[248,245,255]:[255,255,255]);
-    doc.setFillColor(...bg);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(10,yy,W-20,lH-1,'F');
     doc.setDrawColor(221,214,254);doc.rect(10,yy,W-20,lH-1,'S');
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(55,65,81);
     doc.text(label,14,yy+4.5);
-    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(purple[0],purple[1],purple[2]);
     doc.text(String(cas),W-50,yy+4.5,{align:'center'});
     doc.setFont('helvetica','bold');doc.setFontSize(8);
     doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
@@ -2361,7 +2389,7 @@ async function inc_descargarPDF(){
   // Detalle por mes
   y=sec('Detalle por mes',y);
   const cols=[10,55,100,130,160,185];
-  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(purple[0],purple[1],purple[2]);
   ['Mes','Base 8%','IPO 8%','Dev Base','Dev IPO','IPO Neto'].forEach((h,i)=>{
     doc.text(h,cols[i],y+5);
   });
@@ -2372,7 +2400,7 @@ async function inc_descargarPDF(){
     const db=d.dvB8[m]||0;const di=d.dvI8[m]||0;
     const neto=iv-di;
     const bg=y%14<7?[248,245,255]:[255,255,255];
-    doc.setFillColor(...bg);doc.rect(10,y,W-20,6,'F');
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(10,y,W-20,6,'F');
     doc.setDrawColor(221,214,254);doc.rect(10,y,W-20,6,'S');
     doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(55,65,81);
     doc.text(m,cols[0],y+4);
@@ -2380,17 +2408,17 @@ async function inc_descargarPDF(){
     doc.text('$'+inc_fmt(iv),cols[2]+25,y+4,{align:'right'});
     doc.text('$'+inc_fmt(db),cols[3]+25,y+4,{align:'right'});
     doc.text('$'+inc_fmt(di),cols[4]+20,y+4,{align:'right'});
-    doc.setTextColor(...purple);doc.setFont('helvetica','bold');
+    doc.setTextColor(purple[0],purple[1],purple[2]);doc.setFont('helvetica','bold');
     doc.text('$'+inc_fmt(neto),W-12,y+4,{align:'right'});
     y+=6;
   }
   // Total row
-  doc.setFillColor(...lPurple);doc.rect(10,y,W-20,6,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...purple);
+  doc.setFillColor(lPurple[0],lPurple[1],lPurple[2]);doc.rect(10,y,W-20,6,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(purple[0],purple[1],purple[2]);
   doc.text('TOTAL IPO NETO',14,y+4);
   doc.text('$'+inc_fmt(d.c56),W-12,y+4,{align:'right'});
 
-  doc.setFillColor(...purple);doc.rect(0,H-14,W,14,'F');
+  doc.setFillColor(purple[0],purple[1],purple[2]);doc.rect(0,H-14,W,14,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
   doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9 · '+new Date().toLocaleString('es-CO'),W/2,H-8,{align:'center'});
   doc.text('Documento de apoyo — No reemplaza el formulario oficial de la DIAN',W/2,H-4,{align:'center'});
@@ -2793,6 +2821,12 @@ function cargarArchivo(clientId, year){
           if(!rows) return '';
           return '<button onclick="downloadSaved(\x27'+clientId+'\x27,\x27'+n+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">⬇ Formato '+n+' <span style="opacity:.7;font-size:10px;">('+rows+' reg.)</span></button>';
         }).join('');
+      // Add delete button for exogena
+      var delBtn = document.createElement('button');
+      delBtn.innerHTML = '🗑 Eliminar reporte';
+      delBtn.style.cssText = 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-top:12px;';
+      delBtn.onclick = function(){ eliminarReporte('exogena', exoKey, exoDiv); };
+      document.getElementById('guardado-exogena-btns').appendChild(delBtn);
     }).catch(function(){exoDiv.style.display='none';});
   }
 
@@ -2985,6 +3019,31 @@ function doChangePasswordDirect(){
   var mp = document.getElementById('modal-password');
   if(mp) mp.addEventListener('click', function(e){ if(e.target===this) closePasswordModal(); });
 })();
+
+
+function eliminarReporte(tipo, key, divEl){
+  if(!confirm('¿Seguro que deseas eliminar este reporte? Esta acción no se puede deshacer.')) return;
+  if(!db) return;
+  var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
+  db.collection('resultados').doc(docId).delete().then(function(){
+    // Reload the archive screen
+    var c = clients.find(function(x){return x.id===activeClientId;});
+    var yr = activeYear||new Date().getFullYear();
+    if(tipo==='exogena' && divEl){
+      divEl.style.display='none';
+    } else {
+      cargarArchivo(c.id, yr);
+    }
+    // Show feedback
+    var sb = document.createElement('div');
+    sb.textContent = '✓ Reporte eliminado correctamente';
+    sb.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2580;color:#fff;padding:12px 20px;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);';
+    document.body.appendChild(sb);
+    setTimeout(function(){ document.body.removeChild(sb); }, 3000);
+  }).catch(function(e){
+    alert('Error al eliminar: ' + e.message);
+  });
+}
 
 </script>
 
