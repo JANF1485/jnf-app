@@ -262,6 +262,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     </button>
     <span style="font-size:10px;color:var(--t3);">›</span>
     <span id="anio-client-name" style="font-size:10px;font-weight:700;color:var(--t2);"></span>
+    <button id="btn-ficha-anio" onclick="openFicha(activeClientId)"
+      style="background:var(--bl);border:none;color:var(--bd);padding:2px 8px;border-radius:12px;
+      font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:3px;">
+      ℹ️ Ver ficha
+    </button>
     <span style="font-size:10px;color:var(--t3);">›</span>
     <span style="font-size:10px;font-weight:700;color:var(--bd);">Seleccionar Año</span>
   </div>
@@ -653,6 +658,7 @@ function renderClients(){
         <button class="btn btn-sm btn-open" onclick="openContabilidad('${c.id}')">
           📒 Contabilidad
         </button>
+        <button class="btn btn-sm btn-edit" onclick="openFicha('${c.id}')" title="Ver ficha técnica" style="background:#eef1ff;color:#1a2580;border:1px solid #c7d2e8;">ℹ️ Ficha</button>
         <button class="btn btn-sm btn-edit" onclick="editClient('${c.id}')">✏️ Editar</button>
         <button class="btn btn-sm btn-del" onclick="deleteClient('${c.id}')">🗑</button>
       </div>
@@ -716,15 +722,22 @@ const MODULES = [
     active:true, action:'openExogena()'
   },
   {
+    id:'guardado',icon:'💾',iconBg:'#d1fae5',
+    title:'Resultados Guardados — Exógena',
+    desc:'Consulta y descarga los formatos de exógena guardados para este cliente y año gravable.',
+    tags:['Formato 1001','Formato 1005','Formato 1006','Formato 1007'],
+    active:true, action:'openGuardado()'
+  },
+  {
     id:'f300',icon:'🧾',iconBg:'#e8f5e9',
-    title:'Declaración IVA — Formulario 300',
+    title:'Declaración de IVA — Formulario 300',
     desc:'Liquida la declaración de IVA desde el Excel de facturación. Calcula bases, impuesto generado, descontable y resultado.',
     tags:['Base 5%','Base 19%','SERV Públicos','Doc Soporte'],
     active:true, action:'openF300()'
   },
   {
     id:'inc',icon:'🍽️',iconBg:'#ede9fe',
-    title:'Declaración INC — Formulario 310',
+    title:'Impuesto Nacional al Consumo — Formulario 310',
     desc:'Liquida el Impuesto Nacional al Consumo (8%) para restaurantes y servicios. Genera el PDF del formulario 310.',
     tags:['Base 8%','IPO 8%','Devoluciones'],
     active:true, action:'openINC()'
@@ -1359,8 +1372,9 @@ function fbDeleteResult(key){
 
 // ── ADMIN: USUARIOS ──────────────────────────────────────
 var MODULOS_LIST = [
-  {id:'exogena', lbl:'Información Exógena AG 2025'},
-  {id:'f300',    lbl:'Declaración IVA — Formulario 300'},
+  {id:'exogena',  lbl:'Información Exógena AG 2025'},
+  {id:'guardado', lbl:'Resultados Guardados — Exógena'},
+  {id:'f300',     lbl:'Declaración IVA — Formulario 300'},
   {id:'inc',     lbl:'Declaración INC — Formulario 310'},
   {id:'docs',    lbl:'Documentos y Soportes'},
   {id:'estados', lbl:'Estados Financieros'},
@@ -2614,16 +2628,144 @@ function openModulos(){
   showScreen('contabilidad');
 }
 
+
+// ── Ficha técnica cliente ─────────────────────────────────
+function openFicha(clientId){
+  var c = clients.find(function(x){return x.id===(clientId||activeClientId);});
+  if(!c) return;
+
+  document.getElementById('ficha-titulo').textContent = (c.razon||c.nit) + ' · NIT: ' + (c.nit||'') + (c.dv?'-'+c.dv:'');
+  document.getElementById('modal-ficha').style.display = 'flex';
+
+  var jur = c.tipo !== 'PN';
+  var initials = (c.razon||'?').split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+
+  var respsMap = {
+    '05':'Impto. Renta y Compl. Régimen Ordinario',
+    '07':'Retención en la Fuente a Título de Renta',
+    '09':'Retención en la Fuente en el Impuesto sobre las Ventas',
+    '14':'Informante de Exógena',
+    '42':'Obligado a Llevar Contabilidad',
+    '48':'Impuesto sobre las Ventas - IVA',
+    '55':'Informante de Beneficiarios Finales'
+  };
+
+  var respsHtml = '';
+  if(c.resps && c.resps.length){
+    respsHtml = c.resps.map(function(r){
+      return '<span style="background:#eef1ff;color:#1a2580;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;margin:2px;display:inline-block;">'
+        + r + (respsMap[r]?' — '+respsMap[r]:'') + '</span>';
+    }).join('');
+  } else {
+    respsHtml = '<span style="color:#9ca3af;font-size:11px;">No registradas</span>';
+  }
+
+  function row(label, value, icon){
+    if(!value) return '';
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;">'
+      + '<span style="font-size:16px;min-width:24px;">' + (icon||'📌') + '</span>'
+      + '<div><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">' + label + '</div>'
+      + '<div style="font-size:13px;font-weight:600;color:#111827;margin-top:2px;">' + value + '</div></div></div>';
+  }
+
+  document.getElementById('ficha-body').innerHTML =
+    // Avatar + nombre
+    '<div style="display:flex;align-items:center;gap:16px;padding:16px;background:#f8faff;border-radius:12px;margin-bottom:20px;">'
+    + '<div style="width:64px;height:64px;border-radius:14px;background:' + (jur?'#e8eaf6':'#d1fae5') + ';'
+    + 'display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;'
+    + 'color:' + (jur?'#1a2580':'#065f46') + ';flex-shrink:0;">' + initials + '</div>'
+    + '<div><div style="font-size:18px;font-weight:800;color:#1a2580;">' + (c.razon||'—') + '</div>'
+    + '<div style="font-size:12px;color:#6b7280;margin-top:4px;">NIT: <strong>' + (c.nit||'') + (c.dv?'-'+c.dv:'') + '</strong>'
+    + ' &nbsp;·&nbsp; ' + (jur?'Persona Jurídica':'Persona Natural') + '</div>'
+    + (c.sigla?'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">Sigla: '+c.sigla+'</div>':'')
+    + '</div></div>'
+
+    // Sección identificación
+    + '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin-bottom:12px;">Identificación</div>'
+    + row('Razón Social / Nombre', c.razon||c.nombre, '🏢')
+    + row('NIT / Cédula', (c.nit||'') + (c.dv?' DV: '+c.dv:''), '🔢')
+    + row('Tipo de Contribuyente', jur?'Persona Jurídica':'Persona Natural', '👤')
+    + row('Nombre Comercial / Sigla', c.sigla||'', '🏷️')
+    + row('Dirección Seccional DIAN', c.seccional||'', '🏛️')
+
+    // Sección ubicación
+    + '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin:16px 0 12px;">Ubicación</div>'
+    + row('Dirección Principal', c.dir||'', '📍')
+    + row('Ciudad / Municipio', c.ciudad||'', '🌆')
+    + row('Departamento', c.dpto||'', '🗺️')
+    + row('Código Postal', c.cp||'', '📮')
+
+    // Sección contacto
+    + '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin:16px 0 12px;">Contacto</div>'
+    + row('Teléfono', c.tel||'', '📞')
+    + row('Correo Electrónico', c.email||'', '✉️')
+
+    // Sección actividad económica
+    + '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin:16px 0 12px;">Actividad Económica</div>'
+    + row('CIIU Principal', c.ciiu||'', '🏭')
+    + row('CIIU Secundario', c.ciiu2||'', '🏭')
+    + row('Otras Actividades', [c.ciiu3,c.ciiu4].filter(Boolean).join(' · ')||'', '🏭')
+    + row('Régimen', c.regimen||'', '📋')
+
+    // Representante legal
+    + (c.rl_n1 ? '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin:16px 0 12px;">Representante Legal</div>'
+    + row('Nombre', [c.rl_n1,c.rl_n2,c.rl_ap1,c.rl_ap2].filter(Boolean).join(' '), '👔')
+    + row('Cédula', c.rl_cc||'', '🪪')
+    + row('Cargo', c.rl_cargo||'', '💼') : '')
+
+    // Responsabilidades
+    + '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
+    + 'border-bottom:2px solid #1a2580;padding-bottom:4px;margin:16px 0 12px;">Responsabilidades DIAN</div>'
+    + '<div style="padding:10px 0;">' + respsHtml + '</div>'
+
+    // Botones acción
+    + '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid #f3f4f6;">'
+    + '<button onclick="editClient('' + c.id + '');closeFicha();" style="background:#1a2580;color:#fff;border:none;'
+    + 'border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">✏️ Editar cliente</button>'
+    + '<button onclick="closeFicha();" style="background:#f3f4f6;color:#374151;border:none;'
+    + 'border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cerrar</button>'
+    + '</div>';
+}
+
+function closeFicha(){
+  document.getElementById('modal-ficha').style.display='none';
+}
+
+// Close on background click
+document.getElementById('modal-ficha').addEventListener('click', function(e){
+  if(e.target===this) closeFicha();
+});
+
+
+function openGuardado(){
+  const c = clients.find(x=>x.id===activeClientId);
+  if(!c) return;
+  const yr = activeYear||new Date().getFullYear();
+  // Show the savedResults div - it's in screen-contabilidad
+  showScreen('contabilidad');
+  setTimeout(function(){
+    loadSavedResults(c.id, yr);
+    const sr = document.getElementById('savedResults');
+    if(sr){ sr.style.display='block'; sr.scrollIntoView({behavior:'smooth'}); }
+  }, 100);
+}
+
 </script>
 
 <!-- ═══ PANTALLA F300 IVA ════════════════════════════════ -->
 <div id="screen-f300" style="display:none;min-height:100vh;background:#f0f2f8;">
-  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
-    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">← Módulos</button>
-    <div>
-      <div style="font-size:13px;font-weight:800;">Formulario 300 — Declaración IVA</div>
-      <div style="font-size:10px;opacity:.7;" id="f300-cliente-info">—</div>
+  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
+    <div style="flex:1;text-align:center;">
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;">Declaración de IVA — Formulario 300</div>
+      <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600;" id="f300-cliente-info">—</div>
     </div>
+    <div style="width:80px;flex-shrink:0;"></div>
   </div>
   <div style="max-width:960px;margin:0 auto;padding:20px;">
     
@@ -2715,20 +2857,19 @@ function openModulos(){
 </div>
 <!-- ═══ PANTALLA INC F310 ════════════════════════════════ -->
 <div id="screen-inc" style="display:none;min-height:100vh;background:#f0f2f8;">
-  <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;">
-    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">← Módulos</button>
-    <div>
-      <div style="font-size:13px;font-weight:800;">Formulario 310 — Impuesto Nacional al Consumo</div>
-      <div style="font-size:10px;opacity:.7;" id="inc-cliente-info">—</div>
+  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
+    <div style="flex:1;text-align:center;">
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;color:#c9a227;">Impuesto Nacional al Consumo — Formulario 310</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:3px;font-weight:600;" id="inc-cliente-info">—</div>
     </div>
+    <div style="width:80px;flex-shrink:0;"></div>
   </div>
   <div style="max-width:900px;margin:0 auto;padding:20px;">
     
 <div id="inc-stbar" class="st" style="margin-bottom:14px;"></div>
 
-<div style="background:#ede9fe;border-radius:8px;padding:12px 16px;font-size:11px;color:#5b21b6;margin-bottom:16px;line-height:1.6;">
-  <strong>¿Qué es el INC?</strong> El Impuesto Nacional al Consumo (art. 512-1 ET) aplica al 8% sobre servicios de restaurante y similares. La BASE 8% es el valor del servicio sin impuesto y el IPO 8% es el impuesto generado.
-</div>
+
 
 <!-- Configuración período -->
 <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
@@ -2807,5 +2948,27 @@ function openModulos(){
 
   </div>
 </div>
+
+<!-- ═══ MODAL FICHA TÉCNICA CLIENTE ═════════════════════ -->
+<div id="modal-ficha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;
+  align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <!-- Header modal -->
+    <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:20px 24px;
+      border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:15px;font-weight:800;">Ficha Técnica del Cliente</div>
+        <div style="font-size:11px;opacity:.7;margin-top:2px;" id="ficha-titulo">—</div>
+      </div>
+      <button onclick="closeFicha()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+        width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;
+        align-items:center;justify-content:center;font-family:Montserrat,sans-serif;">✕</button>
+    </div>
+    <!-- Body -->
+    <div id="ficha-body" style="padding:24px;"></div>
+  </div>
+</div>
+
 </body>
 </html>l>l>
