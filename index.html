@@ -1235,6 +1235,7 @@ function splashEnter(){
   if(currentUser && currentPerfil){
     // Already logged in - go straight to app
     document.getElementById('screen-app').style.display='';
+    showScreen('clientes');
   } else {
     // Not logged in - show login
     document.getElementById('screen-login').style.display='flex';
@@ -1341,6 +1342,7 @@ function showApp(){
   document.getElementById('screen-splash').style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
+  showScreen('clientes');
   var nameEl = document.getElementById('hdr-user-name');
   if(nameEl) nameEl.textContent = currentPerfil.nombre||currentPerfil.email;
   var roleEl = document.getElementById('hdr-user-role');
