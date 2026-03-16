@@ -436,6 +436,16 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         <div class="fi"><label>Notas internas</label><textarea id="f_notas" placeholder="Observaciones, acuerdos, fechas importantes…"></textarea></div>
       </div>
     </div>
+    <!-- Asignación de contador -->
+    <div style="padding:16px 24px;border-top:1px solid #f3f4f6;background:#f8faff;">
+      <div style="font-size:11px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+        👤 Contador asignado
+      </div>
+      <select id="f_contador" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:9px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;background:#fff;">
+        <option value="">— Sin asignar —</option>
+      </select>
+      <div style="font-size:10px;color:#9ca3af;margin-top:4px;">El contador podrá acceder a los módulos de este cliente.</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ol" onclick="closeModal('add')">Cancelar</button>
       <button class="btn btn-gold" onclick="saveClient()">
@@ -588,6 +598,11 @@ function fillForm(d){
     var cb = document.getElementById('resp_'+padded) || document.getElementById('resp_'+String(cod));
     if(cb) cb.checked=true;
   });
+  // Set contador if present in data
+  if(d.contadorUid){
+    var sel = document.getElementById('f_contador');
+    if(sel) sel.value = d.contadorUid;
+  }
 }
 function getForm(){
   const v=id=>document.getElementById(id)?.value?.trim()||'';
@@ -603,6 +618,7 @@ function getForm(){
     resps: RESPS.map(r=>r.cod).filter(cod=>document.getElementById('resp_'+cod)?.checked),
     added: editingId ? (clients.find(c=>c.id===editingId)?.added||new Date().toISOString()) : new Date().toISOString(),
     updated: new Date().toISOString(),
+    contadorUid: document.getElementById('f_contador')?.value || '',
   };
 }
 function saveClient(){
@@ -3060,6 +3076,29 @@ function eliminarReporte(tipo, key, divEl){
   }).catch(function(e){
     alert('Error al eliminar: ' + e.message);
   });
+}
+
+
+function cargarSelectContador(selectedUid){
+  var sel = document.getElementById('f_contador');
+  if(!sel) return;
+  // Reset
+  sel.innerHTML = '<option value="">— Sin asignar —</option>';
+  if(!db) return;
+  // Load users from Firestore
+  db.collection('usuarios').get().then(function(snap){
+    snap.forEach(function(doc){
+      var u = doc.data();
+      // Only show contadores (not admins)
+      if(u.rol === 'contador' || u.rol === 'admin'){
+        var opt = document.createElement('option');
+        opt.value = doc.id;
+        opt.textContent = (u.nombre||u.email) + (u.rol==='admin'?' (Admin)':' (Contador)');
+        if(doc.id === selectedUid) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    });
+  }).catch(function(){});
 }
 
 </script>
