@@ -583,7 +583,11 @@ function fillForm(d){
   set('f_rl_n2',d.rl_n2);set('f_rl_cc',d.rl_cc);set('f_rl_cargo',d.rl_cargo);
   if(d.tipo)document.getElementById('f_tipo').value=d.tipo;
   if(d.regimen)document.getElementById('f_regimen').value=d.regimen;
-  (d.resps||[]).forEach(cod=>{const cb=document.getElementById('resp_'+cod);if(cb)cb.checked=true;});
+  (d.resps||[]).forEach(function(cod){
+    var padded = String(cod).padStart(2,'0');
+    var cb = document.getElementById('resp_'+padded) || document.getElementById('resp_'+String(cod));
+    if(cb) cb.checked=true;
+  });
 }
 function getForm(){
   const v=id=>document.getElementById(id)?.value?.trim()||'';
