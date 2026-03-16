@@ -3082,23 +3082,26 @@ function eliminarReporte(tipo, key, divEl){
 function cargarSelectContador(selectedUid){
   var sel = document.getElementById('f_contador');
   if(!sel) return;
-  // Reset
   sel.innerHTML = '<option value="">— Sin asignar —</option>';
-  if(!db) return;
-  // Load users from Firestore
+  if(!db){ sel.innerHTML += '<option disabled>Sin conexión</option>'; return; }
   db.collection('usuarios').get().then(function(snap){
+    if(snap.empty){
+      sel.innerHTML += '<option disabled>No hay usuarios registrados</option>';
+      return;
+    }
     snap.forEach(function(doc){
       var u = doc.data();
-      // Only show contadores (not admins)
-      if(u.rol === 'contador' || u.rol === 'admin'){
-        var opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.textContent = (u.nombre||u.email) + (u.rol==='admin'?' (Admin)':' (Contador)');
-        if(doc.id === selectedUid) opt.selected = true;
-        sel.appendChild(opt);
-      }
+      var rolLabel = u.rol==='admin' ? ' (Admin)' : u.rol==='contador' ? ' (Contador)' : '';
+      var opt = document.createElement('option');
+      opt.value = doc.id;
+      opt.textContent = (u.nombre||u.email||doc.id) + rolLabel;
+      if(doc.id === selectedUid) opt.selected = true;
+      sel.appendChild(opt);
     });
-  }).catch(function(){});
+  }).catch(function(e){
+    console.error('cargarSelectContador error:', e);
+    sel.innerHTML += '<option disabled>Error cargando usuarios</option>';
+  });
 }
 
 </script>
