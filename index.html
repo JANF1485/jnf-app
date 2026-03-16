@@ -178,6 +178,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       style="width:100%;background:#1a2580;color:#fff;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;padding:11px;border-radius:8px;border:none;cursor:pointer;">
       Ingresar
     </button>
+    <div style="text-align:center;margin-top:14px;">
+      <button onclick="showResetPassword()" style="background:none;border:none;color:#1a2580;font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;cursor:pointer;text-decoration:underline;">
+        ¿Olvidaste tu contraseña? Solicitar cambio
+      </button>
+    </div>
   </div>
 </div>
 
@@ -220,7 +225,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <div id="hdr-user-role" style="color:rgba(255,255,255,.5);font-size:9px;"></div>
     </div>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
-    <button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
+    <button onclick="showCambiarPassword()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
     <div class="hdr-nit">NIT: 901.904.435-9</div>
   </div></div>
 
@@ -1085,7 +1090,7 @@ async function readRUT(file){
       r.readAsDataURL(file);
     });
 
-    const GEMINI_KEY = 'AIzaSyAELbfay6cnQtATvQbwEqzb9ZI1VBHRCR4';
+    const GEMINI_KEY = 'PEGA_TU_NUEVA_API_KEY_AQUI';
     const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos. IMPORTANTE: Responde UNICAMENTE con el objeto JSON, sin ningun texto antes ni despues, sin backticks, sin markdown. Solo el JSON puro empezando con { y terminando con }. Formato: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}';
 
     const resp = await fetch(
@@ -1217,7 +1222,7 @@ var currentUser   = null;
 var currentPerfil = null;
 
 var FB_CONFIG = {
-  apiKey: "AIzaSyDQdSWjbz38MsoysDczXCkmgmIdYVP56uU",
+  apiKey: "AIzaSyCkCO0rMNceJehsWfUg5CPrvhoXK4sEoK4",
   authDomain: "jnf-app-3e464.firebaseapp.com",
   projectId: "jnf-app-3e464",
   storageBucket: "jnf-app-3e464.firebasestorage.app",
@@ -2883,6 +2888,104 @@ function inc_abrirGuardado(key){
   }
 }
 
+
+// ── Cambio / Reset de contraseña ─────────────────────────
+function showResetPassword(){
+  // Called from login screen - show reset tab
+  document.getElementById('pwd-tab-reset').style.display='block';
+  document.getElementById('pwd-tab-change').style.display='none';
+  document.getElementById('pwd-modal-title').textContent='Recuperar Contraseña';
+  // Pre-fill email if typed
+  var emailInput = document.getElementById('login-email');
+  if(emailInput && emailInput.value){
+    document.getElementById('pwd-reset-email').value = emailInput.value;
+  }
+  var msg = document.getElementById('pwd-reset-msg');
+  if(msg){ msg.style.display='none'; msg.textContent=''; }
+  document.getElementById('modal-password').style.display='flex';
+}
+
+function showCambiarPassword(){
+  // Called from app header - show change tab
+  document.getElementById('pwd-tab-reset').style.display='none';
+  document.getElementById('pwd-tab-change').style.display='block';
+  document.getElementById('pwd-modal-title').textContent='Mi Cuenta — Cambio de Contraseña';
+  var emailEl = document.getElementById('pwd-current-email');
+  if(emailEl && currentUser) emailEl.textContent = currentUser.email;
+  ['pwd-change-msg','pwd-direct-msg'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ el.style.display='none'; el.textContent=''; }
+  });
+  var n1=document.getElementById('pwd-new1'); if(n1) n1.value='';
+  var n2=document.getElementById('pwd-new2'); if(n2) n2.value='';
+  document.getElementById('modal-password').style.display='flex';
+}
+
+function closePasswordModal(){
+  document.getElementById('modal-password').style.display='none';
+}
+
+function showPwdMsg(elId, msg, type){
+  var el=document.getElementById(elId);
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  el.style.background=type==='ok'?'#d1fae5':type==='err'?'#fee2e2':'#dbeafe';
+  el.style.color=type==='ok'?'#065f46':type==='err'?'#991b1b':'#1e40af';
+}
+
+function doSendReset(){
+  var email = (document.getElementById('pwd-reset-email').value||'').trim();
+  if(!email){ showPwdMsg('pwd-reset-msg','Ingresa tu correo electrónico','err'); return; }
+  if(!auth){ showPwdMsg('pwd-reset-msg','Error de conexión. Intenta de nuevo.','err'); return; }
+  auth.sendPasswordResetEmail(email).then(function(){
+    showPwdMsg('pwd-reset-msg','✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada.','ok');
+    setTimeout(function(){ closePasswordModal(); }, 3000);
+  }).catch(function(e){
+    var msgs = {
+      'auth/user-not-found':'No existe una cuenta con ese correo.',
+      'auth/invalid-email':'El correo no es válido.',
+      'auth/too-many-requests':'Demasiados intentos. Espera un momento.'
+    };
+    showPwdMsg('pwd-reset-msg', msgs[e.code]||e.message, 'err');
+  });
+}
+
+function doSendChangeLink(){
+  if(!auth||!currentUser){ showPwdMsg('pwd-change-msg','No hay sesión activa.','err'); return; }
+  auth.sendPasswordResetEmail(currentUser.email).then(function(){
+    showPwdMsg('pwd-change-msg','✓ Enlace enviado a '+currentUser.email+'. Revisa tu correo.','ok');
+  }).catch(function(e){
+    showPwdMsg('pwd-change-msg', e.message, 'err');
+  });
+}
+
+function doChangePasswordDirect(){
+  var n1=(document.getElementById('pwd-new1').value||'').trim();
+  var n2=(document.getElementById('pwd-new2').value||'').trim();
+  if(!n1||n1.length<6){ showPwdMsg('pwd-direct-msg','La contraseña debe tener al menos 6 caracteres.','err'); return; }
+  if(n1!==n2){ showPwdMsg('pwd-direct-msg','Las contraseñas no coinciden.','err'); return; }
+  if(!currentUser){ showPwdMsg('pwd-direct-msg','No hay sesión activa.','err'); return; }
+  currentUser.updatePassword(n1).then(function(){
+    showPwdMsg('pwd-direct-msg','✓ Contraseña actualizada correctamente.','ok');
+    document.getElementById('pwd-new1').value='';
+    document.getElementById('pwd-new2').value='';
+    setTimeout(function(){ closePasswordModal(); }, 2000);
+  }).catch(function(e){
+    if(e.code==='auth/requires-recent-login'){
+      showPwdMsg('pwd-direct-msg','Por seguridad, debes volver a iniciar sesión antes de cambiar la contraseña. Usa la opción "Enviar enlace".','err');
+    } else {
+      showPwdMsg('pwd-direct-msg', e.message, 'err');
+    }
+  });
+}
+
+// Close modal on background click
+(function(){
+  var mp = document.getElementById('modal-password');
+  if(mp) mp.addEventListener('click', function(e){ if(e.target===this) closePasswordModal(); });
+})();
+
 </script>
 
 <!-- ═══ PANTALLA F300 IVA ════════════════════════════════ -->
@@ -3133,6 +3236,49 @@ function inc_abrirGuardado(key){
       <div id="guardado-inc-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
     </div>
 
+  </div>
+</div>
+
+
+<!-- ═══ MODAL CAMBIO / RESET CONTRASEÑA ════════════════ -->
+<div id="modal-password" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:20px 24px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div id="pwd-modal-title" style="font-size:14px;font-weight:800;">Cambio de Contraseña</div>
+      <button onclick="closePasswordModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:24px;">
+      <!-- Tab: Reset (desde login) -->
+      <div id="pwd-tab-reset">
+        <p style="font-size:12px;color:#6b7280;margin-bottom:16px;line-height:1.6;">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
+        <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Correo electrónico</label>
+        <input id="pwd-reset-email" type="email" placeholder="tu@correo.com"
+          style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:10px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:12px;"/>
+        <div id="pwd-reset-msg" style="display:none;font-size:11px;font-weight:600;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+        <button onclick="doSendReset()" style="width:100%;background:#1a2580;color:#fff;border:none;border-radius:8px;padding:11px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+          📧 Enviar enlace de recuperación
+        </button>
+      </div>
+      <!-- Tab: Cambiar (desde app logueado) -->
+      <div id="pwd-tab-change" style="display:none;">
+        <p style="font-size:12px;color:#6b7280;margin-bottom:16px;line-height:1.6;">Te enviaremos un correo a <strong id="pwd-current-email"></strong> con un enlace para cambiar tu contraseña.</p>
+        <div id="pwd-change-msg" style="display:none;font-size:11px;font-weight:600;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+        <button onclick="doSendChangeLink()" style="width:100%;background:#1a2580;color:#fff;border:none;border-radius:8px;padding:11px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+          📧 Enviar enlace de cambio
+        </button>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
+          <div style="font-size:11px;font-weight:700;color:#4b5563;margin-bottom:8px;">O cambia tu contraseña ahora:</div>
+          <input id="pwd-new1" type="password" placeholder="Nueva contraseña (mín. 6 caracteres)"
+            style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:10px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:8px;"/>
+          <input id="pwd-new2" type="password" placeholder="Confirmar nueva contraseña"
+            style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:10px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:12px;"/>
+          <div id="pwd-direct-msg" style="display:none;font-size:11px;font-weight:600;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+          <button onclick="doChangePasswordDirect()" style="width:100%;background:#065f46;color:#fff;border:none;border-radius:8px;padding:11px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+            🔒 Cambiar contraseña
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
