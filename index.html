@@ -675,7 +675,7 @@ function editClient(id){
 // ═══════════════════════════════════════════════════════
 // NAVEGACIÓN DE PANTALLAS
 // ═══════════════════════════════════════════════════════
-const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc'];
+const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado'];
 let activeClientId = null;
 let activeYear = null;
 let _currentAnios = [];
@@ -722,13 +722,6 @@ const MODULES = [
     active:true, action:'openExogena()'
   },
   {
-    id:'guardado',icon:'💾',iconBg:'#d1fae5',
-    title:'Resultados Guardados — Exógena',
-    desc:'Consulta y descarga los formatos de exógena guardados para este cliente y año gravable.',
-    tags:['Formato 1001','Formato 1005','Formato 1006','Formato 1007'],
-    active:true, action:'openGuardado()'
-  },
-  {
     id:'f300',icon:'🧾',iconBg:'#e8f5e9',
     title:'Declaración de IVA — Formulario 300',
     desc:'Liquida la declaración de IVA desde el Excel de facturación. Calcula bases, impuesto generado, descontable y resultado.',
@@ -741,6 +734,13 @@ const MODULES = [
     desc:'Liquida el Impuesto Nacional al Consumo (8%) para restaurantes y servicios. Genera el PDF del formulario 310.',
     tags:['Base 8%','IPO 8%','Devoluciones'],
     active:true, action:'openINC()'
+  },
+  {
+    id:'guardado',icon:'💾',iconBg:'#d1fae5',
+    title:'Archivo de Reportes',
+    desc:'Consulta y descarga los reportes de exógena, IVA e INC guardados para este cliente y año gravable.',
+    tags:['Exógena','F300 IVA','F310 INC'],
+    active:true, action:'openGuardado()'
   },
   {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
@@ -1217,7 +1217,7 @@ var currentUser   = null;
 var currentPerfil = null;
 
 var FB_CONFIG = {
-  apiKey: "AIzaSyDQdSWjbz38MsoysDczXCkmgmIdYVP56uU",
+  apiKey: "AIzaSyAELbfay6cnQtATvQbwEqzb9ZI1VBHRCR4",
   authDomain: "jnf-app-3e464.firebaseapp.com",
   projectId: "jnf-app-3e464",
   storageBucket: "jnf-app-3e464.firebasestorage.app",
@@ -1613,7 +1613,7 @@ function f300_updatePeriodos(){
   s.innerHTML=f300_PERIODOS[t].map(p=>`<option value="${p.cod}">${p.label}</option>`).join('');
 }
 
-let f300_wb=null, sheetMap={};
+let f300_wb=null, f300_sheetMap={};
 
 // Find sheet by possible names
 function f300_findSheet(names){
@@ -1633,7 +1633,7 @@ function f300_handleFile(file){
     try{
       f300_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
       // Map sheet names
-      sheetMap={
+      f300_sheetMap={
         ventas:     f300_findSheet(['VENTAS','INGRESOS']),
         dvVentas:   f300_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']),
         costos:     f300_findSheet(['COSTOS','COMPRAS','EGRESOS']),
@@ -1651,11 +1651,11 @@ function f300_handleFile(file){
         {key:'docSoporte',label:'DOC. SOPORTE',req:false},
       ];
       document.getElementById('f300-sheetsDetected').innerHTML=tags.map(t=>{
-        const found=!!sheetMap[t.key];
+        const found=!!f300_sheetMap[t.key];
         const cls=found?'found':t.req?'missing':'optional';
         return `<span class="sheet-tag ${cls}">${found?'✓':'✗'} ${t.label}</span>`;
       }).join('');
-      if(!sheetMap.ventas||!sheetMap.costos){
+      if(!f300_sheetMap.ventas||!f300_sheetMap.costos){
         f300_ss('Faltan pestañas obligatorias: VENTAS y COSTOS','err');
         document.getElementById('f300-btnProcesar').disabled=true;
         return;
@@ -1797,38 +1797,38 @@ function f300_procesar(){
   const mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
 
   // ── VENTAS ────────────────────────────────────────────────
-  const v_b5   =sumByMes(sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
-  const v_b19  =sumByMes(sheetMap.ventas,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsV,meses);
-  const v_i5   =sumByMes(sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
-  const v_i19  =sumByMes(sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
-  const v_exen =sumByMes(sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
+  const v_b5   =sumByMes(f300_sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
+  const v_b19  =sumByMes(f300_sheetMap.ventas,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsV,meses);
+  const v_i5   =sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
+  const v_i19  =sumByMes(f300_sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
+  const v_exen =sumByMes(f300_sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
 
   // ── DEV VENTAS ────────────────────────────────────────────
-  const dv_b5  =sumByMes(sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
-  const dv_b19 =sumByMes(sheetMap.dvVentas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
-  const dv_i5  =sumByMes(sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
-  const dv_i19 =sumByMes(sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
-  const dv_exen=sumByMes(sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
+  const dv_b5  =sumByMes(f300_sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
+  const dv_b19 =sumByMes(f300_sheetMap.dvVentas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
+  const dv_i5  =sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
+  const dv_i19 =sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
+  const dv_exen=sumByMes(f300_sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
 
   // ── COSTOS ────────────────────────────────────────────────
-  const c_b5   =sumByMes(sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
-  const c_b19  =sumByMes(sheetMap.costos,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsC,meses);
-  const c_i5   =sumByMes(sheetMap.costos,['IVA 5%','IVA5','IVA 5.','IVA5%'],mesColsC,meses);
-  const c_i19  =sumByMes(sheetMap.costos,['IVA 19%','IVA19','IVA19%','IVA19%.'],mesColsC,meses);
-  const c_exen =sumByMes(sheetMap.costos,['EXENTO','EXENTA','EXENTOS'],mesColsC,meses);
+  const c_b5   =sumByMes(f300_sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
+  const c_b19  =sumByMes(f300_sheetMap.costos,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsC,meses);
+  const c_i5   =sumByMes(f300_sheetMap.costos,['IVA 5%','IVA5','IVA 5.','IVA5%'],mesColsC,meses);
+  const c_i19  =sumByMes(f300_sheetMap.costos,['IVA 19%','IVA19','IVA19%','IVA19%.'],mesColsC,meses);
+  const c_exen =sumByMes(f300_sheetMap.costos,['EXENTO','EXENTA','EXENTOS'],mesColsC,meses);
 
   // ── DEV COSTOS ────────────────────────────────────────────
-  const dc_b5  =sumByMes(sheetMap.dvCostos,['BASE 5','BASE5'],mesColsC,meses);
-  const dc_b19 =sumByMes(sheetMap.dvCostos,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
-  const dc_i5  =sumByMes(sheetMap.dvCostos,['IVA 5%','IVA5'],mesColsC,meses);
-  const dc_i19 =sumByMes(sheetMap.dvCostos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
-  const dc_exen=sumByMes(sheetMap.dvCostos,['EXENTO','EXENTA'],mesColsC,meses);
+  const dc_b5  =sumByMes(f300_sheetMap.dvCostos,['BASE 5','BASE5'],mesColsC,meses);
+  const dc_b19 =sumByMes(f300_sheetMap.dvCostos,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
+  const dc_i5  =sumByMes(f300_sheetMap.dvCostos,['IVA 5%','IVA5'],mesColsC,meses);
+  const dc_i19 =sumByMes(f300_sheetMap.dvCostos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
+  const dc_exen=sumByMes(f300_sheetMap.dvCostos,['EXENTO','EXENTA'],mesColsC,meses);
 
   // ── SERV PUBLICOS (pivot) — van a excluidos casilla 54 ────
-  const sp_total=sumPivot(sheetMap.servPub,meses);
+  const sp_total=sumPivot(f300_sheetMap.servPub,meses);
 
   // ── DOC SOPORTE (pivot) — van a excluidos casilla 54 ─────
-  const ds_total=sumPivot(sheetMap.docSoporte,meses);
+  const ds_total=sumPivot(f300_sheetMap.docSoporte,meses);
 
   // ── CASILLEROS F300 ───────────────────────────────────────
   const c27=f300_rdMil(v_b5);
@@ -2021,7 +2021,7 @@ async function f300_descargarPDF(){
 }
 
 function f300_limpiar(){
-  f300_wb=null;sheetMap={};
+  f300_wb=null;f300_sheetMap={};
   document.getElementById('f300-fileNameDisplay').textContent='';
   document.getElementById('f300-sheetsDetected').innerHTML='';
   document.getElementById('f300-btnProcesar').disabled=true;
@@ -2056,7 +2056,7 @@ function inc_updatePeriodos(){
   s.innerHTML=inc_PERIODOS[t].map(p=>`<option value="${p.cod}">${p.label}</option>`).join('');
 }
 
-let inc_wb=null,sheetVentas=null,sheetDevVentas=null;
+let inc_wb=null,inc_sheetVentas=null,inc_sheetDevVentas=null;
 
 function inc_findSheet(names){
   if(!inc_wb) return null;
@@ -2075,22 +2075,22 @@ function inc_handleFile(file){
   reader.onload=e=>{
     try{
       inc_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
-      sheetVentas=inc_findSheet(['VENTAS','INGRESOS']);
-      sheetDevVentas=inc_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']);
+      inc_sheetVentas=inc_findSheet(['VENTAS','INGRESOS']);
+      inc_sheetDevVentas=inc_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']);
 
       const tags=[
-        {name:sheetVentas,label:'VENTAS',req:true},
-        {name:sheetDevVentas,label:'DEV VENTAS',req:false},
+        {name:inc_sheetVentas,label:'VENTAS',req:true},
+        {name:inc_sheetDevVentas,label:'DEV VENTAS',req:false},
       ];
       document.getElementById('inc-sheetsDetected').innerHTML=tags.map(t=>{
         const cls=t.name?'found':t.req?'missing':'optional';
         return `<span class="sheet-tag ${cls}">${t.name?'✓':'✗'} ${t.label}</span>`;
       }).join('');
 
-      if(!sheetVentas){inc_ss('No se encontró la pestaña VENTAS','err');return;}
+      if(!inc_sheetVentas){inc_ss('No se encontró la pestaña VENTAS','err');return;}
 
       // Verify IPO columns exist
-      const ws=inc_wb.Sheets[sheetVentas];
+      const ws=inc_wb.Sheets[inc_sheetVentas];
       const hrow=inc_findHeaderRow(ws);
       const b8=colIdx(ws,'BASE 8%',hrow);
       const i8=colIdx(ws,'IPO 8%',hrow);
@@ -2199,12 +2199,12 @@ function inc_procesar(){
   const mesOpts=['MES','FECHA','MES.','FECHA EMISION'];
 
   // VENTAS — BASE 8% e IPO 8%
-  const vB8=sumByMesMultiCol(sheetVentas,['BASE 8%','BASE8%','BASE 8','BASE8'],mesOpts,meses);
-  const vI8=sumByMesMultiCol(sheetVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
+  const vB8=sumByMesMultiCol(inc_sheetVentas,['BASE 8%','BASE8%','BASE 8','BASE8'],mesOpts,meses);
+  const vI8=sumByMesMultiCol(inc_sheetVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
 
   // DEV VENTAS — BASE IPO e IPO 8%
-  const dvB8=sumByMesMultiCol(sheetDevVentas,['BASE IPO','BASE 8%','BASE8%','BASE IPO 8'],mesOpts,meses);
-  const dvI8=sumByMesMultiCol(sheetDevVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
+  const dvB8=sumByMesMultiCol(inc_sheetDevVentas,['BASE IPO','BASE 8%','BASE8%','BASE IPO 8'],mesOpts,meses);
+  const dvI8=sumByMesMultiCol(inc_sheetDevVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
 
   // Casilleros F310
   const c27=inc_rdMil(vB8.total);
@@ -2395,7 +2395,7 @@ async function inc_descargarPDF(){
 }
 
 function inc_limpiar(){
-  inc_wb=null;sheetVentas=null;sheetDevVentas=null;
+  inc_wb=null;inc_sheetVentas=null;inc_sheetDevVentas=null;
   document.getElementById('inc-fileNameDisplay').textContent='';
   document.getElementById('inc-sheetsDetected').innerHTML='';
   document.getElementById('inc-btnProcesar').disabled=true;
@@ -2747,16 +2747,95 @@ function closeFicha(){
 
 
 function openGuardado(){
-  const c = clients.find(x=>x.id===activeClientId);
+  var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
-  const yr = activeYear||new Date().getFullYear();
-  // Show the savedResults div - it's in screen-contabilidad
-  showScreen('contabilidad');
-  setTimeout(function(){
-    loadSavedResults(c.id, yr);
-    const sr = document.getElementById('savedResults');
-    if(sr){ sr.style.display='block'; sr.scrollIntoView({behavior:'smooth'}); }
-  }, 100);
+  var yr = activeYear||new Date().getFullYear();
+  var gi = document.getElementById('guardado-cliente-info');
+  if(gi) gi.textContent = (c.razon||c.nit) + ' · Año ' + yr;
+  showScreen('guardado');
+  cargarArchivo(c.id, yr);
+}
+
+function cargarArchivo(clientId, year){
+  var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
+
+  // ── Cargar Exógena ────────────────────────────────────────
+  var exoDiv = document.getElementById('guardado-exogena');
+  if(db){
+    var exoKey = ('jnf_cons_'+clientId+'_'+year).replace(/[^a-zA-Z0-9_-]/g,'_');
+    db.collection('resultados').doc(exoKey).get().then(function(doc){
+      if(!doc.exists){exoDiv.style.display='none';return;}
+      var data = JSON.parse(doc.data().data||'{}');
+      if(!data.cons){exoDiv.style.display='none';return;}
+      exoDiv.style.display='block';
+      var fecha = new Date(data.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      document.getElementById('guardado-exogena-fecha').textContent='✓ Guardado el '+fecha;
+      document.getElementById('guardado-exogena-counts').textContent=
+        ['f1001','f1005','f1006','f1007'].map(function(f){return f.replace('f','')+': '+(data.cons[f]||[]).length+' terceros';}).join(' · ');
+      var tots=data.totales||{};
+      document.getElementById('guardado-exogena-totals').innerHTML=[
+        {lbl:'Total 1001',val:tots.f1001||0,color:'#1a2580',bg:'#eef1ff'},
+        {lbl:'IVA Desct. 1005',val:tots.f1005||0,color:'#065f46',bg:'#d1fae5'},
+        {lbl:'IVA Gen. 1006',val:tots.f1006||0,color:'#9f1239',bg:'#fee2e2'},
+        {lbl:'Ingresos 1007',val:tots.f1007||0,color:'#6d28d9',bg:'#ede9fe'},
+      ].map(function(t){return '<div style="background:'+t.bg+';border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:9px;font-weight:700;color:'+t.color+';text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">'+t.lbl+'</div>'
+        +'<div style="font-size:14px;font-weight:800;color:'+t.color+';">'+fmtM(t.val)+'</div></div>';}).join('');
+      document.getElementById('guardado-exogena-btns').innerHTML=
+        ['1001','1005','1006','1007'].map(function(n){
+          var rows=(data.cons['f'+n]||[]).length;
+          if(!rows) return '';
+          return '<button onclick="downloadSaved(''+clientId+'',''+n+'')" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">⬇ Formato '+n+' <span style="opacity:.7;font-size:10px;">('+rows+' reg.)</span></button>';
+        }).join('');
+    }).catch(function(){exoDiv.style.display='none';});
+  }
+
+  // ── Cargar F300 ───────────────────────────────────────────
+  var f300List = document.getElementById('guardado-f300-list');
+  var f300Html = '';
+  var f300Promises = ['01','02','03'].map(function(p){
+    var key = ('jnf_f300_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    return db.collection('resultados').doc(key).get().then(function(doc){
+      if(!doc.exists) return null;
+      var d = JSON.parse(doc.data().data||'{}');
+      if(!d.c67) return null;
+      var label = d.pLabel||('Período '+p);
+      var badge = d.c88>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c88)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c89)+'</span>';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:8px;">'
+        +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+label+'</div>'
+        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">IVA Generado: '+fmtM(d.c67)+' · Descontable: '+fmtM(d.c81)+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+        +'<button onclick="f300_renderSaved('+JSON.stringify(d).replace(/"/g,"'")+')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+        +'</div></div>';
+    }).catch(function(){return null;});
+  });
+  Promise.all(f300Promises).then(function(results){
+    var html = results.filter(Boolean).join('');
+    f300List.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+  });
+
+  // ── Cargar INC ────────────────────────────────────────────
+  var incList = document.getElementById('guardado-inc-list');
+  var incPromises = ['01','02','03','04','05','06'].map(function(p){
+    var key = ('jnf_inc_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    return db.collection('resultados').doc(key).get().then(function(doc){
+      if(!doc.exists) return null;
+      var d = JSON.parse(doc.data().data||'{}');
+      if(!d.c56) return null;
+      var label = d.pLabel||('Bimestre '+p);
+      var badge = d.c64>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c64)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c65)+'</span>';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#faf5ff;border:1px solid #ede9fe;border-radius:8px;margin-bottom:8px;">'
+        +'<div><div style="font-size:12px;font-weight:700;color:#6d28d9;">'+label+'</div>'
+        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Base Neta: '+fmtM(d.c29)+' · IPO: '+fmtM(d.c56)+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+        +'<button onclick="inc_renderSaved('+JSON.stringify(d).replace(/"/g,"'")+')" style="background:#6d28d9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+        +'</div></div>';
+    }).catch(function(){return null;});
+  });
+  Promise.all(incPromises).then(function(results){
+    var html = results.filter(Boolean).join('');
+    incList.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+  });
 }
 
 
@@ -2892,8 +2971,7 @@ function openFicha_edit(){
     <div>
       <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Periodicidad</label>
       <select id="inc-periodicidad" onchange="inc_updatePeriodos()" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">
-        <option value="cuatrimestral">Cuatrimestral</option>
-        <option value="bimestral">Bimestral</option>
+        <option value="bimestral" selected>Bimestral</option>
       </select>
     </div>
     <div>
@@ -2977,6 +3055,45 @@ function openFicha_edit(){
     </div>
     <!-- Body -->
     <div id="ficha-body" style="padding:24px;"></div>
+  </div>
+</div>
+
+
+<!-- ═══ PANTALLA ARCHIVO DE REPORTES ════════════════════ -->
+<div id="screen-guardado" style="display:none;min-height:100vh;background:#f0f2f8;">
+  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
+    <div style="flex:1;text-align:center;">
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;">Archivo de Reportes</div>
+      <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600;" id="guardado-cliente-info">—</div>
+    </div>
+    <div style="width:80px;flex-shrink:0;"></div>
+  </div>
+  <div style="max-width:900px;margin:0 auto;padding:20px;">
+
+    <!-- Exógena guardada -->
+    <div id="guardado-exogena" style="display:none;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+        📊 Información Exógena — Último proceso guardado
+      </div>
+      <div id="guardado-exogena-fecha" style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;"></div>
+      <div id="guardado-exogena-counts" style="font-size:11px;color:#6b7280;margin-bottom:12px;"></div>
+      <div id="guardado-exogena-totals" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+      <div id="guardado-exogena-btns" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- F300 guardados -->
+    <div id="guardado-f300-section" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;">🧾 Declaraciones IVA — Formulario 300</div>
+      <div id="guardado-f300-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
+    </div>
+
+    <!-- INC guardados -->
+    <div id="guardado-inc-section" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:800;color:#6d28d9;margin-bottom:14px;">🍽️ Declaraciones INC — Formulario 310</div>
+      <div id="guardado-inc-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
+    </div>
+
   </div>
 </div>
 
