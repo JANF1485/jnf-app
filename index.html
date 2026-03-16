@@ -190,7 +190,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 <div id="screen-splash" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:40px 20px;text-align:center;">
 
   <!-- Nombre empresa arriba -->
-  <div style="color:var(--gold);font-size:22px;font-weight:900;letter-spacing:3px;text-transform:uppercase;line-height:1.3;margin-bottom:40px;">
+  <div style="color:#c9a227;font-size:29px;font-weight:900;letter-spacing:3px;text-transform:uppercase;line-height:1.3;margin-bottom:40px;text-shadow:0 0 8px rgba(180,140,30,.4),0 2px 6px rgba(0,0,0,.6);">
     Asesorías y Consultorías<br>JNF S.A.S.
   </div>
 
@@ -1088,11 +1088,11 @@ async function readRUT(file){
       r.readAsDataURL(file);
     });
 
-    const GEMINI_KEY = 'AIzaSyBcYLryCCf9FkboEd86bryhudF8tm4p4KA';
+    // Key gestionada en Cloudflare Worker
     const prompt = 'Eres experto en tributación colombiana. Lee este RUT de la DIAN y extrae todos los datos. IMPORTANTE: Responde UNICAMENTE con el objeto JSON, sin ningun texto antes ni despues, sin backticks, sin markdown. Solo el JSON puro empezando con { y terminando con }. Formato: {"razon":"razon social campo 35","nit":"NIT sin DV campo 5","dv":"digito verificacion campo 6","sigla":"nombre comercial campo 36","tipo":"PJ o PN","dir":"direccion campo 41","dpto":"departamento campo 39","ciudad":"municipio campo 40","cp":"codigo postal campo 43","tel":"telefono campo 44","email":"correo campo 42","ciiu":"CIIU campo 46","ciiu2":"CIIU campo 48","ciiu3":"campo 50 primera actividad","ciiu4":"campo 50 segunda actividad","seccional":"seccional DIAN campo 12","regimen":"codigo regimen","resps":["05"],"rl_ap1":"primer apellido RL","rl_ap2":"segundo apellido RL","rl_n1":"primer nombre RL","rl_n2":"otros nombres RL","rl_cc":"cedula RL","rl_cargo":"cargo RL"}';
 
     const resp = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_KEY,
+      'https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
