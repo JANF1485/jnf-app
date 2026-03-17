@@ -241,6 +241,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       Agregar cliente
     </button>
     <input type="text" class="search-box" id="searchBox" placeholder="Buscar por nombre o NIT..." oninput="renderClients()"/>
+    <select id="filterContador" onchange="renderClients()" style="border:1.5px solid #dde1f0;border-radius:8px;padding:8px 12px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;color:#1a2580;background:#fff;cursor:pointer;display:none;">
+      <option value="">Todos los contadores</option>
+    </select>
     <span class="count-badge" id="countBadge">0 clientes</span>
   </div>
 
@@ -663,7 +666,7 @@ function saveClient(){
     closeModal('add');renderClients();
     ss(editingId?'Cliente actualizado ✓':'Cliente agregado ✓','ok');
     // Update contador's clientesAsignados in Firestore
-    actualizarClientesDeContador(d);
+    setTimeout(function(){ actualizarClientesDeContador(d); }, 500);
   }).catch(function(e){ss('Error guardando: '+e.message,'err');});
 }
 
@@ -725,9 +728,12 @@ function deleteClient(id){
 // ═══════════════════════════════════════════════════════
 function renderClients(){
   const q=document.getElementById('searchBox').value.toLowerCase().trim();
-  const filtered=clients.filter(c=>
-    !q||(c.razon||'').toLowerCase().includes(q)||(c.nit||'').includes(q)||(c.sigla||'').toLowerCase().includes(q)
-  );
+  const fc=(document.getElementById('filterContador')||{}).value||'';
+  const filtered=clients.filter(c=>{
+    const matchQ = !q||(c.razon||'').toLowerCase().includes(q)||(c.nit||'').includes(q)||(c.sigla||'').toLowerCase().includes(q);
+    const matchC = !fc || (fc==='sin_asignar' ? !c.contadorUid : c.contadorUid===fc);
+    return matchQ && matchC;
+  });
   document.getElementById('countBadge').textContent=clients.length+' cliente'+(clients.length!==1?'s':'');
   const grid=document.getElementById('clientsGrid');
   if(!filtered.length){
@@ -1469,6 +1475,9 @@ function showApp(){
   var adminBtn = document.getElementById('admin-menu-btn');
   if(adminBtn) adminBtn.style.display = currentPerfil.rol==='admin'?'':'none';
   renderClients();
+  if(currentPerfil && currentPerfil.rol==='admin'){
+    poblarFiltroContador();
+  }
 }
 
 // ── FIRESTORE: CLIENTES ──────────────────────────────────
@@ -1478,14 +1487,29 @@ function loadClientesFromFirestore(){
     snap.forEach(function(doc){ clients.push(Object.assign({id:doc.id}, doc.data())); });
     if(currentPerfil && currentPerfil.rol === 'contador'){
       var uid = currentUser ? currentUser.uid : '';
-      clients = clients.filter(function(c){
-        // Check both: client's contadorUid OR user's clientesAsignados
-        var byContadorUid = c.contadorUid === uid;
-        var byAsignados = (currentPerfil.clientesAsignados||[]).includes(c.id);
-        return byContadorUid || byAsignados;
+      // Refresh perfil from Firestore to get latest clientesAsignados
+      db.collection('usuarios').doc(uid).get().then(function(doc){
+        if(doc.exists){
+          currentPerfil = Object.assign(currentPerfil, doc.data());
+        }
+        clients = clients.filter(function(c){
+          var byContadorUid = c.contadorUid === uid;
+          var byAsignados = (currentPerfil.clientesAsignados||[]).includes(c.id);
+          return byContadorUid || byAsignados;
+        });
+        renderClients();
+      }).catch(function(){
+        // Fallback: use cached profile
+        clients = clients.filter(function(c){
+          var byContadorUid = c.contadorUid === uid;
+          var byAsignados = (currentPerfil.clientesAsignados||[]).includes(c.id);
+          return byContadorUid || byAsignados;
+        });
+        renderClients();
       });
+    } else {
+      renderClients();
     }
-    renderClients();
   }).catch(function(e){ ss('Error cargando clientes: '+e.message,'err'); });
 }
 
@@ -2925,21 +2949,35 @@ function openGuardado(){
   var yr = activeYear||new Date().getFullYear();
   var gi = document.getElementById('guardado-cliente-info');
   if(gi) gi.textContent = (c.razon||c.nit) + ' · Año ' + yr;
+  var isAdmin = currentPerfil && currentPerfil.rol==='admin';
+  var perms = isAdmin ? ['exogena','f300','inc'] : (currentPerfil&&currentPerfil.modulosPermitidos||[]);
+  ['exogena','f300','inc'].forEach(function(mod){
+    var el = document.getElementById('guardado-'+mod+'-section');
+    if(el) el.style.display = perms.indexOf(mod)>=0 ? '' : 'none';
+  });
   showScreen('guardado');
   cargarArchivo(c.id, yr);
 }
-
 function cargarArchivo(clientId, year){
   var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
 
   // ── Cargar Exógena ────────────────────────────────────────
   var exoDiv = document.getElementById('guardado-exogena');
+  var exoSection = document.getElementById('guardado-exogena-section');
+  var exoList = document.getElementById('guardado-exogena-list');
   if(db){
     var exoKey = ('jnf_cons_'+clientId+'_'+year).replace(/[^a-zA-Z0-9_-]/g,'_');
     db.collection('resultados').doc(exoKey).get().then(function(doc){
-      if(!doc.exists){exoDiv.style.display='none';return;}
+      if(!doc.exists){
+        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
+        if(exoDiv) exoDiv.style.display='none'; return;
+      }
       var data = JSON.parse(doc.data().data||'{}');
-      if(!data.cons){exoDiv.style.display='none';return;}
+      if(!data.cons){
+        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
+        if(exoDiv) exoDiv.style.display='none'; return;
+      }
+      if(exoList) exoList.style.display='none';
       exoDiv.style.display='block';
       var fecha = new Date(data.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       document.getElementById('guardado-exogena-fecha').textContent='✓ Guardado el '+fecha;
@@ -2964,7 +3002,7 @@ function cargarArchivo(clientId, year){
       var delBtn = document.createElement('button');
       delBtn.innerHTML = '🗑 Eliminar reporte';
       delBtn.style.cssText = 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-top:12px;';
-      delBtn.onclick = function(){ eliminarReporte('exogena', exoKey, exoDiv); };
+      delBtn.onclick = function(){ eliminarReporte('exogena', exoKey, exoSection||exoDiv); };
       document.getElementById('guardado-exogena-btns').appendChild(delBtn);
     }).catch(function(){exoDiv.style.display='none';});
   }
@@ -3210,6 +3248,31 @@ function cargarSelectContador(selectedUid){
   });
 }
 
+
+function poblarFiltroContador(){
+  var sel = document.getElementById('filterContador');
+  if(!sel || !db) return;
+  // Show filter only for admin
+  var isAdmin = currentPerfil && currentPerfil.rol==='admin';
+  sel.style.display = isAdmin ? '' : 'none';
+  if(!isAdmin) return;
+  // Reset options
+  sel.innerHTML = '<option value="">— Todos los contadores —</option>';
+  db.collection('usuarios').get().then(function(snap){
+    snap.forEach(function(doc){
+      var u = doc.data();
+      var opt = document.createElement('option');
+      opt.value = doc.id;
+      opt.textContent = (u.nombre||u.email) + (u.rol==='admin'?' (Admin)':' (Contador)');
+      sel.appendChild(opt);
+    });
+    // Add "Sin asignar" option
+    var optNone = document.createElement('option');
+    optNone.value = 'sin_asignar';
+    optNone.textContent = '— Sin contador asignado —';
+    sel.appendChild(optNone);
+  }).catch(function(){});
+}
 </script>
 
 <!-- ═══ PANTALLA F300 IVA ════════════════════════════════ -->
@@ -3450,14 +3513,17 @@ function cargarSelectContador(selectedUid){
   <div style="max-width:900px;margin:0 auto;padding:20px;">
 
     <!-- Exógena guardada -->
-    <div id="guardado-exogena" style="display:none;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+    <div id="guardado-exogena-section" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-        📊 Información Exógena — Último proceso guardado
+        📊 Información Exógena AG
       </div>
-      <div id="guardado-exogena-fecha" style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;"></div>
-      <div id="guardado-exogena-counts" style="font-size:11px;color:#6b7280;margin-bottom:12px;"></div>
-      <div id="guardado-exogena-totals" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
-      <div id="guardado-exogena-btns" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="guardado-exogena-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
+      <div id="guardado-exogena" style="display:none;">
+        <div id="guardado-exogena-fecha" style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;"></div>
+        <div id="guardado-exogena-counts" style="font-size:11px;color:#6b7280;margin-bottom:12px;"></div>
+        <div id="guardado-exogena-totals" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+        <div id="guardado-exogena-btns" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
     </div>
 
     <!-- F300 guardados -->
