@@ -455,7 +455,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       </div>
     </div>
     <!-- Asignación de contador -->
-    <div style="padding:16px 24px;border-top:1px solid #f3f4f6;background:#f8faff;">
+    <div id="contador-section" style="padding:16px 24px;border-top:1px solid #f3f4f6;background:#f8faff;">
       <div style="font-size:11px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
         👤 Contador asignado
       </div>
@@ -581,9 +581,14 @@ function openModal(name, data=null){
     document.getElementById('saveBtnText').textContent = data ? 'Guardar cambios' : 'Guardar cliente';
     clearForm();
     if(data) fillForm(data);
-    // Load users for contador selector
-    var contadorUid = data ? (data.contadorUid||'') : '';
-    setTimeout(function(){ cargarSelectContador(contadorUid); }, 300);
+    // Show/hide contador section based on role
+    var contadorSection = document.getElementById('contador-section');
+    var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
+    if(contadorSection) contadorSection.style.display = isAdmin ? '' : 'none';
+    if(isAdmin){
+      var contadorUid = data ? (data.contadorUid||'') : '';
+      setTimeout(function(){ cargarSelectContador(contadorUid); }, 300);
+    }
   }
   if(name==='consolidador' && data){
     document.getElementById('consModalTitle').textContent = '📊 Consolidador — ' + (data.razon||data.nit);
@@ -657,7 +662,36 @@ function saveClient(){
     else{if(clients.find(c=>c.nit===d.nit)){ss('Ya existe un cliente con ese NIT','err');return;}clients.push(d);}
     closeModal('add');renderClients();
     ss(editingId?'Cliente actualizado ✓':'Cliente agregado ✓','ok');
+    // Update contador's clientesAsignados in Firestore
+    actualizarClientesDeContador(d);
   }).catch(function(e){ss('Error guardando: '+e.message,'err');});
+}
+
+function actualizarClientesDeContador(clienteData){
+  if(!db) return;
+  var nuevoContador = clienteData.contadorUid||'';
+  var clienteId = clienteData.id;
+  // Get ALL clients to rebuild each contador's list
+  db.collection('clientes').get().then(function(snap){
+    var contadorMap = {}; // uid -> [clientIds]
+    snap.forEach(function(doc){
+      var c = doc.data();
+      var uid = c.contadorUid||'';
+      if(uid){
+        if(!contadorMap[uid]) contadorMap[uid]=[];
+        contadorMap[uid].push(doc.id);
+      }
+    });
+    // Update each affected contador
+    var uids = Object.keys(contadorMap);
+    // Also clear previous contador if changed
+    uids.forEach(function(uid){
+      db.collection('usuarios').doc(uid).update({
+        clientesAsignados: contadorMap[uid]
+      }).catch(function(){});
+    });
+    // If client has no contador now, nothing to update
+  }).catch(function(){});
 }
 function deleteClient(id){
   var c = clients.find(function(x){return x.id===id;});
@@ -1443,7 +1477,13 @@ function loadClientesFromFirestore(){
     clients = [];
     snap.forEach(function(doc){ clients.push(Object.assign({id:doc.id}, doc.data())); });
     if(currentPerfil && currentPerfil.rol === 'contador'){
-      clients = clients.filter(function(c){ return (currentPerfil.clientesAsignados||[]).includes(c.id); });
+      var uid = currentUser ? currentUser.uid : '';
+      clients = clients.filter(function(c){
+        // Check both: client's contadorUid OR user's clientesAsignados
+        var byContadorUid = c.contadorUid === uid;
+        var byAsignados = (currentPerfil.clientesAsignados||[]).includes(c.id);
+        return byContadorUid || byAsignados;
+      });
     }
     renderClients();
   }).catch(function(e){ ss('Error cargando clientes: '+e.message,'err'); });
