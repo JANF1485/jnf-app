@@ -946,19 +946,28 @@ function openAnio(clientId, year){
   document.getElementById('bc2-name').textContent=(c.razon||c.nit)+' · '+year;
 
   // Módulos — título dinámico con año
-  document.getElementById('modulesGrid').innerHTML=MODULES.map(m=>{
-    const title=m.id==='exogena'?'Información Exógena AG '+year:m.title;
-    return `<div class="module-card ${m.active?'active':'soon'}">
-      ${!m.active?'<span class="mc-soon">Próximamente</span>':''}
-      <div class="mc-icon-wrap" style="background:${m.iconBg};">${m.icon}</div>
-      <div class="mc-title">${title}</div>
-      <div class="mc-desc">${m.desc}</div>
-      ${m.tags.length?`<div class="mc-tags">${m.tags.map(t=>`<span class="mc-tag">${t}</span>`).join('')}</div>`:'<div style="margin-bottom:16px;"></div>'}
-      <button class="mc-btn${m.active?'':' disabled'}" ${m.active?`onclick="${m.action}"`:''}>
-        ${m.active?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg> Abrir módulo':'Próximamente'}
-      </button>
-    </div>`;
+  document.getElementById('modulesGrid').innerHTML=(function(){
+  var modPerms = currentPerfil && currentPerfil.modulosPermitidos;
+  var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  var visible = MODULES.filter(function(m){
+    if(isAdmin) return true;
+    if(!m.active) return false;
+    if(!modPerms || modPerms.length===0) return false;
+    return modPerms.indexOf(m.id) >= 0;
+  });
+  return visible.map(function(m){
+    var title = m.id==='exogena' ? 'Información Exógena AG '+year : m.title;
+    return '<div class="module-card '+(m.active?'active':'soon')+'">'
+      +(!m.active?'<span class="mc-soon">Próximamente</span>':'')
+      +'<div class="mc-icon-wrap" style="background:'+m.iconBg+';">'+m.icon+'</div>'
+      +'<div class="mc-title">'+title+'</div>'
+      +'<div class="mc-desc">'+m.desc+'</div>'
+      +(m.tags.length?'<div class="mc-tags">'+m.tags.map(function(t){return '<span class="mc-tag">'+t+'</span>';}).join('')+'</div>':'<div style="margin-bottom:16px;"></div>')
+      +'<button class="mc-btn'+(m.active?'':' disabled')+'" '+(m.active?'onclick="'+m.action+'"':'')+'>'
+      +(m.active?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg> Abrir módulo':'Próximamente')
+      +'</button></div>';
   }).join('');
+})();;
 
   showScreen('contabilidad');
   setTimeout(()=>loadSavedResults(clientId, year), 0);
@@ -1370,6 +1379,16 @@ function doLogout(){
     currentUser=null; currentPerfil=null;
     activeClientId=null; activeYear=null;
     sessionStorage.removeItem('splashSeen');
+    // Clear login form
+    var emailEl=document.getElementById('login-email');
+    var passEl=document.getElementById('login-pass');
+    var btnEl=document.getElementById('login-btn');
+    if(emailEl) emailEl.value='';
+    if(passEl) passEl.value='';
+    if(btnEl){ btnEl.disabled=false; btnEl.textContent='Ingresar'; }
+    var errEl=document.getElementById('login-error');
+    if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
+    // Hide all screens
     SCREENS.forEach(function(s){
       var el=document.getElementById('screen-'+s);
       if(el) el.style.display='none';
