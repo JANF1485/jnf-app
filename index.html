@@ -596,6 +596,70 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   </div>
 </div>
 
+<!-- ═══ PANTALLA: OBLIGACIONES TRIBUTARIAS ═══════════════ -->
+<div id="screen-obligaciones" class="main" style="display:none;">
+  <div class="gold-bar"></div>
+
+  <!-- Breadcrumb -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+    <button class="btn btn-ol btn-sm" onclick="goBack()" style="gap:5px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver a módulos
+    </button>
+    <span style="font-size:10px;color:var(--t3);">›</span>
+    <span id="obl-client-name" style="font-size:10px;font-weight:700;color:var(--t2);"></span>
+    <span style="font-size:10px;color:var(--t3);">›</span>
+    <span style="font-size:10px;font-weight:700;color:var(--bd);">📅 Obligaciones Tributarias</span>
+    <span id="obl-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
+  </div>
+
+  <!-- Resumen alertas -->
+  <div id="obl-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
+
+  <!-- Sin calendario -->
+  <div id="obl-empty" style="text-align:center;padding:48px 20px;color:var(--t3);display:none;">
+    <div style="font-size:40px;margin-bottom:12px;">📅</div>
+    <div style="font-size:14px;font-weight:700;color:var(--t2);">Sin calendario configurado</div>
+    <div style="font-size:12px;margin-top:6px;">Carga el calendario DIAN desde la pantalla de Gestión de Clientes usando el botón "Calendario DIAN".</div>
+  </div>
+
+  <!-- Lista de obligaciones -->
+  <div id="obl-lista" style="display:none;">
+    <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">Obligaciones del cliente según RUT</div>
+    <div id="obl-items" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+
+  <!-- Modal fecha presentación -->
+  <div id="modal-obl-fecha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--sf);border-radius:14px;border-top:4px solid var(--gold);padding:24px 28px;width:100%;max-width:400px;">
+      <div style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:4px;">📅 Registrar presentación</div>
+      <div id="obl-modal-desc" style="font-size:11px;color:var(--t2);margin-bottom:18px;"></div>
+
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:6px;">Fecha en que se presentó:</label>
+      <input type="date" id="obl-fecha-input"
+        style="width:100%;font-family:Montserrat,sans-serif;font-size:13px;border:1.5px solid var(--br);border-radius:8px;padding:9px 12px;outline:none;color:var(--tx);margin-bottom:18px;"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="oblGuardarFecha()" class="btn" style="background:var(--gr);color:#fff;flex:1;">✓ Guardar</button>
+        <button onclick="document.getElementById('modal-obl-fecha').style.display='none'" class="btn btn-ol" style="flex:1;">Cancelar</button>
+      </div>
+      <div id="obl-modal-err" style="font-size:11px;color:var(--re);margin-top:10px;display:none;"></div>
+    </div>
+  </div>
+
+  <div style="border-top:2px solid #c9a227;background:#fff;padding:10px 24px;display:flex;align-items:center;justify-content:center;gap:14px;margin-top:auto;flex-wrap:wrap;">
+    <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:1px;color:#c9a227;font-family:Montserrat,sans-serif;text-transform:uppercase;">
+      © 2026 Asesorías y Consultorías JNF S.A.S. &nbsp;·&nbsp; Todos los derechos reservados
+    </p>
+    <button onclick="document.getElementById('modal-derechos').style.display='flex'"
+      style="background:none;border:1px solid rgba(201,162,39,0.5);color:#c9a227;border-radius:14px;
+      padding:3px 10px;font-family:Montserrat,sans-serif;font-size:9px;font-weight:700;cursor:pointer;">
+      © Aviso de derechos de autor
+    </button>
+  </div>
+</div>
+
 <!-- ═══ PANTALLA 3: CONSOLIDADOR ════════════════════════ -->
 <div id="screen-consolidador" class="main" style="display:none;padding:0;">
   <!-- Breadcrumb fijo arriba -->
@@ -1104,6 +1168,13 @@ const MODULES = [
     tags:['Exógena','F300 IVA','F310 INC'],
     active:true, action:'openGuardado()'
   },
+  {
+    id:'obligaciones',icon:'📅',iconBg:'#fef3c7',
+    title:'Obligaciones Tributarias',
+    desc:'Consulta los vencimientos del cliente según su RUT. Registra la fecha de presentación de cada obligación.',
+    tags:['Vencimientos','Presentaciones','Alertas DIAN'],
+    active:true, action:'openObligaciones()'
+  },
 
   {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
@@ -1330,7 +1401,7 @@ function loadSavedResults(clientId, year){
 }
 
 window.goBack = function goBack(){
-  const screens=['consolidador','f300','inc','contabilidad','anio','clientes'];
+  const screens=['obligaciones','consolidador','f300','inc','contabilidad','anio','clientes'];
   for(const s of screens){
     const el=document.getElementById('screen-'+s);
     if(el && el.style.display!=='none'){
@@ -1339,6 +1410,7 @@ window.goBack = function goBack(){
         // Refresh saved results panel after returning from consolidador
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
+      else if(s==='obligaciones') showScreen('contabilidad');
       else if(s==='calendario') showScreen('contabilidad');
       else if(s==='contabilidad') showScreen('anio');
       else{ showScreen('clientes'); activeClientId=null; activeYear=null; }
@@ -2347,13 +2419,14 @@ window.calGlobalMarcar = function calGlobalMarcar(clienteId, itemId){
 
 // Ir al módulo calendario del cliente
 window.calGlobalIr = function calGlobalIr(clienteId){
-  // Cerrar panel global, abrir contabilidad del cliente
   document.getElementById('cal-global-panel').style.display = 'none';
+  var mb = document.getElementById('cal-masivo-banner');
+  if(mb) mb.style.display = 'none';
   var c = clients.find(function(x){return x.id===clienteId;});
   if(!c) return;
   activeClientId = clienteId;
   activeYear = parseInt((document.getElementById('cal-global-year')||{}).value||'2026');
-  openCalendario();
+  openObligaciones();
 }
 
 // Recargar cuando cambia el año
@@ -4901,6 +4974,243 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
     }
     statusEl.style.color = '#b91c1c';
     console.error('[JNF] calMasivoReadPDF:', err);
+  }
+};
+
+
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO OBLIGACIONES TRIBUTARIAS
+// ══════════════════════════════════════════════════════════════
+
+var _oblItems        = [];   // items del calendario del cliente
+var _oblPres         = {};   // {itemId: {fecha, usuario}}
+var _oblItemActivo   = null; // item que se está marcando
+
+window.openObligaciones = function openObligaciones(){
+  var c = clients.find(function(x){ return x.id === activeClientId; });
+  if(!c) return;
+
+  document.getElementById('obl-client-name').textContent = c.razon || c.nit;
+  document.getElementById('obl-year-badge').textContent  = activeYear || new Date().getFullYear();
+
+  showScreen('obligaciones');
+  oblCargar();
+};
+
+function oblCargar(){
+  if(!db || !activeClientId) return;
+  var year = activeYear || new Date().getFullYear();
+  var key  = 'calendario_' + activeClientId + '_' + year;
+
+  db.collection('calendarios').doc(key).get().then(function(doc){
+    _oblItems = doc.exists ? (doc.data().items || []) : [];
+    return db.collection('presentaciones').doc(key).get();
+  }).then(function(pDoc){
+    _oblPres = pDoc.exists ? (pDoc.data().registros || {}) : {};
+    oblRender();
+  }).catch(function(e){
+    console.warn('[JNF] oblCargar error:', e);
+    _oblItems = []; _oblPres = {};
+    oblRender();
+  });
+}
+
+function oblGetEstado(fecha, id){
+  if(_oblPres[id]) return 'presentada';
+  var hoy  = new Date(); hoy.setHours(0,0,0,0);
+  var venc = new Date(fecha + 'T00:00:00');
+  var diff = Math.round((venc - hoy) / 86400000);
+  if(diff < 0)  return 'vencida';
+  if(diff <= 3) return 'proxima';
+  return 'ok';
+}
+
+function oblRender(){
+  var c     = clients.find(function(x){ return x.id === activeClientId; });
+  var ruts  = (c && (c.responsabilidades || c.resps)) || [];
+  var items = ruts.length > 0
+    ? _oblItems.filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
+    : _oblItems;
+
+  var emptyEl  = document.getElementById('obl-empty');
+  var listaEl  = document.getElementById('obl-lista');
+  var itemsEl  = document.getElementById('obl-items');
+  var resEl    = document.getElementById('obl-resumen');
+
+  if(!items || items.length === 0){
+    emptyEl.style.display = 'block';
+    listaEl.style.display = 'none';
+    resEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  listaEl.style.display = 'block';
+
+  // Contar estados
+  var cnt = {vencida:0, proxima:0, ok:0, presentada:0};
+  items.forEach(function(it){ cnt[oblGetEstado(it.fecha, it.id)]++; });
+
+  resEl.innerHTML = [
+    {k:'vencida',   icon:'🔴', lbl:'Vencidas',   bg:'#fee2e2', col:'#b91c1c'},
+    {k:'proxima',   icon:'⚠️', lbl:'Por vencer', bg:'#fef3c7', col:'#92400e'},
+    {k:'presentada',icon:'✅', lbl:'Presentadas',bg:'#d1fae5', col:'#065f46'},
+    {k:'ok',        icon:'📅', lbl:'A tiempo',   bg:'#e0e7ff', col:'#3730a3'},
+  ].map(function(x){
+    return '<div style="background:'+x.bg+';border-radius:10px;padding:8px 16px;display:flex;align-items:center;gap:8px;">'
+      +'<div><div style="font-size:18px;font-weight:700;color:'+x.col+';">'+cnt[x.k]+'</div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+x.col+';text-transform:uppercase;letter-spacing:.4px;">'+x.lbl+'</div></div>'
+      +'</div>';
+  }).join('');
+
+  // Ordenar: vencidas → proximas → ok → presentadas, luego por fecha
+  var pri = {vencida:0, proxima:1, ok:2, presentada:3};
+  var sorted = items.slice().sort(function(a,b){
+    var pa = pri[oblGetEstado(a.fecha, a.id)];
+    var pb = pri[oblGetEstado(b.fecha, b.id)];
+    if(pa !== pb) return pa - pb;
+    return new Date(a.fecha) - new Date(b.fecha);
+  });
+
+  var CAL_OBL = {
+    '05':'Renta régimen ordinario','07':'Retención en la fuente renta',
+    '09':'Retención timbre','11':'Ventas régimen común','12':'Ventas simplificado',
+    '14':'Informante de exógena','42':'Obligado llevar contabilidad',
+    '48':'IVA','49':'No responsable de IVA','52':'Impuesto al consumo',
+    '55':'Informante benef. finales'
+  };
+
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  itemsEl.innerHTML = sorted.map(function(it){
+    var estado = oblGetEstado(it.fecha, it.id);
+    var venc   = new Date(it.fecha + 'T00:00:00');
+    var diff   = Math.round((venc - hoy) / 86400000);
+    var fechaStr = venc.toLocaleDateString('es-CO', {day:'2-digit', month:'long', year:'numeric'});
+    var oblNom = CAL_OBL[it.cod] || ('Código ' + it.cod);
+    var pres   = _oblPres[it.id];
+
+    var borderColor, bgColor, estIcon, estLabel, estColor;
+    if(estado === 'presentada'){
+      borderColor='#10b981'; bgColor='#f0fdf4';
+      estIcon='✅'; estLabel='Presentada'; estColor='#065f46';
+    } else if(estado === 'vencida'){
+      borderColor='#ef4444'; bgColor='#fff5f5';
+      estIcon='🔴'; estLabel='VENCIDA'; estColor='#b91c1c';
+    } else if(estado === 'proxima'){
+      borderColor='#f59e0b'; bgColor='#fffbeb'; estColor='#92400e';
+      estIcon='⚠️';
+      estLabel = diff === 0 ? 'Vence HOY' : 'Vence en ' + diff + ' día' + (diff > 1 ? 's' : '');
+    } else {
+      borderColor='#c7d2e8'; bgColor='var(--sf)'; estColor='#3730a3';
+      estIcon='📅';
+      estLabel = diff === 1 ? 'Vence mañana' : 'Vence en ' + diff + ' días';
+    }
+
+    // Información de presentación
+    var presInfo = '';
+    if(pres){
+      var fp = new Date(pres.fecha).toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit', year:'numeric'});
+      presInfo = '<div style="font-size:10px;color:#065f46;margin-top:4px;">Presentada el <strong>' + fp + '</strong> por ' + pres.usuario + '</div>';
+    }
+
+    // Botones
+    var btnHTML = '';
+    if(estado !== 'presentada'){
+      btnHTML = '<button onclick="oblAbrirModal('' + it.id + '')" '
+        + 'style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:8px 16px;'
+        + 'font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+        + '📅 Registrar presentación</button>';
+    } else {
+      btnHTML = '<button onclick="oblDesmarcar('' + it.id + '')" '
+        + 'style="background:none;border:1.5px solid #d1d5db;color:var(--t2);border-radius:8px;padding:7px 14px;'
+        + 'font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+        + '↩ Desmarcar</button>';
+    }
+
+    return '<div style="background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:var(--r);'
+      + 'padding:16px 20px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
+      + '<div style="font-size:28px;padding-top:2px;">' + estIcon + '</div>'
+      + '<div style="flex:1;min-width:200px;">'
+        + '<div style="font-size:13px;font-weight:800;color:var(--bd);">' + it.desc + '</div>'
+        + '<div style="font-size:10px;color:var(--t2);margin-top:2px;">'
+          + oblNom + ' &nbsp;·&nbsp; Código RUT: ' + it.cod
+        + '</div>'
+        + '<div style="font-size:11px;font-weight:700;color:var(--bd);margin-top:5px;">📅 Vencimiento: ' + fechaStr + '</div>'
+        + '<div style="font-size:11px;font-weight:800;color:' + estColor + ';margin-top:2px;">' + estLabel + '</div>'
+        + presInfo
+      + '</div>'
+      + '<div style="display:flex;align-items:center;">' + btnHTML + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ── Abrir modal para registrar fecha ──
+window.oblAbrirModal = window.oblAbrirModal = function oblAbrirModal(itemId){
+  var it = _oblItems.find(function(x){ return x.id === itemId; });
+  if(!it) return;
+  _oblItemActivo = itemId;
+
+  var CAL_OBL = {
+    '05':'Renta','07':'Retención renta','09':'Ret. timbre',
+    '11':'IVA ventas','12':'IVA simplificado','14':'Exógena',
+    '42':'Contabilidad','48':'IVA','49':'No resp. IVA',
+    '52':'Consumo','55':'Benef. finales'
+  };
+
+  document.getElementById('obl-modal-desc').textContent =
+    it.desc + ' · ' + (CAL_OBL[it.cod] || it.cod) +
+    ' · Vencía: ' + new Date(it.fecha+'T00:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Sugerir fecha de hoy
+  document.getElementById('obl-fecha-input').value = new Date().toISOString().slice(0,10);
+  document.getElementById('obl-modal-err').style.display = 'none';
+  document.getElementById('modal-obl-fecha').style.display = 'flex';
+};
+
+// ── Guardar fecha de presentación ──
+window.oblGuardarFecha = window.oblGuardarFecha = function oblGuardarFecha(){
+  var fecha  = document.getElementById('obl-fecha-input').value;
+  var errEl  = document.getElementById('obl-modal-err');
+  if(!fecha){ errEl.textContent = 'Selecciona la fecha de presentación.'; errEl.style.display='block'; return; }
+
+  var usuario = currentPerfil ? (currentPerfil.nombre || currentPerfil.email || 'Usuario') : 'Usuario';
+  _oblPres[_oblItemActivo] = { fecha: new Date(fecha+'T12:00:00').toISOString(), usuario: usuario };
+
+  if(db && activeClientId){
+    var year = activeYear || new Date().getFullYear();
+    var key  = 'presentaciones_' + activeClientId + '_' + year;
+    // Guardar en colección presentaciones (misma clave que usa el calendario global)
+    db.collection('presentaciones').doc('calendario_' + activeClientId + '_' + year).set({
+      clienteId: activeClientId,
+      year: year,
+      registros: _oblPres
+    }, {merge: true}).then(function(){
+      document.getElementById('modal-obl-fecha').style.display = 'none';
+      oblRender();
+    }).catch(function(e){
+      errEl.textContent = 'Error guardando: ' + e.message;
+      errEl.style.display = 'block';
+    });
+  } else {
+    document.getElementById('modal-obl-fecha').style.display = 'none';
+    oblRender();
+  }
+};
+
+// ── Desmarcar presentación ──
+window.oblDesmarcar = window.oblDesmarcar = function oblDesmarcar(itemId){
+  if(!confirm('¿Desmarcar esta obligación como presentada?')) return;
+  delete _oblPres[itemId];
+  if(db && activeClientId){
+    var year = activeYear || new Date().getFullYear();
+    db.collection('presentaciones').doc('calendario_' + activeClientId + '_' + year).set({
+      clienteId: activeClientId,
+      year: year,
+      registros: _oblPres
+    }, {merge: true}).then(function(){ oblRender(); });
+  } else {
+    oblRender();
   }
 };
 
