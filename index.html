@@ -188,32 +188,18 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 </div>
 
 <!-- ═══ PANTALLA 0: SPLASH ═══════════════════════════════ -->
-<div id="screen-splash" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:40px 20px;text-align:center;">
-
-  <!-- Nombre empresa arriba -->
-  <div style="color:#c9a227;font-size:29px;font-weight:900;letter-spacing:3px;text-transform:uppercase;line-height:1.3;margin-bottom:40px;text-shadow:0 0 8px rgba(180,140,30,.4),0 2px 6px rgba(0,0,0,.6);">
-    Asesorías y Consultorías<br>JNF S.A.S.
-  </div>
-
-  <!-- Logo como botón central -->
-  <button onclick="splashEnter()"
-    style="background:none;border:none;cursor:pointer;padding:0;display:block;
-    transition:transform .3s,filter .3s;"
-    onmouseover="this.style.transform='scale(1.06)';this.style.filter='drop-shadow(0 0 8px #c9a227) drop-shadow(0 0 20px #c9a227) drop-shadow(0 0 45px #c9a227) drop-shadow(0 0 80px rgba(201,162,39,.55))'"
-    onmouseout="this.style.transform='scale(1)';this.style.filter='none'"
-    onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform='scale(1.06)'"
-    title="Clic para ingresar al sistema">
+<div id="screen-splash" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);gap:24px;cursor:pointer;text-align:center;padding:40px 20px;" onclick="splashEnter()">
+  <div style="position:relative;display:inline-block;border-radius:50%;">
     <img src="https://janf1485.github.io/jnf-app/logo.jpg" alt="JNF"
-      style="width:420px;height:420px;object-fit:contain;display:block;mix-blend-mode:screen;"/>
-  </button>
-
-  <!-- Indicador de clic -->
-  
-
-  <!-- NIT y subtítulo abajo -->
-  <div style="color:#c9a227;font-size:10px;margin-top:40px;letter-spacing:1px;font-weight:600;font-family:Montserrat,sans-serif;text-shadow:0 0 8px rgba(201,162,39,.5);">
-    NIT: 901.904.435-9 &nbsp;·&nbsp; Sistema de Gestión Contable
+      style="width:216px;height:216px;border-radius:50%;object-fit:cover;border:5px solid #c9a227;box-shadow:0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5);transition:transform .35s ease,box-shadow .35s ease;"
+      onmouseover="this.style.transform='scale(1.06)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.35),0 0 40px rgba(201,162,39,0.6),0 0 80px rgba(201,162,39,0.3),0 25px 70px rgba(0,0,0,0.5)'"
+      onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5)'"
+    />
   </div>
+  <div style="font-size:24px;font-weight:800;color:#c9a227;text-align:center;">Asesorías y Consultorías JNF S.A.S.</div>
+  <div style="font-size:13px;color:rgba(197,202,238,0.7);letter-spacing:1px;text-transform:uppercase;">Sistema de Gestión Contable</div>
+  <div style="width:10px;height:10px;border-radius:50%;background:#c9a227;animation:pulse 2s infinite;"></div>
+  <div style="position:fixed;bottom:24px;text-align:center;color:rgba(255,255,255,0.4);font-size:11px;">© 2026 Asesorías y Consultorías JNF S.A.S. · Todos los derechos reservados</div>
 </div>
 
 <!-- ═══ APP PRINCIPAL ════════════════════════════════════ -->
@@ -1731,7 +1717,12 @@ function saveNewUser(){
     ss('Usuario creado ✓','ok');closeModal('NewUser');openAdminPanel();done();
     }).catch(function(e){
       auth.signInWithEmailAndPassword(adminEmail,adminPass).catch(function(){});
-      errEl.textContent='Error: '+e.message;errEl.style.display='block';done();
+      var msg=e.message;
+      if(e.code==='auth/email-already-in-use')msg='Este correo ya está registrado en el sistema.';
+      else if(e.code==='auth/invalid-email')msg='El correo electrónico no es válido.';
+      else if(e.code==='auth/weak-password')msg='La contraseña debe tener al menos 6 caracteres.';
+      else if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')msg='Contraseña de administrador incorrecta.';
+      errEl.textContent=msg;errEl.style.display='block';done();
     });
   }
 }
