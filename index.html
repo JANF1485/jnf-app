@@ -154,6 +154,58 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 .consolidador-modal .modal-body{flex:1;overflow:hidden;padding:0;}
 .consolidador-frame{width:100%;height:100%;border:none;}
 </style>
+<script>
+  if(!window['doLogin'])window['doLogin']=function(){var a=arguments,t=this;var r=function(){if(window['_doLogin'])window['_doLogin'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['doLogout'])window['doLogout']=function(){var a=arguments,t=this;var r=function(){if(window['_doLogout'])window['_doLogout'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['goBack'])window['goBack']=function(){var a=arguments,t=this;var r=function(){if(window['_goBack'])window['_goBack'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['goHome'])window['goHome']=function(){var a=arguments,t=this;var r=function(){if(window['_goHome'])window['_goHome'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['showScreen'])window['showScreen']=function(){var a=arguments,t=this;var r=function(){if(window['_showScreen'])window['_showScreen'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['renderClients'])window['renderClients']=function(){var a=arguments,t=this;var r=function(){if(window['_renderClients'])window['_renderClients'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openContabilidad'])window['openContabilidad']=function(){var a=arguments,t=this;var r=function(){if(window['_openContabilidad'])window['_openContabilidad'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openFicha'])window['openFicha']=function(){var a=arguments,t=this;var r=function(){if(window['_openFicha'])window['_openFicha'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openFicha_edit'])window['openFicha_edit']=function(){var a=arguments,t=this;var r=function(){if(window['_openFicha_edit'])window['_openFicha_edit'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['closeFicha'])window['closeFicha']=function(){var a=arguments,t=this;var r=function(){if(window['_closeFicha'])window['_closeFicha'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openAdminPanel'])window['openAdminPanel']=function(){var a=arguments,t=this;var r=function(){if(window['_openAdminPanel'])window['_openAdminPanel'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openExogena'])window['openExogena']=function(){var a=arguments,t=this;var r=function(){if(window['_openExogena'])window['_openExogena'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openF300'])window['openF300']=function(){var a=arguments,t=this;var r=function(){if(window['_openF300'])window['_openF300'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openINC'])window['openINC']=function(){var a=arguments,t=this;var r=function(){if(window['_openINC'])window['_openINC'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openGuardado'])window['openGuardado']=function(){var a=arguments,t=this;var r=function(){if(window['_openGuardado'])window['_openGuardado'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openObligaciones'])window['openObligaciones']=function(){var a=arguments,t=this;var r=function(){if(window['_openObligaciones'])window['_openObligaciones'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openCalendario'])window['openCalendario']=function(){var a=arguments,t=this;var r=function(){if(window['_openCalendario'])window['_openCalendario'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openCalendarioGlobal'])window['openCalendarioGlobal']=function(){var a=arguments,t=this;var r=function(){if(window['_openCalendarioGlobal'])window['_openCalendarioGlobal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['editClient'])window['editClient']=function(){var a=arguments,t=this;var r=function(){if(window['_editClient'])window['_editClient'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['deleteClient'])window['deleteClient']=function(){var a=arguments,t=this;var r=function(){if(window['_deleteClient'])window['_deleteClient'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openModal'])window['openModal']=function(){var a=arguments,t=this;var r=function(){if(window['_openModal'])window['_openModal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['closeModal'])window['closeModal']=function(){var a=arguments,t=this;var r=function(){if(window['_closeModal'])window['_closeModal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['confirmarAnio'])window['confirmarAnio']=function(){var a=arguments,t=this;var r=function(){if(window['_confirmarAnio'])window['_confirmarAnio'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['showCambiarPassword'])window['showCambiarPassword']=function(){var a=arguments,t=this;var r=function(){if(window['_showCambiarPassword'])window['_showCambiarPassword'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['showResetPassword'])window['showResetPassword']=function(){var a=arguments,t=this;var r=function(){if(window['_showResetPassword'])window['_showResetPassword'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['doReset'])window['doReset']=function(){var a=arguments,t=this;var r=function(){if(window['_doReset'])window['_doReset'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calTab'])window['calTab']=function(){var a=arguments,t=this;var r=function(){if(window['_calTab'])window['_calTab'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calReadPDF'])window['calReadPDF']=function(){var a=arguments,t=this;var r=function(){if(window['_calReadPDF'])window['_calReadPDF'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calAddItem'])window['calAddItem']=function(){var a=arguments,t=this;var r=function(){if(window['_calAddItem'])window['_calAddItem'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calGuardar'])window['calGuardar']=function(){var a=arguments,t=this;var r=function(){if(window['_calGuardar'])window['_calGuardar'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calLimpiar'])window['calLimpiar']=function(){var a=arguments,t=this;var r=function(){if(window['_calLimpiar'])window['_calLimpiar'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calMarcarPresentada'])window['calMarcarPresentada']=function(){var a=arguments,t=this;var r=function(){if(window['_calMarcarPresentada'])window['_calMarcarPresentada'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calDesmarcarPresentada'])window['calDesmarcarPresentada']=function(){var a=arguments,t=this;var r=function(){if(window['_calDesmarcarPresentada'])window['_calDesmarcarPresentada'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calDeleteItem'])window['calDeleteItem']=function(){var a=arguments,t=this;var r=function(){if(window['_calDeleteItem'])window['_calDeleteItem'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calMasivoReadPDF'])window['calMasivoReadPDF']=function(){var a=arguments,t=this;var r=function(){if(window['_calMasivoReadPDF'])window['_calMasivoReadPDF'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['oblAbrirModal'])window['oblAbrirModal']=function(){var a=arguments,t=this;var r=function(){if(window['_oblAbrirModal'])window['_oblAbrirModal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['oblGuardarFecha'])window['oblGuardarFecha']=function(){var a=arguments,t=this;var r=function(){if(window['_oblGuardarFecha'])window['_oblGuardarFecha'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['oblDesmarcar'])window['oblDesmarcar']=function(){var a=arguments,t=this;var r=function(){if(window['_oblDesmarcar'])window['_oblDesmarcar'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openEditNombreModal'])window['openEditNombreModal']=function(){var a=arguments,t=this;var r=function(){if(window['_openEditNombreModal'])window['_openEditNombreModal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['closeEditNombreModal'])window['closeEditNombreModal']=function(){var a=arguments,t=this;var r=function(){if(window['_closeEditNombreModal'])window['_closeEditNombreModal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['saveEditNombre'])window['saveEditNombre']=function(){var a=arguments,t=this;var r=function(){if(window['_saveEditNombre'])window['_saveEditNombre'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['renderCalGlobal'])window['renderCalGlobal']=function(){var a=arguments,t=this;var r=function(){if(window['_renderCalGlobal'])window['_renderCalGlobal'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calGlobalMarcar'])window['calGlobalMarcar']=function(){var a=arguments,t=this;var r=function(){if(window['_calGlobalMarcar'])window['_calGlobalMarcar'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['calGlobalIr'])window['calGlobalIr']=function(){var a=arguments,t=this;var r=function(){if(window['_calGlobalIr'])window['_calGlobalIr'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['readRUT'])window['readRUT']=function(){var a=arguments,t=this;var r=function(){if(window['_readRUT'])window['_readRUT'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['clearSaved'])window['clearSaved']=function(){var a=arguments,t=this;var r=function(){if(window['_clearSaved'])window['_clearSaved'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['saveClient'])window['saveClient']=function(){var a=arguments,t=this;var r=function(){if(window['_saveClient'])window['_saveClient'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['splashEnter'])window['splashEnter']=function(){var a=arguments,t=this;var r=function(){if(window['_splashEnter'])window['_splashEnter'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['showResetPassword'])window['showResetPassword']=function(){var a=arguments,t=this;var r=function(){if(window['_showResetPassword'])window['_showResetPassword'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['f300_updatePeriodos'])window['f300_updatePeriodos']=function(){var a=arguments,t=this;var r=function(){if(window['_f300_updatePeriodos'])window['_f300_updatePeriodos'].apply(t,a);else setTimeout(r,50);};r();};
+</script>
 </head>
 <body>
 
@@ -895,7 +947,7 @@ buildRespGrid();
 // ═══════════════════════════════════════════════════════
 // MODAL CONTROL
 // ═══════════════════════════════════════════════════════
-window.openModal = function openModal(name, data){
+window._openModal = window.openModal = function openModal(name, data){
   if(name==='add'){
     editingId = data ? data.id : null;
     document.getElementById('modalAddTitle').textContent = data ? '✏️ Editar cliente' : 'Agregar cliente';
@@ -919,7 +971,7 @@ window.openModal = function openModal(name, data){
   }
   document.getElementById('modal'+cap(name)).classList.add('open');
 }
-window.closeModal = function closeModal(name){
+window._closeModal = window.closeModal = function closeModal(name){
   document.getElementById('modal'+cap(name)).classList.remove('open');
   if(name==='consolidador') document.getElementById('consFrame').src='';
 }
@@ -1014,7 +1066,7 @@ function actualizarClientesDeContador(clienteData){
     // If client has no contador now, nothing to update
   }).catch(function(){});
 }
-window.deleteClient = function deleteClient(id){
+window._deleteClient = window.deleteClient = function deleteClient(id){
   var c = clients.find(function(x){return x.id===id;});
   var nombre = c ? (c.razon||c.nit) : 'este cliente';
   // Primera confirmación
@@ -1044,7 +1096,7 @@ window.deleteClient = function deleteClient(id){
 // ═══════════════════════════════════════════════════════
 // RENDER LISTA
 // ═══════════════════════════════════════════════════════
-window.renderClients = function renderClients(){
+window._renderClients = window.renderClients = function renderClients(){
   const q=document.getElementById('searchBox').value.toLowerCase().trim();
   const fc=(document.getElementById('filterContador')||{}).value||'';
   const filtered=clients.filter(c=>{
@@ -1095,7 +1147,7 @@ window.renderClients = function renderClients(){
 }
 renderClients();
 
-window.editClient = function editClient(id){
+window._editClient = window.editClient = function editClient(id){
   const c=clients.find(x=>x.id===id);
   if(c)openModal('add',c);
 }
@@ -1109,7 +1161,7 @@ let activeYear = null;
 let _currentAnios = [];
 let _currentAnosExtra = [];
 
-window.confirmarAnio = function confirmarAnio(){
+window._confirmarAnio = window.confirmarAnio = function confirmarAnio(){
   const input = document.getElementById('anio-nuevo-input');
   const errEl = document.getElementById('anio-nuevo-err');
   const y = parseInt((input.value||'').trim());
@@ -1133,7 +1185,7 @@ window.confirmarAnio = function confirmarAnio(){
   openContabilidad(activeClientId);
 }
 
-window.showScreen = function showScreen(name){
+window._showScreen = window.showScreen = function showScreen(name){
   SCREENS.forEach(s=>{
     document.getElementById('screen-'+s).style.display = s===name ? '' : 'none';
   });
@@ -1198,7 +1250,7 @@ const MODULES = [
   },
 ];
 
-window.openContabilidad = function openContabilidad(id){
+window._openContabilidad = window.openContabilidad = function openContabilidad(id){
   const c=clients.find(x=>x.id===id);
   if(!c)return;
   activeClientId=id;
@@ -1402,7 +1454,7 @@ function loadSavedResults(clientId, year){
   }catch(e){console.error('[JNF] loadSavedResults error:',e);savedEl.style.display='none';}
 }
 
-window.goBack = function goBack(){
+window._goBack = window.goBack = function goBack(){
   const screens=['obligaciones','consolidador','f300','inc','contabilidad','anio','clientes'];
   for(const s of screens){
     const el=document.getElementById('screen-'+s);
@@ -1421,7 +1473,7 @@ window.goBack = function goBack(){
   }
 }
 
-window.goHome = function goHome(){
+window._goHome = window.goHome = function goHome(){
   document.getElementById('screen-app').style.display='none';
   document.getElementById('screen-splash').style.display='flex';
   activeClientId=null; activeYear=null;
@@ -1477,7 +1529,7 @@ function downloadSaved(clientId,n){
   }catch(e){ss('Error: '+e.message,'err');}
 }
 
-window.openExogena = function openExogena(){
+window._openExogena = window.openExogena = function openExogena(){
   const c=clients.find(x=>x.id===activeClientId);
   if(!c)return;
   const year=activeYear||new Date().getFullYear();
@@ -1672,7 +1724,7 @@ var FB_CONFIG = {
 };
 
 
-window.splashEnter = function splashEnter(){
+window._splashEnter = window.splashEnter = function splashEnter(){
   sessionStorage.setItem('splashSeen','1');
   document.getElementById('screen-splash').style.display='none';
   if(currentUser && currentPerfil){
@@ -1728,7 +1780,7 @@ function showFirebaseError(){
 }
 
 // ── AUTH ────────────────────────────────────────────────
-window.doLogin = function doLogin(){
+window._doLogin = window.doLogin = function doLogin(){
   var email = document.getElementById('login-email').value.trim();
   var pass  = document.getElementById('login-pass').value;
   if(!email||!pass){showLoginError('Completa email y contraseña');return;}
@@ -1741,7 +1793,7 @@ window.doLogin = function doLogin(){
   });
 }
 
-window.doLogout = function doLogout(){
+window._doLogout = window.doLogout = function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
   auth.signOut().then(function(){
     currentUser=null; currentPerfil=null;
@@ -1896,7 +1948,7 @@ function updateUsuario(uid, data){
   return db.collection('usuarios').doc(uid).update(data);
 }
 
-window.openAdminPanel = function openAdminPanel(){
+window._openAdminPanel = window.openAdminPanel = function openAdminPanel(){
   document.getElementById('modalAdmin').classList.add('open');
   var list = document.getElementById('usuarios-list');
   list.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);">Cargando...</div>';
@@ -2067,7 +2119,7 @@ var _calGlobalLoading= false;
 // Nombres de contadores cargados (uid→nombre)
 var _calGlobalContadores = {};
 
-window.openCalendarioGlobal = function openCalendarioGlobal(){
+window._openCalendarioGlobal = window.openCalendarioGlobal = function openCalendarioGlobal(){
   var panel   = document.getElementById('cal-global-panel');
   var masivo  = document.getElementById('cal-masivo-banner');
   if(!panel) return;
@@ -2195,7 +2247,7 @@ function calGlobalEstado(fechaStr, itemId, pres){
   return 'ok';
 }
 
-window.renderCalGlobal = function renderCalGlobal(){
+window._renderCalGlobal = window.renderCalGlobal = function renderCalGlobal(){
   var year     = (document.getElementById('cal-global-year')||{}).value    || '2026';
   var filtCont = (document.getElementById('cal-global-contador')||{}).value || '';
   var filtMes  = (document.getElementById('cal-global-mes')||{}).value      || '';
@@ -2400,7 +2452,7 @@ window.renderCalGlobal = function renderCalGlobal(){
 }
 
 
-window.calGlobalMarcar = function calGlobalMarcar(clienteId, itemId){
+window._calGlobalMarcar = window.calGlobalMarcar = function calGlobalMarcar(clienteId, itemId){
   if(!db) return;
   var year = (document.getElementById('cal-global-year')||{}).value || '2026';
   var key  = 'calendario_'+clienteId+'_'+year;
@@ -2420,7 +2472,7 @@ window.calGlobalMarcar = function calGlobalMarcar(clienteId, itemId){
 }
 
 // Ir al módulo calendario del cliente
-window.calGlobalIr = function calGlobalIr(clienteId){
+window._calGlobalIr = window.calGlobalIr = function calGlobalIr(clienteId){
   document.getElementById('cal-global-panel').style.display = 'none';
   var mb = document.getElementById('cal-masivo-banner');
   if(mb) mb.style.display = 'none';
@@ -2449,7 +2501,7 @@ var _oblItems        = [];   // items del calendario del cliente
 var _oblPres         = {};   // {itemId: {fecha, usuario}}
 var _oblItemActivo   = null; // item que se está marcando
 
-window.openObligaciones = function openObligaciones(){
+window._openObligaciones = window.openObligaciones = function openObligaciones(){
   var c = clients.find(function(x){ return x.id === activeClientId; });
   if(!c) return;
 
@@ -2608,7 +2660,7 @@ function oblRender(){
 }
 
 // ── Abrir modal para registrar fecha ──
-window.oblAbrirModal = window.oblAbrirModal = function oblAbrirModal(itemId){
+window.oblAbrirModal = window._oblAbrirModal = window.oblAbrirModal = function oblAbrirModal(itemId){
   var it = _oblItems.find(function(x){ return x.id === itemId; });
   if(!it) return;
   _oblItemActivo = itemId;
@@ -2631,7 +2683,7 @@ window.oblAbrirModal = window.oblAbrirModal = function oblAbrirModal(itemId){
 };
 
 // ── Guardar fecha de presentación ──
-window.oblGuardarFecha = window.oblGuardarFecha = function oblGuardarFecha(){
+window.oblGuardarFecha = window._oblGuardarFecha = window.oblGuardarFecha = function oblGuardarFecha(){
   var fecha  = document.getElementById('obl-fecha-input').value;
   var errEl  = document.getElementById('obl-modal-err');
   if(!fecha){ errEl.textContent = 'Selecciona la fecha de presentación.'; errEl.style.display='block'; return; }
@@ -2661,7 +2713,7 @@ window.oblGuardarFecha = window.oblGuardarFecha = function oblGuardarFecha(){
 };
 
 // ── Desmarcar presentación ──
-window.oblDesmarcar = window.oblDesmarcar = function oblDesmarcar(itemId){
+window.oblDesmarcar = window._oblDesmarcar = window.oblDesmarcar = function oblDesmarcar(itemId){
   if(!confirm('¿Desmarcar esta obligación como presentada?')) return;
   delete _oblPres[itemId];
   if(db && activeClientId){
@@ -3675,7 +3727,7 @@ function inc_renderSaved(d){
 
 
 // ── Module open/close functions ───────────────────────────
-window.openF300 = function openF300(){
+window._openF300 = window.openF300 = function openF300(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -3691,7 +3743,7 @@ window.openF300 = function openF300(){
   f300_loadSaved(c.id, yr);
 }
 
-window.openINC = function openINC(){
+window._openINC = window.openINC = function openINC(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -3803,7 +3855,7 @@ function openModulos(){
 
 
 // ── Ficha técnica cliente ─────────────────────────────────
-window.openFicha = function openFicha(clientId){
+window._openFicha = window.openFicha = function openFicha(clientId){
   window._fichaClientId = clientId||activeClientId;
   var c = clients.find(function(x){return x.id===(clientId||activeClientId);});
   if(!c) return;
@@ -3906,7 +3958,7 @@ window.openFicha = function openFicha(clientId){
     + '</div>';
 }
 
-window.closeFicha = function closeFicha(){
+window._closeFicha = window.closeFicha = function closeFicha(){
   document.getElementById('modal-ficha').style.display='none';
 }
 
@@ -3917,7 +3969,7 @@ window.closeFicha = function closeFicha(){
 })();
 
 
-window.openGuardado = function openGuardado(){
+window._openGuardado = window.openGuardado = function openGuardado(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -4036,7 +4088,7 @@ function cargarArchivo(clientId, year){
 }
 
 
-window.openFicha_edit = function openFicha_edit(){
+window._openFicha_edit = window.openFicha_edit = function openFicha_edit(){
   var c = clients.find(function(x){return x.id===activeClientId||x.id===window._fichaClientId;});
   if(c){ closeFicha(); editClient(c.id); }
 }
@@ -4075,7 +4127,7 @@ function inc_abrirGuardado(key){
 
 
 // ── Cambio / Reset de contraseña ─────────────────────────
-window.showResetPassword = function showResetPassword(){
+window._showResetPassword = window._showResetPassword = window.showResetPassword = function showResetPassword(){
   // Called from login screen - show reset tab
   document.getElementById('pwd-tab-reset').style.display='block';
   document.getElementById('pwd-tab-change').style.display='none';
@@ -4090,7 +4142,7 @@ window.showResetPassword = function showResetPassword(){
   document.getElementById('modal-password').style.display='flex';
 }
 
-window.showCambiarPassword = function showCambiarPassword(){
+window._showCambiarPassword = window.showCambiarPassword = function showCambiarPassword(){
   // Called from app header - show change tab
   document.getElementById('pwd-tab-reset').style.display='none';
   document.getElementById('pwd-tab-change').style.display='block';
@@ -4623,7 +4675,7 @@ function poblarFiltroContador(){
 })();
 
 // ── EDITAR NOMBRE ─────────────────────────────────────────
-window.openEditNombreModal = function openEditNombreModal(){
+window._openEditNombreModal = window.openEditNombreModal = function openEditNombreModal(){
   var inp = document.getElementById('inp-edit-nombre');
   var nameEl = document.getElementById('hdr-user-name');
   if(inp && nameEl) inp.value = nameEl.textContent || '';
@@ -4631,10 +4683,10 @@ window.openEditNombreModal = function openEditNombreModal(){
   document.getElementById('edit-nombre-success').style.display='none';
   document.getElementById('modal-edit-nombre').style.display='flex';
 }
-window.closeEditNombreModal = function closeEditNombreModal(){
+window._closeEditNombreModal = window.closeEditNombreModal = function closeEditNombreModal(){
   document.getElementById('modal-edit-nombre').style.display='none';
 }
-window.saveEditNombre = function saveEditNombre(){
+window._saveEditNombre = window.saveEditNombre = function saveEditNombre(){
   var nombre = document.getElementById('inp-edit-nombre').value.trim();
   var errEl = document.getElementById('edit-nombre-error');
   var sucEl = document.getElementById('edit-nombre-success');
@@ -4674,7 +4726,7 @@ var CAL_OBLIGACIONES = {
   '52':'Impuesto al consumo','55':'Informante benef. finales'
 };
 
-window.openCalendario = function openCalendario(){
+window._openCalendario = window.openCalendario = function openCalendario(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   _calClientId = activeClientId;
@@ -4702,7 +4754,7 @@ window.openCalendario = function openCalendario(){
   calCargar();
 }
 
-window.calTab = function calTab(tab){
+window._calTab = window.calTab = function calTab(tab){
   document.getElementById('cal-panel-pdf').style.display   = tab==='pdf'    ? 'block' : 'none';
   document.getElementById('cal-panel-manual').style.display = tab==='manual' ? 'block' : 'none';
   document.getElementById('cal-tab-pdf').style.cssText    = tab==='pdf'    ? 'background:var(--bd);color:#fff;border-color:var(--bd);' : '';
@@ -4768,7 +4820,7 @@ window.calReadPDF = async function calReadPDF(file){
 }
 
 // ── Agregar item manualmente ─────────────────────────────────
-window.calAddItem = function calAddItem(){
+window._calAddItem = window.calAddItem = function calAddItem(){
   var errEl = document.getElementById('cal-manual-err');
   var cod   = document.getElementById('cal-inp-obligacion').value;
   var desc  = document.getElementById('cal-inp-desc').value.trim();
@@ -4788,7 +4840,7 @@ window.calAddItem = function calAddItem(){
 }
 
 // ── Guardar en Firestore ─────────────────────────────────────
-window.calGuardar = function calGuardar(){
+window._calGuardar = window.calGuardar = function calGuardar(){
   if(!db||!_calClientId) return;
   var key = 'calendario_'+_calClientId+'_'+_calYear;
   db.collection('calendarios').doc(key).set({
@@ -4822,20 +4874,20 @@ function calCargar(){
 }
 
 // ── Limpiar ──────────────────────────────────────────────────
-window.calLimpiar = function calLimpiar(){
+window._calLimpiar = window.calLimpiar = function calLimpiar(){
   if(!confirm('¿Seguro que deseas eliminar todas las fechas del calendario?')) return;
   _calItems = [];
   calRenderItems();
 }
 
 // ── Eliminar item individual ─────────────────────────────────
-window.calDeleteItem = function calDeleteItem(id){
+window._calDeleteItem = window.calDeleteItem = function calDeleteItem(id){
   _calItems = _calItems.filter(function(x){return x.id!==id;});
   calRenderItems();
 }
 
 // ── Marcar como presentada ───────────────────────────────────
-window.calMarcarPresentada = function calMarcarPresentada(id){
+window._calMarcarPresentada = window.calMarcarPresentada = function calMarcarPresentada(id){
   var c = clients.find(function(x){return x.id===_calClientId;});
   var it = _calItems.find(function(x){return x.id===id;});
   if(!it) return;
@@ -4858,7 +4910,7 @@ window.calMarcarPresentada = function calMarcarPresentada(id){
 }
 
 // ── Desmarcar presentación ───────────────────────────────────
-window.calDesmarcarPresentada = function calDesmarcarPresentada(id){
+window._calDesmarcarPresentada = window.calDesmarcarPresentada = function calDesmarcarPresentada(id){
   if(!confirm('¿Desmarcar como presentada esta obligación?')) return;
   delete _calPresentaciones[id];
   if(db && _calClientId){
