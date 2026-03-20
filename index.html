@@ -276,22 +276,22 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         <div style="color:rgba(255,255,255,.6);font-size:10px;margin-top:2px;">Vencimientos de todos los clientes · Filtrable por contador</div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <select id="cal-global-year" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#c9a227;outline:none;">
+        <select id="cal-global-year" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:#fff;color:#1a2580;outline:none;">
           <option value="2025">2025</option>
           <option value="2026" selected>2026</option>
           <option value="2027">2027</option>
         </select>
-        <select id="cal-global-contador" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;min-width:160px;">
+        <select id="cal-global-contador" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:#fff;color:#1a2580;outline:none;min-width:160px;">
           <option value="">Todos los contadores</option>
         </select>
-        <select id="cal-global-mes" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;">
+        <select id="cal-global-mes" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:#fff;color:#1a2580;outline:none;">
           <option value="">Todos los meses</option>
           <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
           <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
           <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
           <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
         </select>
-        <select id="cal-global-estado" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;">
+        <select id="cal-global-estado" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:#fff;color:#1a2580;outline:none;">
           <option value="">Todos los estados</option>
           <option value="vencida">🔴 Vencidas</option>
           <option value="proxima">⚠️ Por vencer (3 días)</option>
@@ -1790,6 +1790,7 @@ function loadUsuarios(){
   return db.collection('usuarios').get().then(function(snap){
     var users = [];
     snap.forEach(function(doc){ users.push(Object.assign({uid:doc.id}, doc.data())); });
+    window._usuariosGlobal = users; // disponible para calGlobalPoblarContadores
     return users;
   });
 }
@@ -1991,32 +1992,52 @@ function calGlobalPoblarContadores(){
   if(!sel) return;
   // Limpiar opciones excepto la primera
   while(sel.options.length > 1) sel.remove(1);
-  // Recopilar contadores únicos de los clientes actuales
-  var vistos = {};
+
+  // Recopilar UIDs únicos de contadores desde los clientes
+  var uidsVistos = {};
   clients.forEach(function(c){
-    if(c.contadorUid && !vistos[c.contadorUid]){
-      vistos[c.contadorUid] = true;
-    }
+    if(c.contadorUid) uidsVistos[c.contadorUid] = true;
   });
-  // También llenar desde el select existente filterContador
+
+  // Intentar tomar nombres desde el filterContador existente
+  var nombresMap = {};
   var existingSel = document.getElementById('filterContador');
   if(existingSel){
     for(var i=1; i<existingSel.options.length; i++){
       var opt = existingSel.options[i];
       if(opt.value && opt.value !== 'sin_asignar'){
-        var newOpt = document.createElement('option');
-        newOpt.value = opt.value;
-        newOpt.textContent = opt.textContent;
-        sel.appendChild(newOpt);
-        _calGlobalContadores[opt.value] = opt.textContent;
+        nombresMap[opt.value] = opt.textContent;
       }
     }
   }
+
+  // Si no hay nombres en filterContador, buscar en el array global de usuarios
+  var usuariosGlobal = window._usuariosGlobal || [];
+  usuariosGlobal.forEach(function(u){
+    if(u.uid && !nombresMap[u.uid]){
+      nombresMap[u.uid] = u.nombre || u.email || u.uid;
+    }
+  });
+
+  // Agregar una opción por cada contador único
+  var agregados = 0;
+  Object.keys(uidsVistos).forEach(function(uid){
+    var nombre = nombresMap[uid] || ('Contador (' + uid.slice(0,6) + '...)');
+    _calGlobalContadores[uid] = nombre;
+    var opt = document.createElement('option');
+    opt.value = uid;
+    opt.textContent = nombre;
+    sel.appendChild(opt);
+    agregados++;
+  });
+
   // Opción sin asignar
   var sinOpt = document.createElement('option');
   sinOpt.value = 'sin_asignar';
   sinOpt.textContent = '— Sin contador asignado';
   sel.appendChild(sinOpt);
+
+  console.log('[JNF Cal] Contadores poblados:', agregados);
 }
 
 // Cargar todos los calendarios y presentaciones de Firestore
