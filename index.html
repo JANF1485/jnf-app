@@ -405,18 +405,17 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     </div>
     <div style="flex:1;min-width:220px;">
-      <div style="font-size:12px;font-weight:800;color:#92400e;">Calendario Tributario DIAN — Carga Masiva</div>
-      <div style="font-size:11px;color:#78350f;margin-top:2px;">Sube el PDF del calendario DIAN y todos los clientes recibirán automáticamente sus fechas según su RUT.</div>
+      <div style="font-size:12px;font-weight:800;color:#92400e;">Calendario Tributario DIAN 2026 — Fechas Oficiales</div>
+      <div style="font-size:11px;color:#78350f;margin-top:2px;">Genera el calendario con las fechas exactas de la DIAN según el último dígito del NIT de cada cliente.</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select id="cal-masivo-year" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid #c9a227;border-radius:7px;padding:5px 9px;background:#fff;color:#92400e;outline:none;">
-        <option value="2025">2025</option>
-        <option value="2026" selected>2026</option>
-        <option value="2027">2027</option>
-      </select>
-      <button onclick="document.getElementById('cal-masivo-input').click()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;">
+      <button onclick="calMasivoRegenerarTodos()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;font-weight:800;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Generar para todos los clientes
+      </button>
+      <button onclick="document.getElementById('cal-masivo-input').click()" class="btn btn-ol" style="font-size:11px;gap:6px;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Subir PDF DIAN
+        Subir PDF (otro año)
       </button>
       <input type="file" id="cal-masivo-input" accept=".pdf" style="display:none" onchange="calMasivoReadPDF(this.files[0])"/>
     </div>
@@ -1504,9 +1503,12 @@ window._goBack = window.goBack = function goBack(){
       }
       else if(s==='obligaciones'){
         if(activeClientId && activeYear){
-          openAnio(activeClientId, parseInt(activeYear));
-        } else {
           showScreen('contabilidad');
+          setTimeout(function(){ loadSavedResults(activeClientId, activeYear); }, 100);
+        } else if(activeClientId){
+          openContabilidad(activeClientId);
+        } else {
+          showScreen('clientes');
         }
       }
       else if(s==='calendario') showScreen('contabilidad');
@@ -3960,11 +3962,26 @@ window._openFicha = window.openFicha = function openFicha(clientId){
 
   document.getElementById('ficha-titulo').textContent = (c.razon||c.nit) + ' · NIT: ' + (c.nit||'') + (c.dv?'-'+c.dv:'');
   document.getElementById('modal-ficha').style.display = 'flex';
-  // Conectar botones estáticos a las funciones reales
+  // Conectar TODOS los botones de la ficha directamente
+  ['ficha-x-btn','ficha-close-btn'].forEach(function(id){
+    var btn = document.getElementById(id);
+    if(btn){
+      btn.onclick = null;
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        document.getElementById('modal-ficha').style.display = 'none';
+      });
+    }
+  });
   var editBtn = document.getElementById('ficha-edit-btn');
-  var closeBtn = document.getElementById('ficha-close-btn');
-  if(editBtn) editBtn.onclick = function(){ openFicha_edit(); };
-  if(closeBtn) closeBtn.onclick = function(){ closeFicha(); };
+  if(editBtn){
+    editBtn.onclick = null;
+    editBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      document.getElementById('modal-ficha').style.display = 'none';
+      openFicha_edit();
+    });
+  }
 
   var jur = c.tipo !== 'PN';
   var initials = (c.razon||'?').split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
@@ -4062,7 +4079,9 @@ window._closeFicha = window.closeFicha = function closeFicha(){
 // Close on background click - wrapped in DOMContentLoaded safety
 (function(){
   var mf = document.getElementById('modal-ficha');
-  if(mf) mf.addEventListener('click', function(e){ if(e.target===this) closeFicha(); });
+  if(mf) mf.addEventListener('click', function(e){
+    if(e.target === mf) mf.style.display = 'none';
+  });
 })();
 
 
@@ -4625,7 +4644,7 @@ function poblarFiltroContador(){
         <div style="font-size:15px;font-weight:800;">Ficha Técnica del Cliente</div>
         <div style="font-size:11px;opacity:.7;margin-top:2px;" id="ficha-titulo">—</div>
       </div>
-      <button onclick="closeFicha()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+      <button id="ficha-x-btn" style="background:rgba(255,255,255,.2);border:none;color:#fff;
         width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;
         align-items:center;justify-content:center;font-family:Montserrat,sans-serif;">✕</button>
     </div>
@@ -5568,6 +5587,42 @@ window.oblRegenerarTodos = async function oblRegenerarTodos(){
   }
 };
 
+
+window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
+  var statusEl = document.getElementById('cal-masivo-status');
+  if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#92400e'; statusEl.innerHTML='⏳ Generando calendarios…'; }
+  if(!db){ if(statusEl) statusEl.innerHTML='❌ Sin conexión a base de datos.'; return; }
+  var actualizados = 0;
+  var sinResps = 0;
+  for(var i=0; i<clients.length; i++){
+    var c = clients[i];
+    var ruts = c.responsabilidades || c.resps || [];
+    if(ruts.length === 0){ sinResps++; continue; }
+    var items = window.generarCalendarioDIAN2026 ? window.generarCalendarioDIAN2026(c.nit, ruts) : [];
+    if(items.length === 0) continue;
+    var key = 'calendario_' + c.id + '_2026';
+    try{
+      await db.collection('calendarios').doc(key).set({
+        clienteId: c.id, year: 2026, items: items,
+        updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
+      });
+      actualizados++;
+      if(statusEl) statusEl.innerHTML = '📤 Generando… ' + actualizados + ' de ' + clients.length + ' clientes';
+    } catch(e){ console.warn('[JNF] Error cliente '+c.id, e); }
+  }
+  if(statusEl){
+    statusEl.style.color = '#065f46';
+    statusEl.innerHTML = '✅ Calendario DIAN 2026 generado para <strong>'+actualizados+' clientes</strong>'
+      + (sinResps > 0 ? ' · '+sinResps+' sin responsabilidades' : '')
+      + ' · ' + new Date().toLocaleString('es-CO');
+  }
+  // Recargar tabla global
+  if(document.getElementById('cal-global-panel') &&
+     document.getElementById('cal-global-panel').style.display !== 'none'){
+    window._calGlobalLoaded = false;
+    if(window.calGlobalCargarTodo) calGlobalCargarTodo();
+  }
+};
 </script>
 
 </body>
