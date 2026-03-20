@@ -298,7 +298,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
           <option value="ok">📅 A tiempo</option>
           <option value="presentada">✅ Presentadas</option>
         </select>
-        <button onclick="document.getElementById('cal-global-panel').style.display='none'" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;">✕ Cerrar</button>
+        <button onclick="document.getElementById('cal-global-panel').style.display='none';var mb=document.getElementById('cal-masivo-banner');if(mb)mb.style.display='none';" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;">✕ Cerrar</button>
       </div>
     </div>
 
@@ -328,6 +328,30 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       </span>
       <span style="font-size:10px;color:#9ca3af;">Celda vacía = no aplica al cliente</span>
     </div>
+  </div>
+
+  <!-- Banner Carga Masiva DIAN -->
+  <div id="cal-masivo-banner" style="background:#fef9ec;border:1.5px solid #c9a227;border-radius:12px;padding:14px 20px;margin-bottom:18px;display:none;flex-wrap:wrap;gap:12px;align-items:center;">
+    <div style="width:38px;height:38px;background:#fef3c7;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:12px;font-weight:800;color:#92400e;">Calendario Tributario DIAN — Carga Masiva</div>
+      <div style="font-size:11px;color:#78350f;margin-top:2px;">Sube el PDF del calendario DIAN y todos los clientes recibirán automáticamente sus fechas según su RUT.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="cal-masivo-year" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid #c9a227;border-radius:7px;padding:5px 9px;background:#fff;color:#92400e;outline:none;">
+        <option value="2025">2025</option>
+        <option value="2026" selected>2026</option>
+        <option value="2027">2027</option>
+      </select>
+      <button onclick="document.getElementById('cal-masivo-input').click()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Subir PDF DIAN
+      </button>
+      <input type="file" id="cal-masivo-input" accept=".pdf" style="display:none" onchange="calMasivoReadPDF(this.files[0])"/>
+    </div>
+    <div id="cal-masivo-status" style="width:100%;font-size:11px;color:#92400e;display:none;padding-top:8px;border-top:1px solid rgba(201,162,39,.3);margin-top:4px;"></div>
   </div>
 
   <div class="clients-grid" id="clientsGrid">
@@ -427,27 +451,6 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <!-- Banner cliente -->
   <div id="client-banner" style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:16px;margin-bottom:28px;"></div>
 
-  <!-- Banner Calendario Global DIAN -->
-  <div id="cal-masivo-banner" style="background:linear-gradient(135deg,#fff7e6,#fef3c7);border:1.5px solid #c9a227;border-radius:var(--r);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="font-size:24px;">📅</div>
-    <div style="flex:1;min-width:200px;">
-      <div style="font-size:12px;font-weight:800;color:#92400e;">Calendario Tributario DIAN — Carga Masiva</div>
-      <div style="font-size:11px;color:#78350f;margin-top:2px;">Sube el PDF del calendario DIAN y todos los clientes recibirán automáticamente sus fechas de vencimiento según su RUT.</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select id="cal-masivo-year" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid #c9a227;border-radius:7px;padding:5px 9px;background:#fff;color:#92400e;outline:none;">
-        <option value="2025">2025</option>
-        <option value="2026" selected>2026</option>
-        <option value="2027">2027</option>
-      </select>
-      <button onclick="document.getElementById('cal-masivo-input').click()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Subir PDF DIAN
-      </button>
-      <input type="file" id="cal-masivo-input" accept=".pdf" style="display:none" onchange="calMasivoReadPDF(this.files[0])"/>
-    </div>
-    <div id="cal-masivo-status" style="width:100%;font-size:11px;color:#92400e;display:none;padding-top:4px;border-top:1px solid rgba(201,162,39,.3);margin-top:4px;"></div>
-  </div>
 
   <!-- Módulos -->
   <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;">Módulos disponibles</div>
@@ -1997,11 +2000,13 @@ var _calGlobalLoading= false;
 var _calGlobalContadores = {};
 
 window.openCalendarioGlobal = function openCalendarioGlobal(){
-  var panel = document.getElementById('cal-global-panel');
+  var panel   = document.getElementById('cal-global-panel');
+  var masivo  = document.getElementById('cal-masivo-banner');
   if(!panel) return;
   var visible = panel.style.display && panel.style.display !== 'none';
   if(!visible){
-    panel.style.display = 'block';
+    panel.style.display  = 'block';
+    if(masivo) masivo.style.display = 'flex';
     _calGlobalLoaded = false;
     calGlobalPoblarContadores();
     calGlobalCargarTodo();
@@ -2009,7 +2014,8 @@ window.openCalendarioGlobal = function openCalendarioGlobal(){
       panel.scrollIntoView({behavior:'smooth', block:'nearest'});
     }, 100);
   } else {
-    panel.style.display = 'none';
+    panel.style.display  = 'none';
+    if(masivo) masivo.style.display = 'none';
   }
 }
 
