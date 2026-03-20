@@ -691,8 +691,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <!-- Botón admin: limpiar y recargar calendario -->
   <div id="obl-admin-bar" style="display:none;background:#fef9ec;border:1.5px solid #c9a227;border-radius:var(--r);padding:10px 16px;margin-bottom:14px;align-items:center;gap:12px;flex-wrap:wrap;">
     <span style="font-size:11px;color:#92400e;flex:1;">Calendario DIAN 2026 oficial — fechas exactas según NIT del cliente.</span>
-    <button onclick="oblRegenerarCalendario()" style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-right:6px;">🔄 Regenerar este cliente</button>
-    <button onclick="oblRegenerarTodos()" style="background:#c9a227;color:#1a2580;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">🔄 Regenerar todos</button>
+    <button id="btn-regen-cliente" style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-right:6px;">🔄 Regenerar este cliente</button>
+    <button id="btn-regen-todos" style="background:#c9a227;color:#1a2580;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">🔄 Regenerar todos</button>
   </div>
 
   <!-- Sin calendario -->
@@ -2580,19 +2580,21 @@ window._openObligaciones = window.openObligaciones = function openObligaciones()
   if(adminBar){
     var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
     adminBar.style.display = isAdmin ? 'flex' : 'none';
-    // Conectar botones directamente sin pasar por wrappers
-    var btnRegen = adminBar.querySelector('button:first-of-type');
-    var btnRegenTodos = adminBar.querySelector('button:last-of-type');
-    if(btnRegen) btnRegen.onclick = function(e){
-      e.stopPropagation();
-      if(window._oblRegenerarCalendario) window._oblRegenerarCalendario();
-      else if(window.oblRegenerarCalendario) window.oblRegenerarCalendario();
-    };
-    if(btnRegenTodos) btnRegenTodos.onclick = function(e){
-      e.stopPropagation();
-      if(window._oblRegenerarTodos) window._oblRegenerarTodos();
-      else if(window.oblRegenerarTodos) window.oblRegenerarTodos();
-    };
+    // Conectar botones por ID directamente a las funciones reales
+    var btnRegen = document.getElementById('btn-regen-cliente');
+    var btnRegenTodos = document.getElementById('btn-regen-todos');
+    if(btnRegen){
+      btnRegen.onclick = null;
+      btnRegen.addEventListener('click', function(){
+        window._oblRegenerarCalendario && window._oblRegenerarCalendario();
+      });
+    }
+    if(btnRegenTodos){
+      btnRegenTodos.onclick = null;
+      btnRegenTodos.addEventListener('click', function(){
+        window._oblRegenerarTodos && window._oblRegenerarTodos();
+      });
+    }
   }
   oblCargar();
 };
