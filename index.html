@@ -1104,13 +1104,7 @@ const MODULES = [
     tags:['Exógena','F300 IVA','F310 INC'],
     active:true, action:'openGuardado()'
   },
-  {
-    id:'calendario',icon:'📅',iconBg:'#fff7e6',
-    title:'Calendario Tributario DIAN',
-    desc:'Consulta las fechas de vencimiento de las obligaciones tributarias según el RUT del cliente. Alertas automáticas y registro de presentaciones.',
-    tags:['Vencimientos','Alertas','Presentaciones'],
-    active:true, action:'openCalendario()'
-  },
+
   {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
     title:'Documentos y Soportes',
@@ -4413,29 +4407,25 @@ window.calReadPDF = async function calReadPDF(file){
     reader.onload = async function(e){
       var base64 = e.target.result.split(',')[1];
       try{
-        var resp = await fetch('https://api.anthropic.com/v1/messages',{
+        var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({
-            model:'claude-sonnet-4-20250514',
-            max_tokens:2000,
-            messages:[{
-              role:'user',
-              content:[
-                {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
-                {type:'text', text:`Extrae del calendario tributario DIAN todas las fechas de vencimiento.
-Para cada obligación devuelve SOLO un JSON array con este formato exacto (sin markdown ni explicación):
-[{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}]
-Donde cod es el código de responsabilidad RUT (05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 48=IVA, 52=consumo).
-Si hay varias fechas para la misma obligación (por últimos dígitos del NIT), usa la fecha límite máxima.`}
-              ]
-            }]
+            contents:[{parts:[
+              {inline_data:{mime_type:'application/pdf', data:base64}},
+              {text:'Extrae del calendario tributario DIAN todas las fechas de vencimiento. Responde SOLO con un JSON array, sin markdown ni explicación: [{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}] Donde cod es el código RUT (05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 48=IVA, 52=consumo). Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima. Solo el JSON array.'}
+            ]}],
+            generationConfig:{temperature:0, maxOutputTokens:4096}
           })
         });
         var data = await resp.json();
-        var text = (data.content||[]).map(function(x){return x.text||'';}).join('');
-        text = text.replace(/```json|```/g,'').trim();
-        var items = JSON.parse(text);
+        var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+        var arrS = text.indexOf('['), arrE = text.lastIndexOf(']');
+        if(arrS >= 0 && arrE > arrS) text = text.slice(arrS, arrE+1);
+        var items;
+        try{ items = JSON.parse(text); }
+        catch(pe){ statusEl.style.color='var(--re)'; statusEl.textContent='No se pudo leer el PDF. Intenta el ingreso manual.'; return; }
         if(Array.isArray(items) && items.length > 0){
           // Agregar a la lista existente (sin duplicar por cod+fecha)
           items.forEach(function(it){
@@ -4727,33 +4717,40 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
       reader.readAsDataURL(file);
     });
 
-    statusEl.innerHTML = '🤖 Extrayendo fechas del calendario DIAN con IA…';
+    // Validar tamaño (proxy acepta hasta ~4MB de base64)
+    if(base64.length > 4000000){
+      statusEl.innerHTML = '⚠️ El PDF es demasiado grande. Intenta con un archivo menor a 3MB o usa el ingreso manual en el módulo de cada cliente.';
+      statusEl.style.display = 'block';
+      return;
+    }
 
-    // Llamar a la API de Anthropic para extraer las fechas
-    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+    statusEl.innerHTML = '🤖 Extrayendo fechas del calendario DIAN con IA…';
+    statusEl.style.display = 'block';
+
+    // Llamar al proxy
+    var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
-        messages:[{
-          role: 'user',
-          content:[
-            {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
-            {type:'text', text:`Extrae TODAS las fechas de vencimiento del calendario tributario DIAN.
-Para cada obligación devuelve SOLO un JSON array, sin markdown ni explicación:
-[{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}]
-Códigos: 05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 42=contabilidad, 48=IVA, 49=no resp IVA, 52=consumo, 55=benef finales.
-Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima (más tardía). Incluye todas las obligaciones del año ${year}.`}
-          ]
-        }]
+        contents:[{parts:[
+          {inline_data:{mime_type:'application/pdf', data:base64}},
+          {text:'Extrae TODAS las fechas de vencimiento del calendario tributario DIAN del año '+year+'. Responde SOLO con un JSON array, sin markdown ni explicación: [{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}] Códigos: 05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 42=contabilidad, 48=IVA, 49=no resp IVA, 52=consumo, 55=benef finales. Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima. Solo el JSON array.'}
+        ]}],
+        generationConfig:{temperature:0, maxOutputTokens:8192}
       })
     });
 
     var data = await resp.json();
-    var text = (data.content||[]).map(function(x){return x.text||'';}).join('');
-    text = text.replace(/```json|```/g,'').trim();
-    var itemsBase = JSON.parse(text);
+    var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if(!text){ statusEl.innerHTML = '⚠️ El proxy no devolvió respuesta. Intenta de nuevo.'; return; }
+    // Limpiar markdown y extraer JSON array
+    text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+    var arrStart = text.indexOf('[');
+    var arrEnd   = text.lastIndexOf(']');
+    if(arrStart >= 0 && arrEnd > arrStart) text = text.slice(arrStart, arrEnd+1);
+    var itemsBase;
+    try{ itemsBase = JSON.parse(text); }
+    catch(e){ statusEl.innerHTML = '❌ No se pudo leer el calendario. Verifica que sea el PDF correcto. Detalle: '+e.message; return; }
 
     if(!Array.isArray(itemsBase) || itemsBase.length === 0){
       statusEl.innerHTML = '⚠️ No se encontraron fechas en el PDF. Verifica que sea el calendario DIAN correcto.';
@@ -4819,8 +4816,14 @@ Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima
     document.getElementById('cal-masivo-input').value = '';
 
   } catch(err){
-    statusEl.innerHTML = '❌ Error: ' + err.message;
+    var msg = err.message || String(err);
+    if(msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')){
+      statusEl.innerHTML = '❌ Error de conexión con el servidor. Verifica tu conexión a internet e intenta de nuevo.';
+    } else {
+      statusEl.innerHTML = '❌ Error: ' + msg;
+    }
     statusEl.style.color = '#b91c1c';
+    statusEl.style.display = 'block';
     console.error('[JNF] calMasivoReadPDF error:', err);
   }
 };
