@@ -1171,7 +1171,7 @@ window.openContabilidad = function openContabilidad(id){
         +'</div>';
     }).join('')
     // Add year button
-    +'<div onclick="addAnio(\''+id+'\')"'
+    +'<div onclick="confirmarAnio()"'
       +' style="background:var(--bg);border:1.5px dashed var(--bm);border-radius:var(--r);padding:20px 16px;cursor:pointer;text-align:center;transition:all .2s;"'
       +' onmouseover="this.style.background=\'var(--bl)\';this.style.borderColor=\'var(--blue)\'"'
       +' onmouseout="this.style.background=\'var(--bg)\';this.style.borderColor=\'var(--bm)\'">'
@@ -2259,7 +2259,7 @@ window.renderCalGlobal = function renderCalGlobal(){
       +'<td style="font-size:11px;color:#374151;padding:8px 10px;border-bottom:1px solid #f3f4f6;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;">'+proxTxt+'</td>'
       +'<td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;">'+estBadge+'</td>'
       +'<td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;">'
-        +'<button onclick="calGlobalIr('" + c.id + "')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">→ Ver</button>'
+        +'<button onclick="calGlobalIr(\'' + c.id + '\')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">→ Ver</button>'
       +'</td>'
       +'</tr>';
   }).join('');
@@ -3544,7 +3544,7 @@ window.openFicha = function openFicha(clientId){
     + '</div>';
 }
 
-function closeFicha(){
+window.closeFicha = function closeFicha(){
   document.getElementById('modal-ficha').style.display='none';
 }
 
@@ -3713,7 +3713,7 @@ function inc_abrirGuardado(key){
 
 
 // ── Cambio / Reset de contraseña ─────────────────────────
-function showResetPassword(){
+window.showResetPassword = function showResetPassword(){
   // Called from login screen - show reset tab
   document.getElementById('pwd-tab-reset').style.display='block';
   document.getElementById('pwd-tab-change').style.display='none';
@@ -4348,7 +4348,7 @@ window.calTab = function calTab(tab){
 }
 
 // ── Leer PDF con IA ──────────────────────────────────────────
-async function calReadPDF(file){
+window.calReadPDF = async function calReadPDF(file){
   if(!file) return;
   var statusEl = document.getElementById('cal-pdf-status');
   statusEl.style.display='block';
