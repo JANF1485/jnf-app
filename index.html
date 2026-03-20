@@ -1495,7 +1495,11 @@ window._goBack = window.goBack = function goBack(){
         // Refresh saved results panel after returning from consolidador
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
-      else if(s==='obligaciones') showScreen('contabilidad');
+      else if(s==='obligaciones'){
+        // Recargar la pantalla de módulos con el cliente y año actuales
+        if(activeClientId && activeYear) openAnio(activeClientId, activeYear);
+        else showScreen('contabilidad');
+      }
       else if(s==='calendario') showScreen('contabilidad');
       else if(s==='contabilidad') showScreen('anio');
       else{ showScreen('clientes'); activeClientId=null; activeYear=null; }
@@ -4575,7 +4579,7 @@ function poblarFiltroContador(){
 </div>
 
 <!-- ═══ MODAL FICHA TÉCNICA CLIENTE ═════════════════════ -->
-<div id="modal-ficha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;
+<div id="modal-ficha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;
   align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;
     box-shadow:0 20px 60px rgba(0,0,0,.3);">
