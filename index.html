@@ -413,7 +413,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <div style="font-size:11px;color:#78350f;margin-top:2px;">Genera el calendario con las fechas exactas de la DIAN según el último dígito del NIT de cada cliente.</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <button onclick="calMasivoRegenerarTodos()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;font-weight:800;">
+      <button id="btn-cal-masivo-regen" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;font-weight:800;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Generar para todos los clientes
       </button>
@@ -689,7 +689,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <div id="obl-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
 
   <!-- Botón admin: limpiar y recargar calendario -->
-  <div id="obl-admin-bar" style="display:none;background:#fef9ec;border:1.5px solid #c9a227;border-radius:var(--r);padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div id="obl-admin-bar" style="display:none;background:#fef9ec;border:1.5px solid #c9a227;border-radius:var(--r);padding:10px 16px;margin-bottom:14px;align-items:center;gap:12px;flex-wrap:wrap;">
     <span style="font-size:11px;color:#92400e;flex:1;">Calendario DIAN 2026 oficial — fechas exactas según NIT del cliente.</span>
     <button onclick="oblRegenerarCalendario()" style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-right:6px;">🔄 Regenerar este cliente</button>
     <button onclick="oblRegenerarTodos()" style="background:#c9a227;color:#1a2580;border:none;border-radius:7px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">🔄 Regenerar todos</button>
@@ -2190,6 +2190,12 @@ window._openCalendarioGlobal = window.openCalendarioGlobal = function openCalend
     if(db) loadUsuarios().then(function(){ calGlobalPoblarContadores(); });
     else calGlobalPoblarContadores();
     calGlobalCargarTodo();
+    // Conectar botón de generación masiva directamente
+    var btnRegen = document.getElementById('btn-cal-masivo-regen');
+    if(btnRegen) btnRegen.onclick = function(){
+      if(window._calMasivoRegenerarTodos) window._calMasivoRegenerarTodos();
+      else if(window.calMasivoRegenerarTodos) window.calMasivoRegenerarTodos();
+    };
     setTimeout(function(){
       panel.scrollIntoView({behavior:'smooth', block:'nearest'});
     }, 100);
@@ -2569,11 +2575,24 @@ window._openObligaciones = window.openObligaciones = function openObligaciones()
   document.getElementById('obl-year-badge').textContent  = activeYear || new Date().getFullYear();
 
   showScreen('obligaciones');
-  // Mostrar barra admin solo para admins
+  // Mostrar barra admin solo para admins y conectar botones directamente
   var adminBar = document.getElementById('obl-admin-bar');
   if(adminBar){
     var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
     adminBar.style.display = isAdmin ? 'flex' : 'none';
+    // Conectar botones directamente sin pasar por wrappers
+    var btnRegen = adminBar.querySelector('button:first-of-type');
+    var btnRegenTodos = adminBar.querySelector('button:last-of-type');
+    if(btnRegen) btnRegen.onclick = function(e){
+      e.stopPropagation();
+      if(window._oblRegenerarCalendario) window._oblRegenerarCalendario();
+      else if(window.oblRegenerarCalendario) window.oblRegenerarCalendario();
+    };
+    if(btnRegenTodos) btnRegenTodos.onclick = function(e){
+      e.stopPropagation();
+      if(window._oblRegenerarTodos) window._oblRegenerarTodos();
+      else if(window.oblRegenerarTodos) window.oblRegenerarTodos();
+    };
   }
   oblCargar();
 };
