@@ -1515,9 +1515,10 @@ window._goBack = window.goBack = function goBack(){
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
       else if(s==='obligaciones'){
-        var yr = parseInt(activeYear) || new Date().getFullYear();
-        if(activeClientId && yr){
-          openAnio(activeClientId, yr);
+        if(activeClientId && activeYear){
+          // Ir directo a la pantalla de módulos (screen-contabilidad)
+          showScreen('contabilidad');
+          setTimeout(function(){ loadSavedResults(activeClientId, activeYear); }, 100);
         } else if(activeClientId){
           openContabilidad(activeClientId);
         } else {
