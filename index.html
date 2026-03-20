@@ -205,6 +205,10 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   if(!window['splashEnter'])window['splashEnter']=function(){var a=arguments,t=this;var r=function(){if(window['_splashEnter'])window['_splashEnter'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['showResetPassword'])window['showResetPassword']=function(){var a=arguments,t=this;var r=function(){if(window['_showResetPassword'])window['_showResetPassword'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['f300_updatePeriodos'])window['f300_updatePeriodos']=function(){var a=arguments,t=this;var r=function(){if(window['_f300_updatePeriodos'])window['_f300_updatePeriodos'].apply(t,a);else setTimeout(r,50);};r();};
+
+  if(!window['calMasivoRegenerarTodos'])window['calMasivoRegenerarTodos']=function(){var a=arguments,t=this;var r=function(){if(window['_calMasivoRegenerarTodos'])window['_calMasivoRegenerarTodos'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['oblRegenerarCalendario'])window['oblRegenerarCalendario']=function(){var a=arguments,t=this;var r=function(){if(window['_oblRegenerarCalendario'])window['_oblRegenerarCalendario'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['oblRegenerarTodos'])window['oblRegenerarTodos']=function(){var a=arguments,t=this;var r=function(){if(window['_oblRegenerarTodos'])window['_oblRegenerarTodos'].apply(t,a);else setTimeout(r,50);};r();};
 </script>
 </head>
 <body>
@@ -1512,8 +1516,7 @@ window._goBack = window.goBack = function goBack(){
       }
       else if(s==='obligaciones'){
         if(activeClientId && activeYear){
-          showScreen('contabilidad');
-          setTimeout(function(){ loadSavedResults(activeClientId, activeYear); }, 100);
+          openAnio(activeClientId, parseInt(activeYear));
         } else if(activeClientId){
           openContabilidad(activeClientId);
         } else {
@@ -5440,7 +5443,7 @@ window.oblBorrarCalendario = function oblBorrarCalendario(){
 // Fuente: Resolución DIAN Calendario Tributario 2026
 // ══════════════════════════════════════════════════════════════
 
-window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps){
+window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps){
   // Último dígito del NIT (sin DV)
   var nitStr = String(nit || '').replace(/[^0-9]/g,'');
   var ultimoDigito = parseInt(nitStr[nitStr.length-1]) || 0;
@@ -5582,7 +5585,7 @@ window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps
 };
 
 // Botón para regenerar calendario desde datos oficiales hardcodeados
-window.oblRegenerarCalendario = async function oblRegenerarCalendario(){
+window._oblRegenerarCalendario = window.oblRegenerarCalendario = async function oblRegenerarCalendario(){
   var c = clients.find(function(x){ return x.id === activeClientId; });
   if(!c || !db) return;
   var year = activeYear || 2026;
@@ -5607,7 +5610,7 @@ window.oblRegenerarCalendario = async function oblRegenerarCalendario(){
 };
 
 // Regenerar para TODOS los clientes
-window.oblRegenerarTodos = async function oblRegenerarTodos(){
+window._oblRegenerarTodos = window.oblRegenerarTodos = async function oblRegenerarTodos(){
   if(!db) return;
   if(!confirm('¿Regenerar el calendario DIAN 2026 para TODOS los clientes?')) return;
 
@@ -5636,7 +5639,7 @@ window.oblRegenerarTodos = async function oblRegenerarTodos(){
 };
 
 
-window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
+window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
   var statusEl = document.getElementById('cal-masivo-status');
   if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#92400e'; statusEl.innerHTML='⏳ Generando calendarios…'; }
   if(!db){ if(statusEl) statusEl.innerHTML='❌ Sin conexión a base de datos.'; return; }
