@@ -246,8 +246,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <div style="position:relative;display:inline-block;border-radius:50%;">
     <img src="https://janf1485.github.io/jnf-interno/logo.jpg" alt="JNF"
       style="width:320px;height:320px;border-radius:50%;object-fit:cover;border:5px solid #c9a227;box-shadow:0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5);transition:transform .35s ease,box-shadow .35s ease;"
-      onmouseover="this.style.transform='scale(1.06)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.35),0 0 40px rgba(201,162,39,0.6),0 0 80px rgba(201,162,39,0.3),0 25px 70px rgba(0,0,0,0.5)'"
-      onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5)'"
+      onmouseover="this.style.transform='scale(1.04)';this.style.borderColor='#f0c840';this.style.boxShadow='0 0 0 6px rgba(201,162,39,0.25),0 0 22px rgba(201,162,39,0.55),0 0 55px rgba(201,162,39,0.30),0 0 100px rgba(201,162,39,0.13),0 25px 70px rgba(0,0,0,0.5)'"
+      onmouseout="this.style.transform='scale(1)';this.style.borderColor='#c9a227';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5)'"
     />
   </div>
   <div style="font-size:24px;font-weight:800;color:#c9a227;text-align:center;">Asesorías y Consultorías JNF S.A.S.</div>
@@ -742,8 +742,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 
       <!-- RUT DROP ZONE -->
       <div class="rut-zone" id="rutZone" onclick="document.getElementById('rutInput').click()">
-        <div class="rut-zone-title">📄 Subir RUT (PDF) — Lectura automática con IA</div>
-        <div class="rut-zone-sub">Arrastra el PDF del RUT aquí o haz clic para seleccionarlo</div>
+        <div class="rut-zone-title" id="rut-zone-title">📄 Subir RUT (PDF) — Lectura automática con IA</div>
+        <div class="rut-zone-sub" id="rut-zone-sub">Arrastra el PDF del RUT aquí o haz clic para seleccionarlo</div>
         <input type="file" id="rutInput" accept=".pdf" style="display:none" onchange="readRUT(this.files[0])"/>
       </div>
       <div class="rut-processing" id="rutProcessing">
@@ -952,6 +952,15 @@ window._openModal = window.openModal = function openModal(name, data){
     editingId = data ? data.id : null;
     document.getElementById('modalAddTitle').textContent = data ? '✏️ Editar cliente' : 'Agregar cliente';
     document.getElementById('saveBtnText').textContent = data ? 'Guardar cambios' : 'Guardar cliente';
+    // Restaurar texto de la zona RUT según modo
+    var rutTit = document.getElementById('rut-zone-title');
+    var rutSub = document.getElementById('rut-zone-sub');
+    if(rutTit) rutTit.textContent = data
+      ? '🔄 Actualizar RUT (PDF) — Lectura automática con IA'
+      : '📄 Subir RUT (PDF) — Lectura automática con IA';
+    if(rutSub) rutSub.textContent = data
+      ? 'Sube el nuevo RUT para actualizar nombre, dirección, responsabilidades, etc.'
+      : 'Arrastra el PDF del RUT aquí o haz clic para seleccionarlo';
     clearForm();
     if(data) fillForm(data);
     // Show/hide contador section based on role
@@ -1149,7 +1158,14 @@ renderClients();
 
 window._editClient = window.editClient = function editClient(id){
   const c=clients.find(x=>x.id===id);
-  if(c)openModal('add',c);
+  if(c){
+    openModal('add',c);
+    // Cambiar texto de la zona RUT a modo actualización
+    var tit = document.getElementById('rut-zone-title');
+    var sub = document.getElementById('rut-zone-sub');
+    if(tit) tit.textContent = '🔄 Actualizar RUT (PDF) — Lectura automática con IA';
+    if(sub) sub.textContent = 'Sube el nuevo RUT para actualizar los datos del cliente (nombre, dirección, responsabilidades, etc.)';
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2128,7 +2144,9 @@ window._openCalendarioGlobal = window.openCalendarioGlobal = function openCalend
     panel.style.display  = 'block';
     if(masivo) masivo.style.display = 'flex';
     _calGlobalLoaded = false;
-    calGlobalPoblarContadores();
+    // Recargar usuarios frescos antes de poblar contadores
+    if(db) loadUsuarios().then(function(){ calGlobalPoblarContadores(); });
+    else calGlobalPoblarContadores();
     calGlobalCargarTodo();
     setTimeout(function(){
       panel.scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -2517,7 +2535,18 @@ function oblCargar(){
   var year = activeYear || new Date().getFullYear();
   var key  = 'calendario_' + activeClientId + '_' + year;
 
-  db.collection('calendarios').doc(key).get().then(function(doc){
+  // Leer cliente fresco de Firestore para tener resps actualizados
+  db.collection('clientes').doc(activeClientId).get().then(function(cDoc){
+    if(cDoc.exists){
+      var cData = cDoc.data();
+      // Actualizar resps en el array local si no están
+      var cLocal = clients.find(function(x){ return x.id === activeClientId; });
+      if(cLocal && (!cLocal.resps || cLocal.resps.length === 0)){
+        cLocal.resps = cData.resps || cData.responsabilidades || [];
+      }
+    }
+    return db.collection('calendarios').doc(key).get();
+  }).then(function(doc){
     _oblItems = doc.exists ? (doc.data().items || []) : [];
     return db.collection('presentaciones').doc(key).get();
   }).then(function(pDoc){
@@ -2543,9 +2572,10 @@ function oblGetEstado(fecha, id){
 function oblRender(){
   var c     = clients.find(function(x){ return x.id === activeClientId; });
   var ruts  = (c && (c.responsabilidades || c.resps)) || [];
+  // Filtrar SIEMPRE por resps del RUT del cliente
   var items = ruts.length > 0
     ? _oblItems.filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
-    : []; // sin responsabilidades = sin obligaciones que mostrar
+    : _oblItems.slice(); // si no hay resps aún, mostrar lo que hay (oblCargar los cargará frescos)
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
