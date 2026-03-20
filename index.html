@@ -4701,130 +4701,206 @@ function openCalendario(){
 // ══════════════════════════════════════════════════════════
 // CARGA MASIVA CALENDARIO DIAN → TODOS LOS CLIENTES
 // ══════════════════════════════════════════════════════════
+// ── Utilidad: dividir base64 de PDF en chunks por tamaño ──────────────────
+function splitBase64Chunks(base64, maxBytes){
+  var chunks = [];
+  var chunkSize = Math.floor(maxBytes * 4 / 3); // bytes → chars base64
+  for(var i = 0; i < base64.length; i += chunkSize){
+    chunks.push(base64.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+// ── Llamar al proxy con reintentos ────────────────────────────────────────
+async function calProxyFetch(base64Chunk, promptText, retries){
+  retries = retries || 3;
+  var lastErr;
+  for(var attempt = 0; attempt < retries; attempt++){
+    try{
+      var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[
+            {inline_data:{mime_type:'application/pdf', data:base64Chunk}},
+            {text: promptText}
+          ]}],
+          generationConfig:{temperature:0, maxOutputTokens:8192}
+        })
+      });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      var data = await resp.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } catch(e){
+      lastErr = e;
+      if(attempt < retries - 1) await new Promise(function(r){ setTimeout(r, 1500 * (attempt+1)); });
+    }
+  }
+  throw lastErr;
+}
+
+// ── Parsear y reparar JSON de fechas ─────────────────────────────────────
+function calParseJSON(text){
+  text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+  var s = text.indexOf('['), e = text.lastIndexOf(']');
+  if(s >= 0 && e > s) text = text.slice(s, e+1);
+  try{ return JSON.parse(text); }
+  catch(_){
+    // Reparar: eliminar último objeto incompleto y cerrar array
+    var last = Math.max(text.lastIndexOf('},'), text.lastIndexOf('}'));
+    if(last > 0){ try{ return JSON.parse(text.slice(0, last+1) + ']'); } catch(_){} }
+    return [];
+  }
+}
+
+// ── CARGA MASIVA PRINCIPAL ────────────────────────────────────────────────
 window.calMasivoReadPDF = async function calMasivoReadPDF(file){
   if(!file) return;
   var statusEl = document.getElementById('cal-masivo-status');
-  var year = parseInt(document.getElementById('cal-masivo-year').value || '2026');
-  statusEl.style.display = 'block';
-  statusEl.innerHTML = '⏳ Leyendo PDF con IA… esto puede tardar unos segundos.';
+  var year     = parseInt(document.getElementById('cal-masivo-year').value || '2026');
+  statusEl.style.display  = 'block';
+  statusEl.style.color    = '#92400e';
+  statusEl.innerHTML      = '📄 Leyendo archivo…';
+  document.getElementById('cal-masivo-input').value = '';
 
   try{
-    // Leer el PDF como base64
+    // ── Leer el archivo ──────────────────────────────────────────────────
     var base64 = await new Promise(function(resolve, reject){
-      var reader = new FileReader();
-      reader.onload  = function(e){ resolve(e.target.result.split(',')[1]); };
-      reader.onerror = function(){ reject(new Error('Error leyendo archivo')); };
-      reader.readAsDataURL(file);
+      var r = new FileReader();
+      r.onload  = function(e){ resolve(e.target.result.split(',')[1]); };
+      r.onerror = function(){ reject(new Error('Error al leer el archivo')); };
+      r.readAsDataURL(file);
     });
 
-    // Validar tamaño (proxy acepta hasta ~4MB de base64)
-    if(base64.length > 4000000){
-      statusEl.innerHTML = '⚠️ El PDF es demasiado grande. Intenta con un archivo menor a 3MB o usa el ingreso manual en el módulo de cada cliente.';
-      statusEl.style.display = 'block';
-      return;
+    var fileSizeMB = (base64.length * 0.75 / 1024 / 1024).toFixed(1);
+    statusEl.innerHTML = '📄 Archivo leído (' + fileSizeMB + ' MB). Procesando…';
+
+    // ── Estrategia según tamaño ──────────────────────────────────────────
+    // Límite seguro por chunk: 2.5MB de base64 (~1.9MB PDF real)
+    var CHUNK_LIMIT = 2500000;
+    var prompt = 'Del calendario tributario DIAN ' + year + ' extrae TODAS las fechas de vencimiento. '
+      + 'Usa la fecha mas tardia cuando haya multiples fechas por digitos del NIT. '
+      + 'Responde SOLO con JSON array minificado sin espacios ni markdown: '
+      + '[{"c":"05","d":"Renta personas juridicas","f":"' + year + '-04-14"},{"c":"07","d":"Retencion enero","f":"' + year + '-02-10"}] '
+      + 'Codigos c: 05=renta, 07=retencion renta, 09=ret timbre, 11=ventas comun, '
+      + '12=ventas simplificado, 14=exogena, 42=contabilidad, 48=IVA, '
+      + '49=no resp IVA, 52=consumo, 55=benef finales. Solo el array JSON.';
+
+    var itemsMap = {}; // deduplicar por cod+fecha
+    var chunks   = splitBase64Chunks(base64, CHUNK_LIMIT);
+    var totalChunks = chunks.length;
+
+    if(totalChunks > 1){
+      statusEl.innerHTML = '📄 PDF grande (' + fileSizeMB + ' MB). Procesando en '
+        + totalChunks + ' partes…';
     }
 
-    statusEl.innerHTML = '🤖 Extrayendo fechas del calendario DIAN con IA…';
-    statusEl.style.display = 'block';
+    for(var ci = 0; ci < chunks.length; ci++){
+      if(totalChunks > 1){
+        statusEl.innerHTML = '🤖 Extrayendo fechas… parte '+(ci+1)+' de '+totalChunks;
+      } else {
+        statusEl.innerHTML = '🤖 Extrayendo fechas del calendario DIAN con IA…';
+      }
 
-    // Llamar al proxy
-    var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        contents:[{parts:[
-          {inline_data:{mime_type:'application/pdf', data:base64}},
-          {text:'Extrae TODAS las fechas de vencimiento del calendario tributario DIAN del año '+year+'. Responde SOLO con un JSON array, sin markdown ni explicación: [{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}] Códigos: 05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 42=contabilidad, 48=IVA, 49=no resp IVA, 52=consumo, 55=benef finales. Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima. Solo el JSON array.'}
-        ]}],
-        generationConfig:{temperature:0, maxOutputTokens:8192}
-      })
-    });
+      var text = await calProxyFetch(chunks[ci], prompt, 3);
 
-    var data = await resp.json();
-    var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if(!text){ statusEl.innerHTML = '⚠️ El proxy no devolvió respuesta. Intenta de nuevo.'; return; }
-    // Limpiar markdown y extraer JSON array
-    text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-    var arrStart = text.indexOf('[');
-    var arrEnd   = text.lastIndexOf(']');
-    if(arrStart >= 0 && arrEnd > arrStart) text = text.slice(arrStart, arrEnd+1);
-    var itemsBase;
-    try{ itemsBase = JSON.parse(text); }
-    catch(e){ statusEl.innerHTML = '❌ No se pudo leer el calendario. Verifica que sea el PDF correcto. Detalle: '+e.message; return; }
+      if(!text){
+        if(totalChunks === 1){
+          statusEl.innerHTML = '⚠️ El servidor no devolvió respuesta. Intenta de nuevo.';
+          return;
+        }
+        continue; // chunk sin respuesta, continuar con el siguiente
+      }
 
-    if(!Array.isArray(itemsBase) || itemsBase.length === 0){
-      statusEl.innerHTML = '⚠️ No se encontraron fechas en el PDF. Verifica que sea el calendario DIAN correcto.';
-      return;
-    }
-
-    statusEl.innerHTML = '✓ ' + itemsBase.length + ' obligaciones extraídas. Distribuyendo a ' + clients.length + ' clientes…';
-
-    if(!db){ statusEl.innerHTML += ' ⚠️ Sin conexión a base de datos.'; return; }
-
-    // Distribuir a cada cliente según sus responsabilidades RUT
-    var clientesActualizados = 0;
-    var batch_size = 5; // procesar en grupos para no saturar
-
-    for(var i = 0; i < clients.length; i++){
-      var c = clients[i];
-      var ruts = c.responsabilidades || c.resps || [];
-      if(ruts.length === 0) continue; // sin responsabilidades, saltar
-
-      // Filtrar solo las obligaciones que aplican a este cliente
-      var itemsCliente = itemsBase
-        .filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
-        .map(function(it){
-          return {
-            id: 'cal_' + it.cod + '_' + it.fecha.replace(/-/g,''),
-            cod: it.cod,
-            desc: it.desc,
-            fecha: it.fecha
+      var items = calParseJSON(text);
+      items.forEach(function(it){
+        var cod   = it.cod  || it.c || '';
+        var desc  = it.desc || it.d || '';
+        var fecha = it.fecha|| it.f || '';
+        if(!cod || !fecha) return;
+        var key = cod + '_' + fecha;
+        if(!itemsMap[key]){
+          itemsMap[key] = {
+            id:    'cal_' + cod + '_' + fecha.replace(/-/g,''),
+            cod:   cod,
+            desc:  desc,
+            fecha: fecha
           };
-        });
+        }
+      });
 
+      // Pequeña pausa entre chunks para no saturar el proxy
+      if(ci < chunks.length - 1) await new Promise(function(r){ setTimeout(r, 800); });
+    }
+
+    var itemsBase = Object.values(itemsMap);
+
+    if(itemsBase.length === 0){
+      statusEl.innerHTML = '⚠️ No se encontraron fechas en el PDF. '
+        + 'Verifica que sea el calendario DIAN digital (no escaneado).';
+      return;
+    }
+
+    statusEl.innerHTML = '✓ ' + itemsBase.length + ' obligaciones extraídas. '
+      + 'Distribuyendo a ' + clients.length + ' clientes…';
+
+    if(!db){
+      statusEl.innerHTML += ' ⚠️ Sin conexión a base de datos.';
+      return;
+    }
+
+    // ── Distribuir a cada cliente según su RUT ───────────────────────────
+    var actualizados = 0;
+    for(var i = 0; i < clients.length; i++){
+      var c    = clients[i];
+      var ruts = c.responsabilidades || c.resps || [];
+      if(ruts.length === 0) continue;
+
+      var itemsCliente = itemsBase.filter(function(it){
+        return ruts.indexOf(it.cod) >= 0;
+      });
       if(itemsCliente.length === 0) continue;
 
       var key = 'calendario_' + c.id + '_' + year;
       try{
         await db.collection('calendarios').doc(key).set({
-          clienteId: c.id,
-          year: year,
-          items: itemsCliente,
-          updatedAt: new Date().toISOString(),
-          fuente: 'carga_masiva'
+          clienteId:  c.id,
+          year:       year,
+          items:      itemsCliente,
+          updatedAt:  new Date().toISOString(),
+          fuente:     'carga_masiva'
         });
-        clientesActualizados++;
-        statusEl.innerHTML = '📤 Guardando… ' + clientesActualizados + ' clientes actualizados de ' + clients.length;
+        actualizados++;
+        statusEl.innerHTML = '📤 Guardando… '
+          + actualizados + ' de ' + clients.length + ' clientes';
       } catch(e){
-        console.warn('[JNF] Error guardando calendario para ' + c.id + ':', e);
+        console.warn('[JNF] Error guardando calendario cliente ' + c.id, e);
       }
     }
 
-    statusEl.innerHTML = '✅ Calendario DIAN distribuido a <strong>' + clientesActualizados + ' clientes</strong> con ' +
-      itemsBase.length + ' obligaciones · Año ' + year +
-      ' <span style="color:#6b7280;font-size:10px;">' + new Date().toLocaleString('es-CO') + '</span>';
     statusEl.style.color = '#065f46';
+    statusEl.innerHTML   = '✅ Calendario DIAN '+ year +' distribuido a <strong>'
+      + actualizados + ' clientes</strong> ('
+      + itemsBase.length + ' obligaciones extraídas'
+      + (totalChunks > 1 ? ', procesado en ' + totalChunks + ' partes' : '')
+      + ') · ' + new Date().toLocaleString('es-CO');
 
-    // Recargar el calendario global si está abierto
+    // Recargar calendario global si está abierto
     if(document.getElementById('cal-global-panel') &&
        document.getElementById('cal-global-panel').style.display !== 'none'){
       window._calGlobalLoaded = false;
-      calGlobalCargarTodo();
+      if(window.calGlobalCargarTodo) calGlobalCargarTodo();
     }
-
-    // Limpiar el input
-    document.getElementById('cal-masivo-input').value = '';
 
   } catch(err){
     var msg = err.message || String(err);
-    if(msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')){
-      statusEl.innerHTML = '❌ Error de conexión con el servidor. Verifica tu conexión a internet e intenta de nuevo.';
+    if(msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')){
+      statusEl.innerHTML = '❌ Error de conexión. Verifica tu internet e intenta de nuevo.';
     } else {
-      statusEl.innerHTML = '❌ Error: ' + msg;
+      statusEl.innerHTML = '❌ Error inesperado: ' + msg;
     }
     statusEl.style.color = '#b91c1c';
-    statusEl.style.display = 'block';
-    console.error('[JNF] calMasivoReadPDF error:', err);
+    console.error('[JNF] calMasivoReadPDF:', err);
   }
 };
 
