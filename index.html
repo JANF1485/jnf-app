@@ -1,3 +1,55 @@
+/*!
+ * ============================================================
+ *  SISTEMA DE GESTIÓN JNF — SOFTWARE PROPIETARIO
+ * ============================================================
+ *
+ *  © 2026 Asesorías y Consultorías JNF S.A.S.
+ *  NIT: 901.904.435-9
+ *  Neiva, Huila, Colombia
+ *
+ *  AVISO DE DERECHOS DE AUTOR
+ *  Este software y su código fuente, diseño, estructura,
+ *  interfaces, lógica de negocio y documentación asociada
+ *  son propiedad exclusiva de Asesorías y Consultorías
+ *  JNF S.A.S. y están protegidos por:
+ *
+ *    - Ley 23 de 1982 (Derechos de Autor - Colombia)
+ *    - Decisión Andina 351 de 1993
+ *    - Ley 1915 de 2018 (Reforma a la Ley de Derechos de Autor)
+ *    - Convenio de Berna para la Protección de las Obras
+ *      Literarias y Artísticas
+ *
+ *  PROHIBICIONES
+ *  Queda estrictamente prohibido, sin autorización escrita
+ *  previa del titular:
+ *
+ *    1. Copiar, reproducir o distribuir este software,
+ *       total o parcialmente.
+ *    2. Modificar, adaptar, traducir o crear obras derivadas.
+ *    3. Descompilar, realizar ingeniería inversa o
+ *       desensamblar el código.
+ *    4. Sublicenciar, vender, arrendar o transferir el
+ *       software a terceros.
+ *    5. Eliminar o alterar este aviso de derechos de autor.
+ *
+ *  USO AUTORIZADO
+ *  El uso de este software está sujeto a los términos del
+ *  contrato de licencia suscrito entre el titular y el
+ *  usuario final. Sin dicho contrato, ningún uso está
+ *  autorizado.
+ *
+ *  CONTACTO Y LICENCIAMIENTO
+ *  Para adquirir una licencia de uso, contactar a:
+ *  asesoriasyconsultoriasjnfsas@gmail.com
+ *
+ *  VERSIÓN: 1.0.0
+ *  FECHA DE CREACIÓN: Marzo 2026
+ *  DESARROLLADO POR: Asesorías y Consultorías JNF S.A.S.
+ *
+ *  Registro ante la Dirección Nacional de Derechos de Autor
+ *  (DNDA) — República de Colombia.
+ * ============================================================
+ */
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -368,6 +420,108 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     © 2026 Asesorías y Consultorías JNF S.A.S. &nbsp;·&nbsp; Todos los derechos reservados
   </p>
 </div>
+</div>
+
+<!-- ═══ PANTALLA: CALENDARIO TRIBUTARIO ════════════════ -->
+<div id="screen-calendario" class="main" style="display:none;">
+  <div class="gold-bar"></div>
+  <!-- Breadcrumb -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+    <button class="btn btn-ol btn-sm" onclick="goBack()" style="gap:5px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver a módulos
+    </button>
+    <span style="font-size:10px;color:var(--t3);">›</span>
+    <span id="cal-client-name" style="font-size:10px;font-weight:700;color:var(--t2);"></span>
+    <span style="font-size:10px;color:var(--t3);">›</span>
+    <span style="font-size:10px;font-weight:700;color:var(--bd);">📅 Calendario Tributario DIAN</span>
+    <span id="cal-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
+    <!-- Indicador de RUT cargado -->
+    <span id="cal-rut-badge" style="font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;background:var(--gb);color:var(--gr);display:none;">✓ Obligaciones según RUT</span>
+  </div>
+
+  <!-- Tabs: subir PDF / manual -->
+  <div id="cal-admin-panel" style="display:none;">
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:18px 22px;margin-bottom:22px;">
+      <div style="font-size:12px;font-weight:800;color:var(--bd);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">⚙️ Configurar Calendario — Solo Administrador</div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button onclick="calTab('pdf')" id="cal-tab-pdf" class="btn btn-ol btn-sm" style="font-size:11px;background:var(--bd);color:#fff;border-color:var(--bd);">📄 Subir PDF DIAN</button>
+        <button onclick="calTab('manual')" id="cal-tab-manual" class="btn btn-ol btn-sm" style="font-size:11px;">✏️ Ingresar manualmente</button>
+      </div>
+
+      <!-- Panel PDF -->
+      <div id="cal-panel-pdf">
+        <div style="border:2px dashed var(--bm);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--bg);" onclick="document.getElementById('cal-pdf-input').click()">
+          <div style="font-size:28px;margin-bottom:8px;">📄</div>
+          <div style="font-size:12px;font-weight:700;color:var(--bd);">Arrastra el PDF del Calendario DIAN aquí</div>
+          <div style="font-size:10px;color:var(--t3);margin-top:4px;">o haz clic para seleccionarlo · La IA leerá las fechas automáticamente</div>
+          <input type="file" id="cal-pdf-input" accept=".pdf" style="display:none" onchange="calReadPDF(this.files[0])"/>
+        </div>
+        <div id="cal-pdf-status" style="margin-top:10px;font-size:11px;color:var(--bd);display:none;"></div>
+      </div>
+
+      <!-- Panel manual -->
+      <div id="cal-panel-manual" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end;margin-bottom:12px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Obligación</label>
+            <select id="cal-inp-obligacion" style="width:100%;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:8px 10px;background:var(--sf);outline:none;">
+              <option value="">Seleccionar...</option>
+              <option value="05">05 - Renta régimen ordinario</option>
+              <option value="07">07 - Retención en la fuente renta</option>
+              <option value="09">09 - Retención timbre</option>
+              <option value="11">11 - Ventas régimen común</option>
+              <option value="14">14 - Informante de exógena</option>
+              <option value="42">42 - Obligado llevar contabilidad</option>
+              <option value="48">48 - IVA</option>
+              <option value="52">52 - Impuesto al consumo</option>
+              <option value="55">55 - Informante benef. finales</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Descripción / Período</label>
+            <input type="text" id="cal-inp-desc" placeholder="Ej: Declaración IVA Bimestre 1" style="width:100%;box-sizing:border-box;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:8px 10px;background:var(--sf);outline:none;"/>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha vencimiento</label>
+            <input type="date" id="cal-inp-fecha" style="font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:8px 10px;background:var(--sf);outline:none;"/>
+          </div>
+          <button onclick="calAddItem()" class="btn" style="background:var(--bd);color:#fff;padding:8px 16px;white-space:nowrap;">+ Agregar</button>
+        </div>
+        <div id="cal-manual-err" style="font-size:11px;color:var(--re);display:none;margin-bottom:8px;"></div>
+      </div>
+
+      <!-- Botones guardar/limpiar -->
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button onclick="calGuardar()" class="btn" style="background:var(--gr);color:#fff;">💾 Guardar calendario</button>
+        <button onclick="calLimpiar()" class="btn btn-ol btn-sm" style="color:var(--re);border-color:var(--rb);">🗑 Limpiar todo</button>
+        <span id="cal-save-msg" style="font-size:11px;color:var(--gr);align-self:center;display:none;">✓ Guardado</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen alertas -->
+  <div id="cal-alertas-summary" style="display:none;margin-bottom:16px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;" id="cal-alertas-badges"></div>
+  </div>
+
+  <!-- Tabla de obligaciones -->
+  <div id="cal-empty" style="text-align:center;padding:48px 20px;color:var(--t3);">
+    <div style="font-size:40px;margin-bottom:12px;">📅</div>
+    <div style="font-size:14px;font-weight:700;color:var(--t2);">Sin calendario configurado</div>
+    <div style="font-size:12px;margin-top:6px;">El administrador debe subir el PDF del calendario DIAN o ingresar las fechas manualmente.</div>
+  </div>
+  <div id="cal-tabla-wrap" style="display:none;">
+    <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">Obligaciones tributarias del cliente</div>
+    <div id="cal-items-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+
+  <div style="border-top:2px solid #c9a227;background:#fff;padding:12px 24px;text-align:center;margin-top:32px;">
+    <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:1px;color:#c9a227;font-family:Montserrat,sans-serif;text-transform:uppercase;">
+      © 2026 Asesorías y Consultorías JNF S.A.S. &nbsp;·&nbsp; Todos los derechos reservados
+    </p>
+  </div>
 </div>
 
 <!-- ═══ PANTALLA 3: CONSOLIDADOR ════════════════════════ -->
@@ -873,6 +1027,13 @@ const MODULES = [
     active:true, action:'openGuardado()'
   },
   {
+    id:'calendario',icon:'📅',iconBg:'#fff7e6',
+    title:'Calendario Tributario DIAN',
+    desc:'Consulta las fechas de vencimiento de las obligaciones tributarias según el RUT del cliente. Alertas automáticas y registro de presentaciones.',
+    tags:['Vencimientos','Alertas','Presentaciones'],
+    active:true, action:'openCalendario()'
+  },
+  {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
     title:'Documentos y Soportes',
     desc:'Gestión y archivo de documentos contables y soportes del cliente.',
@@ -1106,6 +1267,7 @@ function goBack(){
         // Refresh saved results panel after returning from consolidador
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
+      else if(s==='calendario') showScreen('contabilidad');
       else if(s==='contabilidad') showScreen('anio');
       else{ showScreen('clientes'); activeClientId=null; activeYear=null; }
       return;
@@ -3697,6 +3859,365 @@ function saveEditNombre(){
     errEl.textContent = 'Error: ' + e.message;
     errEl.style.display = 'block';
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO CALENDARIO TRIBUTARIO DIAN — JNF APP
+// ══════════════════════════════════════════════════════════════
+
+var _calItems = [];        // [{cod, desc, fecha, id}]
+var _calPresentaciones = {}; // {itemId: {fecha, usuario}}
+var _calYear = null;
+var _calClientId = null;
+
+// Mapeo cod RUT → nombre legible
+var CAL_OBLIGACIONES = {
+  '05':'Renta régimen ordinario','06':'Ingresos y patrimonio',
+  '07':'Retención en la fuente renta','09':'Retención timbre',
+  '11':'Ventas régimen común','12':'Ventas simplificado',
+  '14':'Informante de exógena','16':'Obligado aduanero',
+  '42':'Obligado llevar contabilidad','47':'Régimen tributario especial',
+  '48':'IVA','49':'No responsable de IVA',
+  '52':'Impuesto al consumo','55':'Informante benef. finales'
+};
+
+function openCalendario(){
+  var c = clients.find(function(x){return x.id===activeClientId;});
+  if(!c) return;
+  _calClientId = activeClientId;
+  _calYear = activeYear || new Date().getFullYear();
+
+  // Actualizar breadcrumb
+  document.getElementById('cal-client-name').textContent = c.razon||c.nit;
+  document.getElementById('cal-year-badge').textContent = _calYear;
+
+  // Mostrar panel admin solo si es admin
+  var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  document.getElementById('cal-admin-panel').style.display = isAdmin ? 'block' : 'none';
+
+  // Mostrar badge RUT si tiene responsabilidades
+  var ruts = (c.responsabilidades||[]);
+  var rutBadge = document.getElementById('cal-rut-badge');
+  if(ruts.length > 0) {
+    rutBadge.style.display = 'inline';
+    rutBadge.title = 'Obligaciones: ' + ruts.join(', ');
+  } else {
+    rutBadge.style.display = 'none';
+  }
+
+  showScreen('calendario');
+  calCargar();
+}
+
+function calTab(tab){
+  document.getElementById('cal-panel-pdf').style.display   = tab==='pdf'    ? 'block' : 'none';
+  document.getElementById('cal-panel-manual').style.display = tab==='manual' ? 'block' : 'none';
+  document.getElementById('cal-tab-pdf').style.cssText    = tab==='pdf'    ? 'background:var(--bd);color:#fff;border-color:var(--bd);' : '';
+  document.getElementById('cal-tab-manual').style.cssText  = tab==='manual' ? 'background:var(--bd);color:#fff;border-color:var(--bd);' : '';
+}
+
+// ── Leer PDF con IA ──────────────────────────────────────────
+async function calReadPDF(file){
+  if(!file) return;
+  var statusEl = document.getElementById('cal-pdf-status');
+  statusEl.style.display='block';
+  statusEl.style.color='var(--bd)';
+  statusEl.textContent = '⏳ Leyendo PDF con IA… por favor espera';
+
+  try{
+    var reader = new FileReader();
+    reader.onload = async function(e){
+      var base64 = e.target.result.split(',')[1];
+      try{
+        var resp = await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            model:'claude-sonnet-4-20250514',
+            max_tokens:2000,
+            messages:[{
+              role:'user',
+              content:[
+                {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+                {type:'text', text:`Extrae del calendario tributario DIAN todas las fechas de vencimiento.
+Para cada obligación devuelve SOLO un JSON array con este formato exacto (sin markdown ni explicación):
+[{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}]
+Donde cod es el código de responsabilidad RUT (05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 48=IVA, 52=consumo).
+Si hay varias fechas para la misma obligación (por últimos dígitos del NIT), usa la fecha límite máxima.`}
+              ]
+            }]
+          })
+        });
+        var data = await resp.json();
+        var text = (data.content||[]).map(function(x){return x.text||'';}).join('');
+        text = text.replace(/```json|```/g,'').trim();
+        var items = JSON.parse(text);
+        if(Array.isArray(items) && items.length > 0){
+          // Agregar a la lista existente (sin duplicar por cod+fecha)
+          items.forEach(function(it){
+            it.id = 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+            var dup = _calItems.some(function(x){return x.cod===it.cod && x.fecha===it.fecha;});
+            if(!dup) _calItems.push(it);
+          });
+          statusEl.style.color='var(--gr)';
+          statusEl.textContent = '✓ ' + items.length + ' obligaciones extraídas. Revisa y guarda.';
+          calRenderItems();
+        } else {
+          statusEl.style.color='var(--re)';
+          statusEl.textContent = 'No se encontraron fechas en el PDF. Intenta con el ingreso manual.';
+        }
+      } catch(apiErr){
+        statusEl.style.color='var(--re)';
+        statusEl.textContent = 'Error al procesar: ' + apiErr.message;
+      }
+    };
+    reader.readAsDataURL(file);
+  } catch(e){
+    statusEl.style.color='var(--re)';
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+// ── Agregar item manualmente ─────────────────────────────────
+function calAddItem(){
+  var errEl = document.getElementById('cal-manual-err');
+  var cod   = document.getElementById('cal-inp-obligacion').value;
+  var desc  = document.getElementById('cal-inp-desc').value.trim();
+  var fecha = document.getElementById('cal-inp-fecha').value;
+  errEl.style.display='none';
+  if(!cod){ errEl.textContent='Selecciona la obligación'; errEl.style.display='block'; return; }
+  if(!desc){ errEl.textContent='Ingresa una descripción'; errEl.style.display='block'; return; }
+  if(!fecha){ errEl.textContent='Ingresa la fecha de vencimiento'; errEl.style.display='block'; return; }
+
+  _calItems.push({
+    id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    cod: cod, desc: desc, fecha: fecha
+  });
+  document.getElementById('cal-inp-desc').value='';
+  document.getElementById('cal-inp-fecha').value='';
+  calRenderItems();
+}
+
+// ── Guardar en Firestore ─────────────────────────────────────
+function calGuardar(){
+  if(!db||!_calClientId) return;
+  var key = 'calendario_'+_calClientId+'_'+_calYear;
+  db.collection('calendarios').doc(key).set({
+    clienteId:_calClientId, year:_calYear,
+    items:_calItems, updatedAt: new Date().toISOString()
+  }).then(function(){
+    var msg = document.getElementById('cal-save-msg');
+    msg.style.display='inline';
+    setTimeout(function(){msg.style.display='none';},2500);
+    calRenderItems();
+  }).catch(function(e){ alert('Error guardando: '+e.message); });
+}
+
+// ── Cargar desde Firestore ───────────────────────────────────
+function calCargar(){
+  if(!db||!_calClientId) return;
+  var key = 'calendario_'+_calClientId+'_'+_calYear;
+  // Cargar calendario
+  db.collection('calendarios').doc(key).get().then(function(doc){
+    if(doc.exists){
+      _calItems = doc.data().items || [];
+    } else {
+      _calItems = [];
+    }
+    // Cargar presentaciones
+    db.collection('presentaciones').doc(key).get().then(function(pDoc){
+      _calPresentaciones = pDoc.exists ? (pDoc.data().registros||{}) : {};
+      calRenderItems();
+    });
+  });
+}
+
+// ── Limpiar ──────────────────────────────────────────────────
+function calLimpiar(){
+  if(!confirm('¿Seguro que deseas eliminar todas las fechas del calendario?')) return;
+  _calItems = [];
+  calRenderItems();
+}
+
+// ── Eliminar item individual ─────────────────────────────────
+function calDeleteItem(id){
+  _calItems = _calItems.filter(function(x){return x.id!==id;});
+  calRenderItems();
+}
+
+// ── Marcar como presentada ───────────────────────────────────
+function calMarcarPresentada(id){
+  var c = clients.find(function(x){return x.id===_calClientId;});
+  var it = _calItems.find(function(x){return x.id===id;});
+  if(!it) return;
+  var hoy = new Date().toISOString();
+  var usuario = currentPerfil ? (currentPerfil.nombre || currentPerfil.email || 'Usuario') : 'Usuario';
+  _calPresentaciones[id] = { fecha: hoy, usuario: usuario };
+
+  // Guardar en Firestore
+  if(db && _calClientId){
+    var key = 'calendario_'+_calClientId+'_'+_calYear;
+    db.collection('presentaciones').doc(key).set({
+      clienteId:_calClientId, year:_calYear,
+      registros:_calPresentaciones
+    }, {merge:true}).then(function(){
+      calRenderItems();
+    }).catch(function(e){ console.warn('Error guardando presentación:',e); calRenderItems(); });
+  } else {
+    calRenderItems();
+  }
+}
+
+// ── Desmarcar presentación ───────────────────────────────────
+function calDesmarcarPresentada(id){
+  if(!confirm('¿Desmarcar como presentada esta obligación?')) return;
+  delete _calPresentaciones[id];
+  if(db && _calClientId){
+    var key = 'calendario_'+_calClientId+'_'+_calYear;
+    db.collection('presentaciones').doc(key).set({
+      clienteId:_calClientId, year:_calYear,
+      registros:_calPresentaciones
+    }, {merge:true}).then(function(){ calRenderItems(); });
+  } else {
+    calRenderItems();
+  }
+}
+
+// ── Estado de alerta ─────────────────────────────────────────
+function calGetEstado(fechaStr, itemId){
+  if(_calPresentaciones[itemId]) return 'presentada';
+  var hoy  = new Date(); hoy.setHours(0,0,0,0);
+  var venc = new Date(fechaStr+'T00:00:00');
+  var diff = Math.round((venc-hoy)/(1000*60*60*24)); // días restantes
+  if(diff < 0) return 'vencida';
+  if(diff <= 3) return 'proxima';
+  return 'ok';
+}
+
+// ── Filtrar por RUT del cliente ──────────────────────────────
+function calItemsVisibles(){
+  var c = clients.find(function(x){return x.id===_calClientId;});
+  if(!c || !c.responsabilidades || c.responsabilidades.length===0) return _calItems;
+  var ruts = c.responsabilidades;
+  return _calItems.filter(function(it){
+    return ruts.indexOf(it.cod) >= 0;
+  });
+}
+
+// ── Renderizar lista ─────────────────────────────────────────
+function calRenderItems(){
+  var isAdmin = currentPerfil && currentPerfil.rol==='admin';
+  var allItems   = _calItems;
+  var visibles   = calItemsVisibles();
+
+  var emptyEl = document.getElementById('cal-empty');
+  var tablaEl = document.getElementById('cal-tabla-wrap');
+  var listEl  = document.getElementById('cal-items-list');
+  var summEl  = document.getElementById('cal-alertas-summary');
+  var badgesEl= document.getElementById('cal-alertas-badges');
+
+  if(allItems.length===0){
+    emptyEl.style.display='block';
+    tablaEl.style.display='none';
+    summEl.style.display='none';
+    return;
+  }
+  emptyEl.style.display='none';
+  tablaEl.style.display='block';
+
+  // Contar alertas
+  var cntVenc=0, cntProx=0, cntPres=0, cntOk=0;
+  visibles.forEach(function(it){
+    var est = calGetEstado(it.fecha, it.id);
+    if(est==='vencida')    cntVenc++;
+    else if(est==='proxima') cntProx++;
+    else if(est==='presentada') cntPres++;
+    else cntOk++;
+  });
+
+  // Badges resumen
+  var badges = [];
+  if(cntVenc>0)  badges.push('<span style="background:#fee2e2;color:#b91c1c;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;">🔴 '+cntVenc+' vencida'+(cntVenc>1?'s':'')+'</span>');
+  if(cntProx>0)  badges.push('<span style="background:#fef3c7;color:#92400e;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;">⚠️ '+cntProx+' por vencer</span>');
+  if(cntPres>0)  badges.push('<span style="background:#d1fae5;color:#065f46;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;">✅ '+cntPres+' presentada'+(cntPres>1?'s':'')+'</span>');
+  if(cntOk>0)    badges.push('<span style="background:#e0e7ff;color:#3730a3;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;">📅 '+cntOk+' a tiempo</span>');
+  badgesEl.innerHTML = badges.join('');
+  summEl.style.display = badges.length>0 ? 'block' : 'none';
+
+  // Ordenar: vencidas primero, luego próximas, luego por fecha
+  var sorted = visibles.slice().sort(function(a,b){
+    var pa = {vencida:0,proxima:1,presentada:3,ok:2}[calGetEstado(a.fecha,a.id)];
+    var pb = {vencida:0,proxima:1,presentada:3,ok:2}[calGetEstado(b.fecha,b.id)];
+    if(pa!==pb) return pa-pb;
+    return new Date(a.fecha)-new Date(b.fecha);
+  });
+
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  listEl.innerHTML = sorted.map(function(it){
+    var estado = calGetEstado(it.fecha, it.id);
+    var venc   = new Date(it.fecha+'T00:00:00');
+    var diff   = Math.round((venc-hoy)/(1000*60*60*24));
+    var fechaStr = venc.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+    var pres   = _calPresentaciones[it.id];
+    var oblNom = CAL_OBLIGACIONES[it.cod]||('Cod. '+it.cod);
+
+    var borderColor, bgColor, estadoLabel, estadoIcon;
+    if(estado==='presentada'){
+      borderColor='#10b981'; bgColor='#f0fdf4'; estadoIcon='✅'; estadoLabel='Presentada';
+    } else if(estado==='vencida'){
+      borderColor='#ef4444'; bgColor='#fff5f5'; estadoIcon='🔴'; estadoLabel='VENCIDA';
+    } else if(estado==='proxima'){
+      borderColor='#f59e0b'; bgColor='#fffbeb'; estadoIcon='⚠️';
+      estadoLabel = diff===0 ? 'Vence HOY' : 'Vence en '+diff+' día'+(diff>1?'s':'');
+    } else {
+      borderColor='var(--br)'; bgColor='var(--sf)'; estadoIcon='📅';
+      estadoLabel = diff===1 ? 'Vence mañana' : 'Vence en '+diff+' días';
+    }
+
+    var accionBtn = '';
+    if(estado!=='presentada'){
+      accionBtn = '<button onclick="calMarcarPresentada(''+it.id+'')" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Marcar presentada</button>';
+    } else {
+      var fechaPres = new Date(pres.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      accionBtn = '<div style="font-size:10px;color:#065f46;font-weight:600;">Presentada el '+fechaPres+'<br><span style="color:var(--t3);">por '+pres.usuario+'</span></div>'
+        +'<button onclick="calDesmarcarPresentada(''+it.id+'')" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-family:Montserrat,sans-serif;font-size:10px;color:var(--t2);cursor:pointer;margin-top:6px;">Desmarcar</button>';
+    }
+
+    var deleteBtn = isAdmin ? '<button onclick="calDeleteItem(''+it.id+'')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;">🗑</button>' : '';
+
+    return '<div style="background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+      +'<div style="min-width:40px;text-align:center;font-size:24px;">'+estadoIcon+'</div>'
+      +'<div style="flex:1;min-width:200px;">'
+        +'<div style="font-size:12px;font-weight:800;color:var(--bd);">'+it.desc+'</div>'
+        +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+oblNom+' &nbsp;·&nbsp; Cód. '+it.cod+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:var(--bd);margin-top:4px;">📅 Vence: '+fechaStr+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+(estado==='vencida'?'#b91c1c':estado==='proxima'?'#92400e':estado==='presentada'?'#065f46':'#3730a3')+';">'+estadoLabel+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+        +accionBtn
+        +deleteBtn
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Función para abrir directamente el calendario (para el módulo card) ──
+function openCalendario(){
+  var c = clients.find(function(x){return x.id===activeClientId;});
+  if(!c){ ss('No hay cliente activo','err'); return; }
+  _calClientId = activeClientId;
+  _calYear = activeYear || new Date().getFullYear();
+  document.getElementById('cal-client-name').textContent = c.razon||c.nit;
+  document.getElementById('cal-year-badge').textContent = _calYear;
+  var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  document.getElementById('cal-admin-panel').style.display = isAdmin ? 'block' : 'none';
+  var ruts = (c.responsabilidades||[]);
+  var rutBadge = document.getElementById('cal-rut-badge');
+  rutBadge.style.display = ruts.length>0 ? 'inline' : 'none';
+  showScreen('calendario');
+  calCargar();
 }
 </script>
 
