@@ -275,7 +275,28 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   </div>
   <div style="font-size:24px;font-weight:800;color:#c9a227;text-align:center;">Asesorías y Consultorías JNF S.A.S.</div>
   <div style="font-size:13px;color:rgba(197,202,238,0.7);letter-spacing:1px;text-transform:uppercase;">Sistema de Gestión Contable</div>
-  <div style="width:10px;height:10px;border-radius:50%;background:#c9a227;animation:pulse 2s infinite;"></div>
+
+  <!-- Átomo online/offline en el splash -->
+  <div id="splash-atom-indicator" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+    <div id="splash-atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;">
+      <svg id="splash-atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;">
+        <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(0 43 43)"/>
+        <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(60 43 43)"/>
+        <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(120 43 43)"/>
+        <circle cx="83" cy="43" r="5" fill="#c9a227">
+          <animateTransform attributeName="transform" type="rotate" from="0 43 43" to="360 43 43" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="83" cy="43" r="5" fill="#ffe066">
+          <animateTransform attributeName="transform" type="rotate" from="120 43 43" to="480 43 43" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="83" cy="43" r="5" fill="#c9a227">
+          <animateTransform attributeName="transform" type="rotate" from="240 43 43" to="600 43 43" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+      <div id="splash-atom-nucleus" style="width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#4a7fe5,#1a2580);border:1.5px solid #c9a227;position:absolute;z-index:10;animation:pulseBlueA 1.5s infinite;"></div>
+    </div>
+    <div id="splash-atom-label" style="font-size:7px;font-weight:800;letter-spacing:1px;color:#c9a227;font-family:'Montserrat',sans-serif;animation:neonGoldA 2.5s infinite;">EN LÍNEA</div>
+  </div>
   <div style="position:fixed;bottom:18px;display:flex;align-items:center;gap:12px;">
     <span style="color:rgba(255,255,255,0.4);font-size:11px;">© 2026 Asesorías y Consultorías JNF S.A.S. · Todos los derechos reservados</span>
     <button onclick="document.getElementById('modal-derechos').style.display='flex'"
@@ -5058,8 +5079,10 @@ function poblarFiltroContador(){
 <script>
 // ── DETECTOR ONLINE / OFFLINE — ÁTOMO JNF ─────────────────
 (function(){
-  var indicator = document.getElementById('atom-indicator');
-  var nucleus   = document.getElementById('atom-nucleus');
+  var indicator       = document.getElementById('atom-indicator');
+  var nucleus         = document.getElementById('atom-nucleus');
+  var splashIndicator = document.getElementById('splash-atom-indicator');
+  var splashNucleus   = document.getElementById('splash-atom-nucleus');
   var label     = document.getElementById('atom-label');
   var atomWrap  = document.getElementById('atom-wrap');
 
@@ -5071,6 +5094,37 @@ function poblarFiltroContador(){
     els.forEach(function(id,i){var el=document.getElementById(id);if(el)el.setAttribute('fill',colors[i]);});
   }
 
+  function setSplashAtom(online){
+    var sw = document.getElementById('splash-atom-wrap');
+    var sn = document.getElementById('splash-atom-nucleus');
+    var sl = document.getElementById('splash-atom-label');
+    if(!sw||!sn||!sl) return;
+    // Cambiar órbitas del splash
+    var splashSvg = document.getElementById('splash-atom-svg');
+    if(splashSvg){
+      splashSvg.querySelectorAll('ellipse').forEach(function(el){
+        el.setAttribute('stroke', online ? '#c9a227' : '#ef4444');
+      });
+      splashSvg.querySelectorAll('circle').forEach(function(el,i){
+        el.setAttribute('fill', online ? (i===1?'#ffe066':'#c9a227') : (i===1?'#f87171':'#ef4444'));
+      });
+    }
+    if(online){
+      sw.className='online-anim';
+      sn.className='';
+      sn.style.background='radial-gradient(circle at 35% 35%,#4a7fe5,#1a2580)';
+      sn.style.borderColor='#c9a227';
+      sl.style.color='#c9a227';
+      sl.className='';
+      sl.textContent='EN LÍNEA';
+    } else {
+      sw.className='offline-anim';
+      sn.className='offline';
+      sl.className='offline';
+      sl.textContent='SIN SEÑAL';
+    }
+  }
+
   function setOffline(){
     if(!nucleus||!label||!atomWrap)return;
     nucleus.className='offline';
@@ -5078,6 +5132,7 @@ function poblarFiltroContador(){
     atomWrap.className='offline-anim';
     label.textContent='SIN SEÑAL';
     setAtomColor(false);
+    setSplashAtom(false);
   }
 
   function setOnline(){
@@ -5087,6 +5142,7 @@ function poblarFiltroContador(){
     atomWrap.className='online-anim';
     label.textContent='EN LÍNEA';
     setAtomColor(true);
+    setSplashAtom(true);
   }
 
   window.addEventListener('offline', setOffline);
