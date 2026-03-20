@@ -1,6 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script>
+// Proxies para funciones usadas en onclick inline — se definen antes del HTML
+(function(){
+  var _q = [];
+  function _proxy(name){
+    window[name] = function(){
+      var a = arguments;
+      if(typeof window['_real_'+name] === 'function') return window['_real_'+name].apply(this,a);
+      _q.push({n:name,a:a});
+    };
+  }
+  ['splashEnter','doLogin','doLogout','goHome','goBack','showScreen','renderClients',
+   'openContabilidad','openFicha','openFicha_edit','closeFicha','openAdminPanel',
+   'openExogena','openF300','openINC','openGuardado','openObligaciones','openCalendario',
+   'openCalendarioGlobal','editClient','deleteClient','openModal','closeModal',
+   'confirmarAnio','showCambiarPassword','showResetPassword','doReset',
+   'calTab','calReadPDF','calAddItem','calGuardar','calLimpiar',
+   'calMarcarPresentada','calDesmarcarPresentada','calDeleteItem',
+   'calMasivoReadPDF','oblAbrirModal','oblGuardarFecha','oblDesmarcar',
+   'openEditNombreModal','closeEditNombreModal','saveEditNombre',
+   'renderCalGlobal','calGlobalMarcar','calGlobalIr',
+   'readRUT','f300_updatePeriodos','clearSaved'
+  ].forEach(_proxy);
+
+  // Cuando el DOM cargue, redirigir proxies a las funciones reales
+  document.addEventListener('DOMContentLoaded', function(){
+    Object.keys(window).forEach(function(k){
+      if(k.indexOf('_real_') === 0) return;
+      var real = window[k];
+      if(typeof real === 'function' && typeof window['_real_'+k] === 'undefined'){
+        // nada — las funciones ya están en window directamente
+      }
+    });
+    // Drenar la cola de llamadas que llegaron antes de que cargara todo
+    _q.forEach(function(item){
+      if(typeof window[item.n] === 'function') window[item.n].apply(window, item.a);
+    });
+    _q = [];
+  });
+})();
+</script>
+
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>JNF — Sistema de Gestión Contable</title>
