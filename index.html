@@ -190,8 +190,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 <!-- ═══ PANTALLA 0: SPLASH ═══════════════════════════════ -->
 <div id="screen-splash" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);gap:24px;cursor:pointer;text-align:center;padding:40px 20px;" onclick="splashEnter()">
   <div style="position:relative;display:inline-block;border-radius:50%;">
-    <img src="https://janf1485.github.io/jnf-app/logo.jpg" alt="JNF"
-      style="width:216px;height:216px;border-radius:50%;object-fit:cover;border:5px solid #c9a227;box-shadow:0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5);transition:transform .35s ease,box-shadow .35s ease;"
+    <img src="https://janf1485.github.io/jnf-interno/logo.jpg" alt="JNF"
+      style="width:320px;height:320px;border-radius:50%;object-fit:cover;border:5px solid #c9a227;box-shadow:0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5);transition:transform .35s ease,box-shadow .35s ease;"
       onmouseover="this.style.transform='scale(1.06)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.35),0 0 40px rgba(201,162,39,0.6),0 0 80px rgba(201,162,39,0.3),0 25px 70px rgba(0,0,0,0.5)'"
       onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 0 10px rgba(201,162,39,0.25),0 25px 70px rgba(0,0,0,0.5)'"
     />
@@ -204,10 +204,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 
 <!-- ═══ APP PRINCIPAL ════════════════════════════════════ -->
 <div id="screen-app" style="display:none;">
-<div class="hdr"><img class="hdr-logo" src="https://janf1485.github.io/jnf-app/logo.jpg" alt="JNF" onclick="goHome()" title="Ir al inicio"/><div class="hdr-left"><div class="hdr-name">Asesorías y Consultorías JNF S.A.S.</div><div class="hdr-sub">Sistema de Gestión Contable</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <div style="text-align:right;margin-right:4px;">
+<div class="hdr"><img class="hdr-logo" src="https://janf1485.github.io/jnf-interno/logo.jpg" alt="JNF" onclick="goHome()" title="Ir al inicio"/><div class="hdr-left"><div class="hdr-name">Asesorías y Consultorías JNF S.A.S.</div><div class="hdr-sub">Sistema de Gestión Contable</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div style="text-align:right;margin-right:4px;cursor:pointer;" onclick="openEditNombreModal()" title="Editar mi nombre">
       <div id="hdr-user-name" style="color:var(--gold);font-size:11px;font-weight:700;"></div>
       <div id="hdr-user-role" style="color:rgba(255,255,255,.5);font-size:9px;"></div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.35);">✏ Editar nombre</div>
     </div>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
     <button onclick="showCambiarPassword()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
@@ -3666,6 +3667,54 @@ function poblarFiltroContador(){
   window.addEventListener('online',  setOnline);
   if(!navigator.onLine){ setOffline(); } else { setOnline(); }
 })();
+
+// ── EDITAR NOMBRE ─────────────────────────────────────────
+function openEditNombreModal(){
+  var inp = document.getElementById('inp-edit-nombre');
+  var nameEl = document.getElementById('hdr-user-name');
+  if(inp && nameEl) inp.value = nameEl.textContent || '';
+  document.getElementById('edit-nombre-error').style.display='none';
+  document.getElementById('edit-nombre-success').style.display='none';
+  document.getElementById('modal-edit-nombre').style.display='flex';
+}
+function closeEditNombreModal(){
+  document.getElementById('modal-edit-nombre').style.display='none';
+}
+function saveEditNombre(){
+  var nombre = document.getElementById('inp-edit-nombre').value.trim();
+  var errEl = document.getElementById('edit-nombre-error');
+  var sucEl = document.getElementById('edit-nombre-success');
+  errEl.style.display='none'; sucEl.style.display='none';
+  if(!nombre){ errEl.textContent='El nombre es obligatorio.'; errEl.style.display='block'; return; }
+  if(!currentUser){ errEl.textContent='No hay sesión activa.'; errEl.style.display='block'; return; }
+  db.collection('usuarios').doc(currentUser.uid).update({ nombre: nombre }).then(function(){
+    document.getElementById('hdr-user-name').textContent = nombre;
+    if(currentPerfil) currentPerfil.nombre = nombre;
+    sucEl.textContent = '✓ Nombre actualizado.';
+    sucEl.style.display = 'block';
+    setTimeout(closeEditNombreModal, 1200);
+  }).catch(function(e){
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  });
+}
 </script>
+
+<!-- Modal Editar Nombre -->
+<div id="modal-edit-nombre" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;border-top:4px solid #1a2580;padding:24px;width:380px;max-width:92vw;">
+    <h3 style="margin:0 0 8px;color:#1a2580;font-size:16px;">✏ Editar mi nombre</h3>
+    <p style="font-size:13px;color:#666;margin:0 0 16px;">Este nombre aparecerá en el encabezado del sistema.</p>
+    <label style="display:block;font-size:12px;font-weight:700;color:#333;margin-bottom:6px;">Mi nombre</label>
+    <input type="text" id="inp-edit-nombre" placeholder="Ej: Javier Niebles"
+      style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-family:Montserrat,sans-serif;outline:none;"/>
+    <div id="edit-nombre-error" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none;"></div>
+    <div id="edit-nombre-success" style="color:#276749;font-size:12px;margin-top:6px;display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+      <button onclick="closeEditNombreModal()" style="padding:8px 18px;border:1.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:600;font-size:13px;color:#555;">Cancelar</button>
+      <button onclick="saveEditNombre()" style="padding:8px 18px;border:none;border-radius:8px;background:#1a2580;color:#fff;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;">Guardar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>l>l>
