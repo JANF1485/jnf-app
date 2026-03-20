@@ -2557,7 +2557,10 @@ function oblCargar(){
   db.collection('clientes').doc(activeClientId).get().then(function(cDoc){
     if(cDoc.exists){
       var d = cDoc.data();
-      _oblResps = d.resps || d.responsabilidades || [];
+      var rawResps = d.resps || d.responsabilidades || [];
+      // Normalizar a string con padding: 5 -> "05", "5" -> "05"
+      _oblResps = rawResps.map(function(r){ return String(r).padStart(2,'0'); });
+      console.log('[JNF OBL] resps leídos de Firestore:', _oblResps);
       // Sincronizar en memoria local también
       var cLocal = clients.find(function(x){ return x.id === activeClientId; });
       if(cLocal) cLocal.resps = _oblResps;
@@ -2592,11 +2595,19 @@ function oblGetEstado(fecha, id){
 
 function oblRender(){
   // Usar resps leídos frescos de Firestore por oblCargar
-  var ruts  = _oblResps || [];
-  // Filtrar SIEMPRE por resps — si no hay resps, lista vacía
+  // Normalizar a string con padding para comparar: "5" -> "05", 5 -> "05"
+  var ruts = (_oblResps || []).map(function(r){
+    return String(r).padStart(2,'0');
+  });
+
+  // Filtrar items normalizando también el cod del item
   var items = ruts.length > 0
-    ? _oblItems.filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
+    ? _oblItems.filter(function(it){
+        var cod = String(it.cod || '').padStart(2,'0');
+        return ruts.indexOf(cod) >= 0;
+      })
     : [];
+  console.log('[JNF OBL] resps:', ruts, '| items total:', _oblItems.length, '| items filtrados:', items.length);
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
