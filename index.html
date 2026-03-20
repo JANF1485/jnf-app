@@ -427,6 +427,28 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <!-- Banner cliente -->
   <div id="client-banner" style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:16px;margin-bottom:28px;"></div>
 
+  <!-- Banner Calendario Global DIAN -->
+  <div id="cal-masivo-banner" style="background:linear-gradient(135deg,#fff7e6,#fef3c7);border:1.5px solid #c9a227;border-radius:var(--r);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="font-size:24px;">📅</div>
+    <div style="flex:1;min-width:200px;">
+      <div style="font-size:12px;font-weight:800;color:#92400e;">Calendario Tributario DIAN — Carga Masiva</div>
+      <div style="font-size:11px;color:#78350f;margin-top:2px;">Sube el PDF del calendario DIAN y todos los clientes recibirán automáticamente sus fechas de vencimiento según su RUT.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="cal-masivo-year" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid #c9a227;border-radius:7px;padding:5px 9px;background:#fff;color:#92400e;outline:none;">
+        <option value="2025">2025</option>
+        <option value="2026" selected>2026</option>
+        <option value="2027">2027</option>
+      </select>
+      <button onclick="document.getElementById('cal-masivo-input').click()" class="btn" style="background:#c9a227;color:#1a2580;gap:6px;font-size:11px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Subir PDF DIAN
+      </button>
+      <input type="file" id="cal-masivo-input" accept=".pdf" style="display:none" onchange="calMasivoReadPDF(this.files[0])"/>
+    </div>
+    <div id="cal-masivo-status" style="width:100%;font-size:11px;color:#92400e;display:none;padding-top:4px;border-top:1px solid rgba(201,162,39,.3);margin-top:4px;"></div>
+  </div>
+
   <!-- Módulos -->
   <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;">Módulos disponibles</div>
   <div class="modules-grid" id="modulesGrid"></div>
@@ -1790,7 +1812,11 @@ function loadUsuarios(){
   return db.collection('usuarios').get().then(function(snap){
     var users = [];
     snap.forEach(function(doc){ users.push(Object.assign({uid:doc.id}, doc.data())); });
-    window._usuariosGlobal = users; // disponible para calGlobalPoblarContadores
+    window._usuariosGlobal = users;
+    // Actualizar _calGlobalContadores con nombres reales
+    users.forEach(function(u){
+      if(u.uid) window._calGlobalContadores[u.uid] = u.nombre || u.email || u.uid;
+    });
     return users;
   });
 }
@@ -2141,7 +2167,7 @@ window.renderCalGlobal = function renderCalGlobal(){
     var cal   = _calGlobalData[c.id] || {items:[], pres:{}};
     var items = cal.items || [];
     var pres  = cal.pres  || {};
-    var ruts  = c.responsabilidades || [];
+    var ruts  = c.responsabilidades || c.resps || [];
 
     // Próximo vencimiento más urgente (no presentado)
     var pendientes = items.filter(function(it){
@@ -4348,7 +4374,7 @@ window.openCalendario = function openCalendario(){
   document.getElementById('cal-admin-panel').style.display = isAdmin ? 'block' : 'none';
 
   // Mostrar badge RUT si tiene responsabilidades
-  var ruts = (c.responsabilidades||[]);
+  var ruts = (c.responsabilidades || c.resps || []);
   var rutBadge = document.getElementById('cal-rut-badge');
   if(ruts.length > 0) {
     rutBadge.style.display = 'inline';
@@ -4549,8 +4575,8 @@ function calGetEstado(fechaStr, itemId){
 // ── Filtrar por RUT del cliente ──────────────────────────────
 function calItemsVisibles(){
   var c = clients.find(function(x){return x.id===_calClientId;});
-  if(!c || !c.responsabilidades || c.responsabilidades.length===0) return _calItems;
-  var ruts = c.responsabilidades;
+  var ruts = c.responsabilidades || c.resps || [];
+  if(!c || ruts.length===0) return _calItems;
   return _calItems.filter(function(it){
     return ruts.indexOf(it.cod) >= 0;
   });
@@ -4664,7 +4690,7 @@ function openCalendario(){
   document.getElementById('cal-year-badge').textContent = _calYear;
   var isAdmin = currentPerfil && currentPerfil.rol === 'admin';
   document.getElementById('cal-admin-panel').style.display = isAdmin ? 'block' : 'none';
-  var ruts = (c.responsabilidades||[]);
+  var ruts = (c.responsabilidades || c.resps || []);
   var rutBadge = document.getElementById('cal-rut-badge');
   rutBadge.style.display = ruts.length>0 ? 'inline' : 'none';
   showScreen('calendario');
@@ -4673,6 +4699,125 @@ function openCalendario(){
 
 
 
+
+
+
+// ══════════════════════════════════════════════════════════
+// CARGA MASIVA CALENDARIO DIAN → TODOS LOS CLIENTES
+// ══════════════════════════════════════════════════════════
+window.calMasivoReadPDF = async function calMasivoReadPDF(file){
+  if(!file) return;
+  var statusEl = document.getElementById('cal-masivo-status');
+  var year = parseInt(document.getElementById('cal-masivo-year').value || '2026');
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '⏳ Leyendo PDF con IA… esto puede tardar unos segundos.';
+
+  try{
+    // Leer el PDF como base64
+    var base64 = await new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload  = function(e){ resolve(e.target.result.split(',')[1]); };
+      reader.onerror = function(){ reject(new Error('Error leyendo archivo')); };
+      reader.readAsDataURL(file);
+    });
+
+    statusEl.innerHTML = '🤖 Extrayendo fechas del calendario DIAN con IA…';
+
+    // Llamar a la API de Anthropic para extraer las fechas
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        messages:[{
+          role: 'user',
+          content:[
+            {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+            {type:'text', text:`Extrae TODAS las fechas de vencimiento del calendario tributario DIAN.
+Para cada obligación devuelve SOLO un JSON array, sin markdown ni explicación:
+[{"cod":"XX","desc":"descripción del período","fecha":"YYYY-MM-DD"}]
+Códigos: 05=renta, 07=retención renta, 09=retención timbre, 11=ventas común, 12=ventas simplificado, 14=exógena, 42=contabilidad, 48=IVA, 49=no resp IVA, 52=consumo, 55=benef finales.
+Si hay varias fechas por últimos dígitos del NIT, usa la fecha límite máxima (más tardía). Incluye todas las obligaciones del año ${year}.`}
+          ]
+        }]
+      })
+    });
+
+    var data = await resp.json();
+    var text = (data.content||[]).map(function(x){return x.text||'';}).join('');
+    text = text.replace(/```json|```/g,'').trim();
+    var itemsBase = JSON.parse(text);
+
+    if(!Array.isArray(itemsBase) || itemsBase.length === 0){
+      statusEl.innerHTML = '⚠️ No se encontraron fechas en el PDF. Verifica que sea el calendario DIAN correcto.';
+      return;
+    }
+
+    statusEl.innerHTML = '✓ ' + itemsBase.length + ' obligaciones extraídas. Distribuyendo a ' + clients.length + ' clientes…';
+
+    if(!db){ statusEl.innerHTML += ' ⚠️ Sin conexión a base de datos.'; return; }
+
+    // Distribuir a cada cliente según sus responsabilidades RUT
+    var clientesActualizados = 0;
+    var batch_size = 5; // procesar en grupos para no saturar
+
+    for(var i = 0; i < clients.length; i++){
+      var c = clients[i];
+      var ruts = c.responsabilidades || c.resps || [];
+      if(ruts.length === 0) continue; // sin responsabilidades, saltar
+
+      // Filtrar solo las obligaciones que aplican a este cliente
+      var itemsCliente = itemsBase
+        .filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
+        .map(function(it){
+          return {
+            id: 'cal_' + it.cod + '_' + it.fecha.replace(/-/g,''),
+            cod: it.cod,
+            desc: it.desc,
+            fecha: it.fecha
+          };
+        });
+
+      if(itemsCliente.length === 0) continue;
+
+      var key = 'calendario_' + c.id + '_' + year;
+      try{
+        await db.collection('calendarios').doc(key).set({
+          clienteId: c.id,
+          year: year,
+          items: itemsCliente,
+          updatedAt: new Date().toISOString(),
+          fuente: 'carga_masiva'
+        });
+        clientesActualizados++;
+        statusEl.innerHTML = '📤 Guardando… ' + clientesActualizados + ' clientes actualizados de ' + clients.length;
+      } catch(e){
+        console.warn('[JNF] Error guardando calendario para ' + c.id + ':', e);
+      }
+    }
+
+    statusEl.innerHTML = '✅ Calendario DIAN distribuido a <strong>' + clientesActualizados + ' clientes</strong> con ' +
+      itemsBase.length + ' obligaciones · Año ' + year +
+      ' <span style="color:#6b7280;font-size:10px;">' + new Date().toLocaleString('es-CO') + '</span>';
+    statusEl.style.color = '#065f46';
+
+    // Recargar el calendario global si está abierto
+    if(document.getElementById('cal-global-panel') &&
+       document.getElementById('cal-global-panel').style.display !== 'none'){
+      window._calGlobalLoaded = false;
+      calGlobalCargarTodo();
+    }
+
+    // Limpiar el input
+    document.getElementById('cal-masivo-input').value = '';
+
+  } catch(err){
+    statusEl.innerHTML = '❌ Error: ' + err.message;
+    statusEl.style.color = '#b91c1c';
+    console.error('[JNF] calMasivoReadPDF error:', err);
+  }
+};
 
 </script>
 
