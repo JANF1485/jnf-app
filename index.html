@@ -703,16 +703,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     <div style="font-size:12px;margin-top:6px;">Carga el calendario DIAN desde la pantalla de Gestión de Clientes usando el botón "Calendario DIAN".</div>
   </div>
 
-  <!-- Filtros -->
-  <div id="obl-filtros" style="display:none;margin-bottom:14px;gap:8px;flex-wrap:wrap;align-items:center;">
-    <span style="font-size:11px;font-weight:700;color:var(--t2);">Filtrar:</span>
-    <button id="obl-f-todas"      class="obl-filtro-btn active" data-f="todas"        onclick="oblFiltrar('todas')">Todas</button>
-    <button id="obl-f-vencida"    class="obl-filtro-btn"        data-f="vencida"      onclick="oblFiltrar('vencida')">🔴 Vencidas</button>
-    <button id="obl-f-proxima"    class="obl-filtro-btn"        data-f="proxima"      onclick="oblFiltrar('proxima')">⚠️ Por vencer</button>
-    <button id="obl-f-ok"         class="obl-filtro-btn"        data-f="ok"           onclick="oblFiltrar('ok')">📅 A tiempo</button>
-    <button id="obl-f-presentada" class="obl-filtro-btn"        data-f="presentada"   onclick="oblFiltrar('presentada')">✅ Presentadas</button>
-    <button id="obl-f-extemporanea" class="obl-filtro-btn"      data-f="extemporanea" onclick="oblFiltrar('extemporanea')">⏰ Extemporáneas</button>
-  </div>
+  <!-- Filtros (select al lado de extemporáneas en el resumen) -->
+  <div id="obl-filtros" style="display:none;"></div>
 
   <!-- Lista de obligaciones -->
   <div id="obl-lista" style="display:none;">
@@ -2673,10 +2665,9 @@ var _oblFiltroActivo = 'todas';
 
 window._oblFiltrar = window.oblFiltrar = function oblFiltrar(filtro){
   _oblFiltroActivo = filtro;
-  // Actualizar botones activos
-  document.querySelectorAll('.obl-filtro-btn').forEach(function(btn){
-    btn.classList.toggle('active', btn.dataset.f === filtro);
-  });
+  // Sincronizar el select
+  var sel = document.getElementById('obl-filtro-select');
+  if(sel && sel.value !== filtro) sel.value = filtro;
   oblRender();
 };
 
@@ -2726,14 +2717,12 @@ function oblRender(){
     emptyEl.style.display = 'block';
     listaEl.style.display = 'none';
     resEl.innerHTML = '';
-    var filtrosEl = document.getElementById('obl-filtros');
-    if(filtrosEl) filtrosEl.style.display = 'none';
+
     return;
   }
   emptyEl.style.display = 'none';
   listaEl.style.display = 'block';
-  var filtrosEl = document.getElementById('obl-filtros');
-  if(filtrosEl) filtrosEl.style.display = 'flex';
+  // filtros integrados en resEl (select al lado de extemporáneas)
 
   // Contar estados
   var cnt = {vencida:0, proxima:0, ok:0, presentada:0, extemporanea:0};
@@ -2741,6 +2730,10 @@ function oblRender(){
     var est = oblGetEstado(it.fecha, it.id);
     cnt[est] = (cnt[est]||0) + 1;
   });
+
+  // Guardar valor actual del select antes de redibujar
+  var selectActual = document.getElementById('obl-filtro-select');
+  var valorActual  = selectActual ? selectActual.value : 'todas';
 
   resEl.innerHTML = [
     {k:'vencida',      icon:'🔴', lbl:'Vencidas',      bg:'#fee2e2', col:'#b91c1c'},
@@ -2753,7 +2746,29 @@ function oblRender(){
       +'<div><div style="font-size:18px;font-weight:700;color:'+x.col+';">'+cnt[x.k]+'</div>'
       +'<div style="font-size:9px;font-weight:700;color:'+x.col+';text-transform:uppercase;letter-spacing:.4px;">'+x.lbl+'</div></div>'
       +'</div>';
-  }).join('');
+  }).join('')
+  + '<div style="position:relative;display:inline-flex;align-items:center;margin-left:4px;">'
+  + '<select id="obl-filtro-select"'
+  + ' style="appearance:none;-webkit-appearance:none;background:#fdf4ff;border:1.5px solid #a855f7;'
+  + 'border-radius:20px;padding:6px 30px 6px 12px;font-family:Montserrat,sans-serif;font-size:10px;'
+  + 'font-weight:700;color:#7e22ce;cursor:pointer;outline:none;min-width:170px;">'
+  + '<option value="todas">📋 Todas las obligaciones</option>'
+  + '<option value="vencida">🔴 Vencidas</option>'
+  + '<option value="proxima">⚠️ Por vencer</option>'
+  + '<option value="ok">📅 A tiempo</option>'
+  + '<option value="presentada">✅ Presentadas</option>'
+  + '<option value="extemporanea">⏰ Extemporáneas</option>'
+  + '</select>'
+  + '<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);'
+  + 'pointer-events:none;color:#7e22ce;font-size:10px;">▾</span>'
+  + '</div>';
+
+  // Restaurar valor del select y conectar evento
+  var newSel = document.getElementById('obl-filtro-select');
+  if(newSel){
+    newSel.value = valorActual;
+    newSel.addEventListener('change', function(){ oblFiltrar(this.value); });
+  }
 
   // Ordenar: vencidas → proximas → ok → presentadas, luego por fecha
   var pri = {vencida:0, proxima:1, ok:2, presentada:3};
