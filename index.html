@@ -804,7 +804,7 @@ buildRespGrid();
 // ═══════════════════════════════════════════════════════
 // MODAL CONTROL
 // ═══════════════════════════════════════════════════════
-function openModal(name, data=null){
+window.openModal = function openModal(name, data){
   if(name==='add'){
     editingId = data ? data.id : null;
     document.getElementById('modalAddTitle').textContent = data ? '✏️ Editar cliente' : 'Agregar cliente';
@@ -828,7 +828,7 @@ function openModal(name, data=null){
   }
   document.getElementById('modal'+cap(name)).classList.add('open');
 }
-function closeModal(name){
+window.closeModal = function closeModal(name){
   document.getElementById('modal'+cap(name)).classList.remove('open');
   if(name==='consolidador') document.getElementById('consFrame').src='';
 }
@@ -923,7 +923,7 @@ function actualizarClientesDeContador(clienteData){
     // If client has no contador now, nothing to update
   }).catch(function(){});
 }
-function deleteClient(id){
+window.deleteClient = function deleteClient(id){
   var c = clients.find(function(x){return x.id===id;});
   var nombre = c ? (c.razon||c.nit) : 'este cliente';
   // Primera confirmación
@@ -953,7 +953,7 @@ function deleteClient(id){
 // ═══════════════════════════════════════════════════════
 // RENDER LISTA
 // ═══════════════════════════════════════════════════════
-function renderClients(){
+window.renderClients = function renderClients(){
   const q=document.getElementById('searchBox').value.toLowerCase().trim();
   const fc=(document.getElementById('filterContador')||{}).value||'';
   const filtered=clients.filter(c=>{
@@ -1004,7 +1004,7 @@ function renderClients(){
 }
 renderClients();
 
-function editClient(id){
+window.editClient = function editClient(id){
   const c=clients.find(x=>x.id===id);
   if(c)openModal('add',c);
 }
@@ -1018,7 +1018,7 @@ let activeYear = null;
 let _currentAnios = [];
 let _currentAnosExtra = [];
 
-function confirmarAnio(){
+window.confirmarAnio = function confirmarAnio(){
   const input = document.getElementById('anio-nuevo-input');
   const errEl = document.getElementById('anio-nuevo-err');
   const y = parseInt((input.value||'').trim());
@@ -1042,7 +1042,7 @@ function confirmarAnio(){
   openContabilidad(activeClientId);
 }
 
-function showScreen(name){
+window.showScreen = function showScreen(name){
   SCREENS.forEach(s=>{
     document.getElementById('screen-'+s).style.display = s===name ? '' : 'none';
   });
@@ -1106,7 +1106,7 @@ const MODULES = [
   },
 ];
 
-function openContabilidad(id){
+window.openContabilidad = function openContabilidad(id){
   const c=clients.find(x=>x.id===id);
   if(!c)return;
   activeClientId=id;
@@ -1310,7 +1310,7 @@ function loadSavedResults(clientId, year){
   }catch(e){console.error('[JNF] loadSavedResults error:',e);savedEl.style.display='none';}
 }
 
-function goBack(){
+window.goBack = function goBack(){
   const screens=['consolidador','f300','inc','contabilidad','anio','clientes'];
   for(const s of screens){
     const el=document.getElementById('screen-'+s);
@@ -1328,7 +1328,7 @@ function goBack(){
   }
 }
 
-function goHome(){
+window.goHome = function goHome(){
   document.getElementById('screen-app').style.display='none';
   document.getElementById('screen-splash').style.display='flex';
   activeClientId=null; activeYear=null;
@@ -1384,7 +1384,7 @@ function downloadSaved(clientId,n){
   }catch(e){ss('Error: '+e.message,'err');}
 }
 
-function openExogena(){
+window.openExogena = function openExogena(){
   const c=clients.find(x=>x.id===activeClientId);
   if(!c)return;
   const year=activeYear||new Date().getFullYear();
@@ -1579,7 +1579,7 @@ var FB_CONFIG = {
 };
 
 
-function splashEnter(){
+window.splashEnter = function splashEnter(){
   sessionStorage.setItem('splashSeen','1');
   document.getElementById('screen-splash').style.display='none';
   if(currentUser && currentPerfil){
@@ -1635,7 +1635,7 @@ function showFirebaseError(){
 }
 
 // ── AUTH ────────────────────────────────────────────────
-function doLogin(){
+window.doLogin = function doLogin(){
   var email = document.getElementById('login-email').value.trim();
   var pass  = document.getElementById('login-pass').value;
   if(!email||!pass){showLoginError('Completa email y contraseña');return;}
@@ -1648,7 +1648,7 @@ function doLogin(){
   });
 }
 
-function doLogout(){
+window.doLogout = function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
   auth.signOut().then(function(){
     currentUser=null; currentPerfil=null;
@@ -1798,7 +1798,7 @@ function updateUsuario(uid, data){
   return db.collection('usuarios').doc(uid).update(data);
 }
 
-function openAdminPanel(){
+window.openAdminPanel = function openAdminPanel(){
   document.getElementById('modalAdmin').classList.add('open');
   var list = document.getElementById('usuarios-list');
   list.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);">Cargando...</div>';
@@ -2074,7 +2074,7 @@ function calGlobalEstado(fechaStr, itemId, pres){
   return 'ok';
 }
 
-function renderCalGlobal(){
+window.renderCalGlobal = function renderCalGlobal(){
   var year     = (document.getElementById('cal-global-year')||{}).value    || '2026';
   var filtCont = (document.getElementById('cal-global-contador')||{}).value || '';
   var filtMes  = (document.getElementById('cal-global-mes')||{}).value      || '';
@@ -2279,7 +2279,7 @@ function renderCalGlobal(){
 }
 
 
-function calGlobalMarcar(clienteId, itemId){
+window.calGlobalMarcar = function calGlobalMarcar(clienteId, itemId){
   if(!db) return;
   var year = (document.getElementById('cal-global-year')||{}).value || '2026';
   var key  = 'calendario_'+clienteId+'_'+year;
@@ -2299,7 +2299,7 @@ function calGlobalMarcar(clienteId, itemId){
 }
 
 // Ir al módulo calendario del cliente
-function calGlobalIr(clienteId){
+window.calGlobalIr = function calGlobalIr(clienteId){
   // Cerrar panel global, abrir contabilidad del cliente
   document.getElementById('cal-global-panel').style.display = 'none';
   var c = clients.find(function(x){return x.id===clienteId;});
@@ -3313,7 +3313,7 @@ function inc_renderSaved(d){
 
 
 // ── Module open/close functions ───────────────────────────
-function openF300(){
+window.openF300 = function openF300(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -3329,7 +3329,7 @@ function openF300(){
   f300_loadSaved(c.id, yr);
 }
 
-function openINC(){
+window.openINC = function openINC(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -3441,7 +3441,7 @@ function openModulos(){
 
 
 // ── Ficha técnica cliente ─────────────────────────────────
-function openFicha(clientId){
+window.openFicha = function openFicha(clientId){
   window._fichaClientId = clientId||activeClientId;
   var c = clients.find(function(x){return x.id===(clientId||activeClientId);});
   if(!c) return;
@@ -3555,7 +3555,7 @@ function closeFicha(){
 })();
 
 
-function openGuardado(){
+window.openGuardado = function openGuardado(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   var yr = activeYear||new Date().getFullYear();
@@ -3674,7 +3674,7 @@ function cargarArchivo(clientId, year){
 }
 
 
-function openFicha_edit(){
+window.openFicha_edit = function openFicha_edit(){
   var c = clients.find(function(x){return x.id===activeClientId||x.id===window._fichaClientId;});
   if(c){ closeFicha(); editClient(c.id); }
 }
@@ -3728,7 +3728,7 @@ function showResetPassword(){
   document.getElementById('modal-password').style.display='flex';
 }
 
-function showCambiarPassword(){
+window.showCambiarPassword = function showCambiarPassword(){
   // Called from app header - show change tab
   document.getElementById('pwd-tab-reset').style.display='none';
   document.getElementById('pwd-tab-change').style.display='block';
@@ -4261,7 +4261,7 @@ function poblarFiltroContador(){
 })();
 
 // ── EDITAR NOMBRE ─────────────────────────────────────────
-function openEditNombreModal(){
+window.openEditNombreModal = function openEditNombreModal(){
   var inp = document.getElementById('inp-edit-nombre');
   var nameEl = document.getElementById('hdr-user-name');
   if(inp && nameEl) inp.value = nameEl.textContent || '';
@@ -4269,10 +4269,10 @@ function openEditNombreModal(){
   document.getElementById('edit-nombre-success').style.display='none';
   document.getElementById('modal-edit-nombre').style.display='flex';
 }
-function closeEditNombreModal(){
+window.closeEditNombreModal = function closeEditNombreModal(){
   document.getElementById('modal-edit-nombre').style.display='none';
 }
-function saveEditNombre(){
+window.saveEditNombre = function saveEditNombre(){
   var nombre = document.getElementById('inp-edit-nombre').value.trim();
   var errEl = document.getElementById('edit-nombre-error');
   var sucEl = document.getElementById('edit-nombre-success');
@@ -4312,7 +4312,7 @@ var CAL_OBLIGACIONES = {
   '52':'Impuesto al consumo','55':'Informante benef. finales'
 };
 
-function openCalendario(){
+window.openCalendario = function openCalendario(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   _calClientId = activeClientId;
@@ -4340,7 +4340,7 @@ function openCalendario(){
   calCargar();
 }
 
-function calTab(tab){
+window.calTab = function calTab(tab){
   document.getElementById('cal-panel-pdf').style.display   = tab==='pdf'    ? 'block' : 'none';
   document.getElementById('cal-panel-manual').style.display = tab==='manual' ? 'block' : 'none';
   document.getElementById('cal-tab-pdf').style.cssText    = tab==='pdf'    ? 'background:var(--bd);color:#fff;border-color:var(--bd);' : '';
@@ -4410,7 +4410,7 @@ Si hay varias fechas para la misma obligación (por últimos dígitos del NIT), 
 }
 
 // ── Agregar item manualmente ─────────────────────────────────
-function calAddItem(){
+window.calAddItem = function calAddItem(){
   var errEl = document.getElementById('cal-manual-err');
   var cod   = document.getElementById('cal-inp-obligacion').value;
   var desc  = document.getElementById('cal-inp-desc').value.trim();
@@ -4430,7 +4430,7 @@ function calAddItem(){
 }
 
 // ── Guardar en Firestore ─────────────────────────────────────
-function calGuardar(){
+window.calGuardar = function calGuardar(){
   if(!db||!_calClientId) return;
   var key = 'calendario_'+_calClientId+'_'+_calYear;
   db.collection('calendarios').doc(key).set({
@@ -4464,20 +4464,20 @@ function calCargar(){
 }
 
 // ── Limpiar ──────────────────────────────────────────────────
-function calLimpiar(){
+window.calLimpiar = function calLimpiar(){
   if(!confirm('¿Seguro que deseas eliminar todas las fechas del calendario?')) return;
   _calItems = [];
   calRenderItems();
 }
 
 // ── Eliminar item individual ─────────────────────────────────
-function calDeleteItem(id){
+window.calDeleteItem = function calDeleteItem(id){
   _calItems = _calItems.filter(function(x){return x.id!==id;});
   calRenderItems();
 }
 
 // ── Marcar como presentada ───────────────────────────────────
-function calMarcarPresentada(id){
+window.calMarcarPresentada = function calMarcarPresentada(id){
   var c = clients.find(function(x){return x.id===_calClientId;});
   var it = _calItems.find(function(x){return x.id===id;});
   if(!it) return;
@@ -4500,7 +4500,7 @@ function calMarcarPresentada(id){
 }
 
 // ── Desmarcar presentación ───────────────────────────────────
-function calDesmarcarPresentada(id){
+window.calDesmarcarPresentada = function calDesmarcarPresentada(id){
   if(!confirm('¿Desmarcar como presentada esta obligación?')) return;
   delete _calPresentaciones[id];
   if(db && _calClientId){
