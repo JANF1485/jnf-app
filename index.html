@@ -5628,43 +5628,7 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
     console.error('[JNF] calMasivoReadPDF:', err);
   }
 };
+</script>
 
-
-
-CTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>JNF — Sistema de Gestión Contable</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js">
-// Borrar calendario de un cliente para que se pueda recargar limpio
-window.oblBorrarCalendario = function oblBorrarCalendario(){
-  if(!confirm('¿Borrar el calendario de este cliente? Deberás volver a subirlo desde el PDF DIAN.')) return;
-  if(!db || !activeClientId) return;
-  var year = activeYear || new Date().getFullYear();
-  var key  = 'calendario_' + activeClientId + '_' + year;
-  db.collection('calendarios').doc(key).delete().then(function(){
-    _oblItems = [];
-    oblRender();
-    ss('Calendario borrado. Sube el PDF DIAN para regenerarlo.', 'ok');
-  }).catch(function(e){
-    ss('Error al borrar: ' + e.message, 'err');
-  });
-};
-
-
-
-// ══════════════════════════════════════════════════════════════
-// CALENDARIO DIAN 2026 — FECHAS OFICIALES HARDCODEADAS
-// Fuente: Resolución DIAN Calendario Tributario 2026
-// ══════════════════════════════════════════════════════════════
-
-<script>
 </body>
 </html>
