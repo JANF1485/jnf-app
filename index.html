@@ -2614,6 +2614,7 @@ function oblRender(){
       })
     : [];
   console.log('[JNF OBL] resps:', ruts, '| items total:', _oblItems.length, '| items filtrados:', items.length);
+  console.log('[JNF OBL] items filtrados detalle:', items.map(function(it){ return it.cod + ':' + it.desc.slice(0,20) + ':' + it.fecha; }));
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
@@ -5218,8 +5219,11 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
     // ── Estrategia según tamaño ──────────────────────────────────────────
     // Límite seguro por chunk: 2.5MB de base64 (~1.9MB PDF real)
     var CHUNK_LIMIT = 2500000;
-    var prompt = 'Del calendario tributario DIAN ' + year + ' extrae TODAS las fechas de vencimiento. '
-      + 'Usa la fecha mas tardia cuando haya multiples fechas por digitos del NIT. '
+    var prompt = 'Del calendario tributario DIAN ' + year + ' extrae UNICAMENTE las fechas de vencimiento para PRESENTAR declaraciones y reportes. '
+      + 'EXCLUYE absolutamente: cuotas de pago, pagos anticipados, PES, abonos, cuotas de renta, pagos fraccionados. '
+      + 'INCLUYE SOLO: vencimiento para presentar la declaracion, vencimiento para informar, vencimiento para reportar. '
+      + 'Usa la fecha mas tardia cuando haya multiples fechas por ultimos digitos del NIT. '
+      + 'Un codigo debe aparecer MAXIMO UNA VEZ por periodo (ej: IVA bimestral ene-feb = 1 entrada, no 2). '
       + 'Responde SOLO con JSON array minificado sin espacios ni markdown: '
       + '[{"c":"05","d":"Renta personas juridicas","f":"' + year + '-04-14"},{"c":"07","d":"Retencion enero","f":"' + year + '-02-10"}] '
       + 'Codigos c: 05=renta, 07=retencion renta, 09=ret timbre, 11=ventas comun, '
