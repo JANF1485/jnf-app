@@ -305,6 +305,73 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <option value="">Todos los contadores</option>
     </select>
     <span class="count-badge" id="countBadge">0 clientes</span>
+    <button class="btn" onclick="openCalendarioGlobal()" style="background:linear-gradient(135deg,#c9a227,#a07c10);color:#fff;gap:6px;margin-left:auto;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      📅 Calendario Global DIAN
+    </button>
+  </div>
+
+  <!-- Panel Calendario Global (expandible) -->
+  <div id="cal-global-panel" style="display:none;background:#fff;border:1.5px solid #c9a227;border-radius:12px;padding:0;margin-bottom:22px;overflow:hidden;box-shadow:0 4px 20px rgba(201,162,39,.18);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a2580,#2535a8);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="color:#c9a227;font-size:14px;font-weight:800;letter-spacing:.3px;">📅 Calendario Tributario DIAN — Vista Global</div>
+        <div style="color:rgba(255,255,255,.6);font-size:10px;margin-top:2px;">Vencimientos de todos los clientes · Filtrable por contador</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="cal-global-year" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(201,162,39,.5);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#c9a227;outline:none;">
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+        </select>
+        <select id="cal-global-contador" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;min-width:160px;">
+          <option value="">Todos los contadores</option>
+        </select>
+        <select id="cal-global-mes" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;">
+          <option value="">Todos los meses</option>
+          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <select id="cal-global-estado" onchange="renderCalGlobal()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;background:rgba(255,255,255,.1);color:#fff;outline:none;">
+          <option value="">Todos los estados</option>
+          <option value="vencida">🔴 Vencidas</option>
+          <option value="proxima">⚠️ Por vencer (3 días)</option>
+          <option value="ok">📅 A tiempo</option>
+          <option value="presentada">✅ Presentadas</option>
+        </select>
+        <button onclick="document.getElementById('cal-global-panel').style.display='none'" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;">✕ Cerrar</button>
+      </div>
+    </div>
+
+    <!-- Resumen rápido -->
+    <div id="cal-global-resumen" style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid #f3f4f6;background:#f8faff;"></div>
+
+    <!-- Loading -->
+    <div id="cal-global-loading" style="padding:32px;text-align:center;color:var(--t3);font-size:12px;">⏳ Cargando calendario…</div>
+
+    <!-- Contenido -->
+    <div id="cal-global-contenido" style="display:none;overflow-x:auto;max-height:560px;overflow-y:auto;padding:14px 18px;"></div>
+
+    <!-- Empty -->
+    <div id="cal-global-empty" style="display:none;padding:40px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:10px;">📅</div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);">Sin obligaciones para los filtros seleccionados</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px;">Configura calendarios desde cada cliente · módulo Calendario Tributario</div>
+    </div>
+    <!-- Leyenda -->
+    <div id="cal-global-leyenda" style="display:none;border-top:1px solid #eaecf5;background:#fafafa;padding:9px 18px;align-items:center;gap:14px;flex-wrap:wrap;">
+      <span style="font-size:10px;font-weight:700;color:#374151;">Responsabilidades RUT:</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#6b7280;">
+        <span style="width:18px;height:18px;border-radius:5px;background:#d1fae5;display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3" stroke="#065f46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        Responsabilidad activa
+      </span>
+      <span style="font-size:10px;color:#9ca3af;">Celda vacía = no aplica al cliente</span>
+    </div>
   </div>
 
   <div class="clients-grid" id="clientsGrid">
@@ -4219,6 +4286,362 @@ function openCalendario(){
   showScreen('calendario');
   calCargar();
 }
+
+
+// ══════════════════════════════════════════════════════════════════
+// CALENDARIO GLOBAL — VISTA DESDE GESTIÓN DE CLIENTES
+// ══════════════════════════════════════════════════════════════════
+
+var _calGlobalData   = {};  // {clienteId: {items:[], pres:{}}}
+var _calGlobalLoaded = false;
+var _calGlobalLoading= false;
+
+// Nombres de contadores cargados (uid→nombre)
+var _calGlobalContadores = {};
+
+function openCalendarioGlobal(){
+  var panel = document.getElementById('cal-global-panel');
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    // Scroll suave al panel
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
+    // Poblar select de contadores
+    calGlobalPoblarContadores();
+    // Cargar datos
+    calGlobalCargarTodo();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function calGlobalPoblarContadores(){
+  var sel = document.getElementById('cal-global-contador');
+  if(!sel) return;
+  // Limpiar opciones excepto la primera
+  while(sel.options.length > 1) sel.remove(1);
+  // Recopilar contadores únicos de los clientes actuales
+  var vistos = {};
+  clients.forEach(function(c){
+    if(c.contadorUid && !vistos[c.contadorUid]){
+      vistos[c.contadorUid] = true;
+    }
+  });
+  // También llenar desde el select existente filterContador
+  var existingSel = document.getElementById('filterContador');
+  if(existingSel){
+    for(var i=1; i<existingSel.options.length; i++){
+      var opt = existingSel.options[i];
+      if(opt.value && opt.value !== 'sin_asignar'){
+        var newOpt = document.createElement('option');
+        newOpt.value = opt.value;
+        newOpt.textContent = opt.textContent;
+        sel.appendChild(newOpt);
+        _calGlobalContadores[opt.value] = opt.textContent;
+      }
+    }
+  }
+  // Opción sin asignar
+  var sinOpt = document.createElement('option');
+  sinOpt.value = 'sin_asignar';
+  sinOpt.textContent = '— Sin contador asignado';
+  sel.appendChild(sinOpt);
+}
+
+// Cargar todos los calendarios y presentaciones de Firestore
+function calGlobalCargarTodo(){
+  if(!db) { renderCalGlobal(); return; }
+  if(_calGlobalLoading) return;
+  _calGlobalLoading = true;
+
+  document.getElementById('cal-global-loading').style.display  = 'block';
+  document.getElementById('cal-global-contenido').style.display = 'none';
+  document.getElementById('cal-global-empty').style.display     = 'none';
+
+  var year = document.getElementById('cal-global-year').value || '2026';
+
+  // Cargar todos los calendarios del año
+  db.collection('calendarios').where('year','==',parseInt(year)).get()
+  .then(function(snap){
+    _calGlobalData = {};
+    snap.forEach(function(doc){
+      var d = doc.data();
+      var cid = d.clienteId;
+      if(!_calGlobalData[cid]) _calGlobalData[cid] = {items:[], pres:{}};
+      _calGlobalData[cid].items = d.items || [];
+    });
+    // Cargar presentaciones
+    return db.collection('presentaciones').where('year','==',parseInt(year)).get();
+  })
+  .then(function(snap){
+    snap.forEach(function(doc){
+      var d = doc.data();
+      var cid = d.clienteId;
+      if(!_calGlobalData[cid]) _calGlobalData[cid] = {items:[], pres:{}};
+      _calGlobalData[cid].pres = d.registros || {};
+    });
+    _calGlobalLoaded = true;
+    _calGlobalLoading = false;
+    renderCalGlobal();
+  })
+  .catch(function(e){
+    _calGlobalLoading = false;
+    document.getElementById('cal-global-loading').style.display = 'none';
+    document.getElementById('cal-global-empty').style.display = 'block';
+    document.getElementById('cal-global-empty').innerHTML = '<div style="padding:32px;text-align:center;color:#b91c1c;">⚠️ Error cargando calendarios: '+e.message+'</div>';
+  });
+}
+
+// Estado de una obligación
+function calGlobalEstado(fechaStr, itemId, pres){
+  if(pres && pres[itemId]) return 'presentada';
+  var hoy  = new Date(); hoy.setHours(0,0,0,0);
+  var venc = new Date(fechaStr+'T00:00:00');
+  var diff = Math.round((venc - hoy)/(1000*60*60*24));
+  if(diff < 0) return 'vencida';
+  if(diff <= 3) return 'proxima';
+  return 'ok';
+}
+
+function renderCalGlobal(){
+  var year     = (document.getElementById('cal-global-year')||{}).value    || '2026';
+  var filtCont = (document.getElementById('cal-global-contador')||{}).value || '';
+  var filtMes  = (document.getElementById('cal-global-mes')||{}).value      || '';
+  var filtEst  = (document.getElementById('cal-global-estado')||{}).value   || '';
+
+  var loadEl  = document.getElementById('cal-global-loading');
+  var contEl  = document.getElementById('cal-global-contenido');
+  var emptyEl = document.getElementById('cal-global-empty');
+  var resEl   = document.getElementById('cal-global-resumen');
+  var legEl   = document.getElementById('cal-global-leyenda');
+
+  if(!_calGlobalLoaded || (document.getElementById('cal-global-year')._lastYear && document.getElementById('cal-global-year')._lastYear !== year)){
+    document.getElementById('cal-global-year')._lastYear = year;
+    _calGlobalLoaded = false;
+    calGlobalCargarTodo();
+    return;
+  }
+  document.getElementById('cal-global-year')._lastYear = year;
+  if(!_calGlobalLoaded){ loadEl.style.display='block'; contEl.style.display='none'; emptyEl.style.display='none'; return; }
+  loadEl.style.display = 'none';
+
+  var OBLIGS = [
+    {cod:'05', nom:'Renta ordinaria'},
+    {cod:'07', nom:'Retención renta'},
+    {cod:'09', nom:'Ret. timbre'},
+    {cod:'11', nom:'Ventas régimen común'},
+    {cod:'14', nom:'Informante exógena'},
+    {cod:'42', nom:'Obligado contabilidad'},
+    {cod:'48', nom:'IVA'},
+    {cod:'49', nom:'No resp. de IVA'},
+    {cod:'52', nom:'Imp. al consumo'},
+    {cod:'55', nom:'Benef. finales'},
+  ];
+
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  // Construir filas filtrando por contador
+  var filas = clients.filter(function(c){
+    if(filtCont === 'sin_asignar') return !c.contadorUid;
+    if(filtCont) return c.contadorUid === filtCont;
+    return true;
+  }).map(function(c){
+    var cal   = _calGlobalData[c.id] || {items:[], pres:{}};
+    var items = cal.items || [];
+    var pres  = cal.pres  || {};
+    var ruts  = c.responsabilidades || [];
+
+    // Próximo vencimiento más urgente (no presentado)
+    var pendientes = items.filter(function(it){
+      if(pres[it.id]) return false;
+      if(ruts.length > 0 && ruts.indexOf(it.cod) < 0) return false;
+      if(filtMes && it.fecha && it.fecha.slice(5,7) !== filtMes) return false;
+      return true;
+    }).sort(function(a,b){ return new Date(a.fecha)-new Date(b.fecha); });
+
+    var proximo = pendientes[0] || null;
+    var estado  = null;
+    var diff    = null;
+    if(proximo){
+      var v = new Date(proximo.fecha+'T00:00:00');
+      diff  = Math.round((v - hoy)/(1000*60*60*24));
+      estado = diff < 0 ? 'vencida' : diff <= 3 ? 'proxima' : 'ok';
+    } else {
+      // revisar si hay presentadas
+      var hayPres = items.some(function(it){ return pres[it.id]; });
+      if(hayPres) estado = 'presentada';
+    }
+
+    // Filtro por estado
+    if(filtEst && estado !== filtEst) return null;
+
+    // Nombre contador
+    var contNom = '—';
+    if(c.contadorUid) contNom = _calGlobalContadores[c.contadorUid] || 'Contador';
+
+    return {c:c, ruts:ruts, proximo:proximo, estado:estado, diff:diff, contNom:contNom, pres:pres};
+  }).filter(Boolean);
+
+  // Contadores resumen
+  var cnt = {vencida:0, proxima:0, ok:0, presentada:0, sin:0};
+  filas.forEach(function(f){
+    if(f.estado) cnt[f.estado] = (cnt[f.estado]||0) + 1;
+    else cnt.sin++;
+  });
+  var total = filas.length;
+
+  resEl.innerHTML = [
+    {est:'vencida',    icon:'🔴', lbl:'Vencidas',   bg:'#fee2e2', col:'#b91c1c'},
+    {est:'proxima',    icon:'⚠️', lbl:'Por vencer', bg:'#fef3c7', col:'#92400e'},
+    {est:'presentada', icon:'✅', lbl:'Presentadas',bg:'#d1fae5', col:'#065f46'},
+    {est:'ok',         icon:'📅', lbl:'A tiempo',   bg:'#e0e7ff', col:'#3730a3'},
+  ].map(function(x){
+    return '<div style="background:'+x.bg+';border-radius:9px;padding:5px 12px;">'
+      +'<div style="font-size:16px;font-weight:700;color:'+x.col+';">'+cnt[x.est]+'</div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+x.col+';text-transform:uppercase;letter-spacing:.4px;">'+x.lbl+'</div>'
+      +'</div>';
+  }).join('')
+  +'<div style="background:#f3f4f6;border-radius:9px;padding:5px 12px;">'
+  +'<div style="font-size:16px;font-weight:700;color:#374151;">'+total+'</div>'
+  +'<div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Total</div>'
+  +'</div>';
+
+  if(filas.length === 0){
+    contEl.style.display='none'; emptyEl.style.display='block';
+    if(legEl) legEl.style.display='none';
+    return;
+  }
+  emptyEl.style.display='none';
+  contEl.style.display='block';
+  if(legEl){ legEl.style.display='flex'; }
+
+  // Ordenar: vencidas → próximas → ok → presentadas → sin
+  var pri = {vencida:0, proxima:1, ok:2, presentada:3};
+  filas.sort(function(a,b){
+    var pa = a.estado ? (pri[a.estado]||4) : 4;
+    var pb = b.estado ? (pri[b.estado]||4) : 4;
+    if(pa !== pb) return pa - pb;
+    if(a.proximo && b.proximo) return new Date(a.proximo.fecha)-new Date(b.proximo.fecha);
+    return 0;
+  });
+
+  var CHK = '<span style="width:22px;height:22px;border-radius:6px;background:#d1fae5;display:inline-flex;align-items:center;justify-content:center;">'
+    +'<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3" stroke="#065f46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    +'</span>';
+
+  // Construir tabla
+  var thObl = OBLIGS.map(function(o){
+    return '<th style="text-align:center;min-width:54px;max-width:64px;padding:6px 4px 8px;border-bottom:2px solid #dde1f0;">'
+      +'<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">'
+      +'<span style="font-size:9px;font-weight:700;color:#9ca3af;">'+o.cod+'</span>'
+      +'<span style="font-size:9px;font-weight:700;color:#374151;line-height:1.3;text-align:center;max-width:58px;white-space:normal;">'+o.nom+'</span>'
+      +'</div></th>';
+  }).join('');
+
+  var rows = filas.map(function(f){
+    var c = f.c;
+    var jur = c.tipo !== 'PN';
+    var tipoPill = jur
+      ? '<span style="background:#e8eaf6;color:#1a2580;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:2px;">Jurídica</span>'
+      : '<span style="background:#dcfce7;color:#166534;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:2px;">Natural</span>';
+
+    var oblCells = OBLIGS.map(function(o){
+      var aplica = f.ruts.length > 0 ? f.ruts.indexOf(o.cod) >= 0 : false;
+      return '<td style="text-align:center;padding:8px 4px;border-bottom:1px solid #f3f4f6;">'
+        +(aplica ? CHK : '')+'</td>';
+    }).join('');
+
+    // Próximo vencimiento texto
+    var proxTxt = '—';
+    if(f.proximo){
+      var vd = new Date(f.proximo.fecha+'T00:00:00');
+      var vStr = vd.toLocaleDateString('es-CO',{day:'2-digit',month:'short'});
+      proxTxt = f.proximo.desc.length>22 ? f.proximo.desc.slice(0,22)+'…' : f.proximo.desc;
+      proxTxt += ' · '+vStr;
+    }
+
+    // Estado badge
+    var estBadge = '';
+    if(f.estado==='vencida') estBadge='<span style="background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap;">🔴 Vencida</span>';
+    else if(f.estado==='proxima'){
+      var dl = f.diff===0?'Hoy':f.diff+'d';
+      estBadge='<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap;">⚠ '+dl+'</span>';
+    }
+    else if(f.estado==='ok') estBadge='<span style="background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap;">📅 '+f.diff+'d</span>';
+    else if(f.estado==='presentada') estBadge='<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap;">✅ Presentada</span>';
+    else estBadge='<span style="font-size:10px;color:#9ca3af;">Sin calendario</span>';
+
+    // Fila con borde izquierdo según estado
+    var rowBorder = '';
+    if(f.estado==='vencida') rowBorder='border-left:3px solid #ef4444;';
+    else if(f.estado==='proxima') rowBorder='border-left:3px solid #f59e0b;';
+    else if(f.estado==='presentada') rowBorder='border-left:3px solid #10b981;';
+
+    return '<tr style="'+rowBorder+'">'
+      +'<td style="font-family:monospace;font-size:11px;font-weight:600;color:#374151;padding:8px 10px;border-bottom:1px solid #f3f4f6;white-space:nowrap;">'+c.nit+(c.dv?'-'+c.dv:'')+'</td>'
+      +'<td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;min-width:155px;">'
+        +'<div style="font-size:11px;font-weight:700;color:#1a2580;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+( c.razon||'—')+'</div>'
+        +tipoPill
+      +'</td>'
+      +'<td style="font-size:10px;color:#6b7280;padding:8px 10px;border-bottom:1px solid #f3f4f6;white-space:nowrap;">'+f.contNom+'</td>'
+      +oblCells
+      +'<td style="font-size:11px;color:#374151;padding:8px 10px;border-bottom:1px solid #f3f4f6;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;">'+proxTxt+'</td>'
+      +'<td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;">'+estBadge+'</td>'
+      +'<td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;">'
+        +'<button onclick="calGlobalIr(''+c.id+'')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">→ Ver</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+
+  contEl.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    +'<thead><tr style="background:#f0f2f8;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:2px solid #dde1f0;min-width:105px;">NIT</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:2px solid #dde1f0;min-width:155px;">Empresa</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:2px solid #dde1f0;">Contador</th>'
+    +thObl
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:2px solid #dde1f0;min-width:140px;">Próximo venc.</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:2px solid #dde1f0;min-width:95px;">Estado</th>'
+    +'<th style="border-bottom:2px solid #dde1f0;"></th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table>';
+}
+
+
+function calGlobalMarcar(clienteId, itemId){
+  if(!db) return;
+  var year = (document.getElementById('cal-global-year')||{}).value || '2026';
+  var key  = 'calendario_'+clienteId+'_'+year;
+  var usuario = currentPerfil ? (currentPerfil.nombre || currentPerfil.email || 'Usuario') : 'Usuario';
+  var hoy  = new Date().toISOString();
+
+  if(!_calGlobalData[clienteId]) _calGlobalData[clienteId] = {items:[], pres:{}};
+  _calGlobalData[clienteId].pres[itemId] = {fecha: hoy, usuario: usuario};
+
+  db.collection('presentaciones').doc(key).set({
+    clienteId: clienteId,
+    year: parseInt(year),
+    registros: _calGlobalData[clienteId].pres
+  }, {merge:true}).then(function(){
+    renderCalGlobal();
+  }).catch(function(e){ alert('Error: '+e.message); });
+}
+
+// Ir al módulo calendario del cliente
+function calGlobalIr(clienteId){
+  // Cerrar panel global, abrir contabilidad del cliente
+  document.getElementById('cal-global-panel').style.display = 'none';
+  var c = clients.find(function(x){return x.id===clienteId;});
+  if(!c) return;
+  activeClientId = clienteId;
+  activeYear = parseInt((document.getElementById('cal-global-year')||{}).value||'2026');
+  openCalendario();
+}
+
+// Recargar cuando cambia el año
+document.addEventListener('DOMContentLoaded', function(){
+  var yearSel = document.getElementById('cal-global-year');
+  if(yearSel) yearSel._lastYear = yearSel.value;
+});
 </script>
 
 <!-- Modal Editar Nombre -->
