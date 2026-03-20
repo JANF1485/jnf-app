@@ -2545,7 +2545,7 @@ function oblRender(){
   var ruts  = (c && (c.responsabilidades || c.resps)) || [];
   var items = ruts.length > 0
     ? _oblItems.filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
-    : _oblItems;
+    : []; // sin responsabilidades = sin obligaciones que mostrar
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
