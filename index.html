@@ -1515,8 +1515,9 @@ window._goBack = window.goBack = function goBack(){
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
       else if(s==='obligaciones'){
-        if(activeClientId && activeYear){
-          openAnio(activeClientId, parseInt(activeYear));
+        var yr = parseInt(activeYear) || new Date().getFullYear();
+        if(activeClientId && yr){
+          openAnio(activeClientId, yr);
         } else if(activeClientId){
           openContabilidad(activeClientId);
         } else {
@@ -2861,6 +2862,206 @@ window.oblDesmarcar = window._oblDesmarcar = window.oblDesmarcar = function oblD
   }
 };
 
+
+
+
+window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps, periodoIva, regimen){
+  // resps: array de códigos RUT del cliente ej: ['05','07','14','42','48','55']
+  // periodoIva: 'bimestral' | 'cuatrimestral' | 'no_aplica'
+  // regimen: '05' | '04' | 'RST' | 'O'
+
+  var nitStr = String(nit || '').replace(/[^0-9]/g,'');
+  var ultimoDigito = parseInt(nitStr[nitStr.length-1]);
+  if(isNaN(ultimoDigito)) ultimoDigito = 0;
+  var idx = ultimoDigito === 0 ? 9 : ultimoDigito - 1;
+
+  // Normalizar resps a strings con padding
+  var ruts = (resps||[]).map(function(r){ return String(r).padStart(2,'0'); });
+  periodoIva = periodoIva || 'bimestral';
+  regimen    = regimen    || '05';
+
+  // ── TABLAS DE FECHAS ─────────────────────────────────────────
+  // [d1, d2, d3, d4, d5, d6, d7, d8, d9, d0]
+  var RETENCIÓN = [
+    {mes:'enero',     f:['02-10','02-11','02-12','02-13','02-16','02-17','02-18','02-19','02-20','02-23']},
+    {mes:'febrero',   f:['03-10','03-11','03-12','03-13','03-16','03-17','03-18','03-19','03-20','03-24']},
+    {mes:'marzo',     f:['04-13','04-14','04-15','04-16','04-20','04-21','04-22','04-23','04-24','04-27']},
+    {mes:'abril',     f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
+    {mes:'mayo',      f:['06-10','06-11','06-12','06-16','06-17','06-18','06-19','06-22','06-23','06-24']},
+    {mes:'junio',     f:['07-09','07-10','07-13','07-14','07-15','07-16','07-17','07-21','07-22','07-23']},
+    {mes:'julio',     f:['08-12','08-13','08-14','08-18','08-19','08-20','08-21','08-24','08-25','08-26']},
+    {mes:'agosto',    f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
+    {mes:'septiembre',f:['10-09','10-13','10-14','10-15','10-16','10-19','10-20','10-21','10-22','10-23']},
+    {mes:'octubre',   f:['11-11','11-12','11-13','11-17','11-18','11-19','11-20','11-23','11-24','11-25']},
+    {mes:'noviembre', f:['12-10','12-11','12-14','12-15','12-16','12-17','12-18','12-21','12-22','12-23']},
+    {mes:'diciembre', f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
+  ];
+  var IVA_BIM = [
+    {per:'ene-feb',f:['03-10','03-11','03-12','03-13','03-16','03-17','03-18','03-19','03-20','03-24']},
+    {per:'mar-abr',f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
+    {per:'may-jun',f:['07-09','07-10','07-13','07-14','07-15','07-16','07-17','07-21','07-22','07-23']},
+    {per:'jul-ago',f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
+    {per:'sep-oct',f:['11-11','11-12','11-13','11-17','11-18','11-19','11-20','11-23','11-24','11-25']},
+    {per:'nov-dic',f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
+  ];
+  var IVA_CUATRI = [
+    {per:'ene-abr',f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
+    {per:'may-ago',f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
+    {per:'sep-dic',f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
+  ];
+
+  var items = [];
+  function addItem(cod, desc, fecha){
+    if(ruts.length > 0 && ruts.indexOf(cod) < 0) return;
+    var f = fecha.length === 10 ? fecha : '2026-' + fecha;
+    items.push({ id:'cal_'+cod+'_'+f.replace(/-/g,''), cod:cod, desc:desc, fecha:f });
+  }
+  function addItemF(cod, desc, arr){
+    var f = arr[idx];
+    addItem(cod, desc, f.length===10 ? f : '2026-'+f);
+  }
+
+  // ── 07 RETENCIÓN EN LA FUENTE — mensual ──────────────────────
+  RETENCIÓN.forEach(function(r){ addItemF('07','Retención en la fuente — '+r.mes, r.f); });
+
+  // ── 48 IVA — según periodicidad ──────────────────────────────
+  if(regimen === 'RST'){
+    // RST: consolidada anual IVA (Febrero)
+    addItem('48','RST Declaración consolidada IVA','02-20');
+    // RST: anticipos bimestrales
+    IVA_BIM.forEach(function(r){ addItemF('48','RST Anticipo IVA '+r.per, r.f); });
+  } else if(periodoIva === 'bimestral'){
+    IVA_BIM.forEach(function(r){ addItemF('48','IVA Bimestral '+r.per, r.f); });
+  } else if(periodoIva === 'cuatrimestral'){
+    IVA_CUATRI.forEach(function(r){ addItemF('48','IVA Cuatrimestral '+r.per, r.f); });
+  }
+  // si no_aplica: no agrega ningún item de IVA
+
+  // ── 05 RENTA ──────────────────────────────────────────────────
+  if(regimen === '04'){
+    // Grandes contribuyentes: declaración Abril
+    addItem('05','Renta — grandes contribuyentes declaración','04-27');
+  } else {
+    // Personas jurídicas régimen ordinario: Mayo
+    addItem('05','Renta personas jurídicas — declaración y pago',
+      ['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26'][idx]);
+  }
+
+  // ── 14 EXÓGENA ────────────────────────────────────────────────
+  addItem('14','Información exógena año gravable 2025','2026-04-27');
+
+  // ── 42 OBLIGADO A LLEVAR CONTABILIDAD ─────────────────────────
+  // No tiene fecha de vencimiento propia — es una obligación permanente
+  // Se incluye como referencia sin fecha específica de declaración
+  // (el cliente ya sabe que debe llevar contabilidad)
+  // NO se genera item para 42
+
+  // ── 55 BENEF. FINALES RUB — 4 actualizaciones ─────────────────
+  [
+    {per:'ene', fecha:'2026-02-02'},
+    {per:'abr', fecha:'2026-05-04'},
+    {per:'ago', fecha:'2026-08-03'},
+    {per:'nov', fecha:'2026-11-03'},
+  ].forEach(function(r){ addItem('55','RUB Actualización '+r.per, r.fecha); });
+
+  console.log('[JNF CAL] Generado NIT',nit,'dígito',ultimoDigito,'resps',ruts,'periodo',periodoIva,'items',items.length);
+  return items;
+};
+
+// Botón para regenerar calendario desde datos oficiales hardcodeados
+window._oblRegenerarCalendario = window.oblRegenerarCalendario = async function oblRegenerarCalendario(){
+  var c = clients.find(function(x){ return x.id === activeClientId; });
+  if(!c || !db) return;
+  var year = activeYear || 2026;
+  if(year !== 2026){ ss('Solo disponible para año 2026','err'); return; }
+
+  if(!confirm('¿Regenerar el calendario de '+( c.razon||c.nit)+' con las fechas oficiales DIAN 2026?')) return;
+
+  var ruts = c.responsabilidades || c.resps || [];
+  var items = window.generarCalendarioDIAN2026(c.nit, ruts);
+
+  var key = 'calendario_' + c.id + '_' + year;
+  try{
+    await db.collection('calendarios').doc(key).set({
+      clienteId: c.id, year: year, items: items,
+      updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
+    });
+    ss('Calendario regenerado: '+items.length+' obligaciones ✓','ok');
+    oblCargar();
+  } catch(e){
+    ss('Error: '+e.message,'err');
+  }
+};
+
+// Regenerar para TODOS los clientes
+window._oblRegenerarTodos = window.oblRegenerarTodos = async function oblRegenerarTodos(){
+  if(!db) return;
+  if(!confirm('¿Regenerar el calendario DIAN 2026 para TODOS los clientes?')) return;
+
+  var actualizados = 0;
+  for(var i=0; i<clients.length; i++){
+    var c = clients[i];
+    var ruts = c.responsabilidades || c.resps || [];
+    if(ruts.length === 0) continue;
+    var items = window.generarCalendarioDIAN2026(c.nit, ruts, c.periodo_iva || 'bimestral', c.regimen || '05');
+    if(items.length === 0) continue;
+    var key = 'calendario_' + c.id + '_2026';
+    try{
+      await db.collection('calendarios').doc(key).set({
+        clienteId: c.id, year: 2026, items: items,
+        updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
+      });
+      actualizados++;
+    } catch(e){ console.warn('[JNF] Error cliente '+c.id, e); }
+  }
+  ss('Calendario DIAN 2026 regenerado para '+actualizados+' clientes ✓','ok');
+  if(document.getElementById('cal-global-panel') &&
+     document.getElementById('cal-global-panel').style.display !== 'none'){
+    window._calGlobalLoaded = false;
+    if(window.calGlobalCargarTodo) calGlobalCargarTodo();
+  }
+};
+
+
+window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
+  var statusEl = document.getElementById('cal-masivo-status');
+  if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#92400e'; statusEl.innerHTML='⏳ Generando calendarios…'; }
+  if(!db){ if(statusEl) statusEl.innerHTML='❌ Sin conexión a base de datos.'; return; }
+  var actualizados = 0;
+  var sinResps = 0;
+  for(var i=0; i<clients.length; i++){
+    var c = clients[i];
+    var ruts = c.responsabilidades || c.resps || [];
+    if(ruts.length === 0){ sinResps++; continue; }
+    var ruts2 = c.responsabilidades || c.resps || [];
+    var items = window.generarCalendarioDIAN2026
+      ? window.generarCalendarioDIAN2026(c.nit, ruts2, c.periodo_iva || 'bimestral', c.regimen || '05')
+      : [];
+    if(items.length === 0) continue;
+    var key = 'calendario_' + c.id + '_2026';
+    try{
+      await db.collection('calendarios').doc(key).set({
+        clienteId: c.id, year: 2026, items: items,
+        updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
+      });
+      actualizados++;
+      if(statusEl) statusEl.innerHTML = '📤 Generando… ' + actualizados + ' de ' + clients.length + ' clientes';
+    } catch(e){ console.warn('[JNF] Error cliente '+c.id, e); }
+  }
+  if(statusEl){
+    statusEl.style.color = '#065f46';
+    statusEl.innerHTML = '✅ Calendario DIAN 2026 generado para <strong>'+actualizados+' clientes</strong>'
+      + (sinResps > 0 ? ' · '+sinResps+' sin responsabilidades' : '')
+      + ' · ' + new Date().toLocaleString('es-CO');
+  }
+  // Recargar tabla global
+  if(document.getElementById('cal-global-panel') &&
+     document.getElementById('cal-global-panel').style.display !== 'none'){
+    window._calGlobalLoaded = false;
+    if(window.calGlobalCargarTodo) calGlobalCargarTodo();
+  }
+};
+</script>
 
 </script>
 </div><!-- /screen-app -->
@@ -5464,203 +5665,6 @@ window.oblBorrarCalendario = function oblBorrarCalendario(){
 // Fuente: Resolución DIAN Calendario Tributario 2026
 // ══════════════════════════════════════════════════════════════
 
-window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps, periodoIva, regimen){
-  // resps: array de códigos RUT del cliente ej: ['05','07','14','42','48','55']
-  // periodoIva: 'bimestral' | 'cuatrimestral' | 'no_aplica'
-  // regimen: '05' | '04' | 'RST' | 'O'
-
-  var nitStr = String(nit || '').replace(/[^0-9]/g,'');
-  var ultimoDigito = parseInt(nitStr[nitStr.length-1]);
-  if(isNaN(ultimoDigito)) ultimoDigito = 0;
-  var idx = ultimoDigito === 0 ? 9 : ultimoDigito - 1;
-
-  // Normalizar resps a strings con padding
-  var ruts = (resps||[]).map(function(r){ return String(r).padStart(2,'0'); });
-  periodoIva = periodoIva || 'bimestral';
-  regimen    = regimen    || '05';
-
-  // ── TABLAS DE FECHAS ─────────────────────────────────────────
-  // [d1, d2, d3, d4, d5, d6, d7, d8, d9, d0]
-  var RETENCIÓN = [
-    {mes:'enero',     f:['02-10','02-11','02-12','02-13','02-16','02-17','02-18','02-19','02-20','02-23']},
-    {mes:'febrero',   f:['03-10','03-11','03-12','03-13','03-16','03-17','03-18','03-19','03-20','03-24']},
-    {mes:'marzo',     f:['04-13','04-14','04-15','04-16','04-20','04-21','04-22','04-23','04-24','04-27']},
-    {mes:'abril',     f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
-    {mes:'mayo',      f:['06-10','06-11','06-12','06-16','06-17','06-18','06-19','06-22','06-23','06-24']},
-    {mes:'junio',     f:['07-09','07-10','07-13','07-14','07-15','07-16','07-17','07-21','07-22','07-23']},
-    {mes:'julio',     f:['08-12','08-13','08-14','08-18','08-19','08-20','08-21','08-24','08-25','08-26']},
-    {mes:'agosto',    f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
-    {mes:'septiembre',f:['10-09','10-13','10-14','10-15','10-16','10-19','10-20','10-21','10-22','10-23']},
-    {mes:'octubre',   f:['11-11','11-12','11-13','11-17','11-18','11-19','11-20','11-23','11-24','11-25']},
-    {mes:'noviembre', f:['12-10','12-11','12-14','12-15','12-16','12-17','12-18','12-21','12-22','12-23']},
-    {mes:'diciembre', f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
-  ];
-  var IVA_BIM = [
-    {per:'ene-feb',f:['03-10','03-11','03-12','03-13','03-16','03-17','03-18','03-19','03-20','03-24']},
-    {per:'mar-abr',f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
-    {per:'may-jun',f:['07-09','07-10','07-13','07-14','07-15','07-16','07-17','07-21','07-22','07-23']},
-    {per:'jul-ago',f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
-    {per:'sep-oct',f:['11-11','11-12','11-13','11-17','11-18','11-19','11-20','11-23','11-24','11-25']},
-    {per:'nov-dic',f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
-  ];
-  var IVA_CUATRI = [
-    {per:'ene-abr',f:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
-    {per:'may-ago',f:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
-    {per:'sep-dic',f:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
-  ];
-
-  var items = [];
-  function addItem(cod, desc, fecha){
-    if(ruts.length > 0 && ruts.indexOf(cod) < 0) return;
-    var f = fecha.length === 10 ? fecha : '2026-' + fecha;
-    items.push({ id:'cal_'+cod+'_'+f.replace(/-/g,''), cod:cod, desc:desc, fecha:f });
-  }
-  function addItemF(cod, desc, arr){
-    var f = arr[idx];
-    addItem(cod, desc, f.length===10 ? f : '2026-'+f);
-  }
-
-  // ── 07 RETENCIÓN EN LA FUENTE — mensual ──────────────────────
-  RETENCIÓN.forEach(function(r){ addItemF('07','Retención en la fuente — '+r.mes, r.f); });
-
-  // ── 48 IVA — según periodicidad ──────────────────────────────
-  if(regimen === 'RST'){
-    // RST: consolidada anual IVA (Febrero)
-    addItem('48','RST Declaración consolidada IVA','02-20');
-    // RST: anticipos bimestrales
-    IVA_BIM.forEach(function(r){ addItemF('48','RST Anticipo IVA '+r.per, r.f); });
-  } else if(periodoIva === 'bimestral'){
-    IVA_BIM.forEach(function(r){ addItemF('48','IVA Bimestral '+r.per, r.f); });
-  } else if(periodoIva === 'cuatrimestral'){
-    IVA_CUATRI.forEach(function(r){ addItemF('48','IVA Cuatrimestral '+r.per, r.f); });
-  }
-  // si no_aplica: no agrega ningún item de IVA
-
-  // ── 05 RENTA ──────────────────────────────────────────────────
-  if(regimen === '04'){
-    // Grandes contribuyentes: declaración Abril
-    addItem('05','Renta — grandes contribuyentes declaración','04-27');
-  } else {
-    // Personas jurídicas régimen ordinario: Mayo
-    addItem('05','Renta personas jurídicas — declaración y pago',
-      ['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26'][idx]);
-  }
-
-  // ── 14 EXÓGENA ────────────────────────────────────────────────
-  addItem('14','Información exógena año gravable 2025','2026-04-27');
-
-  // ── 42 OBLIGADO A LLEVAR CONTABILIDAD ─────────────────────────
-  // No tiene fecha de vencimiento propia — es una obligación permanente
-  // Se incluye como referencia sin fecha específica de declaración
-  // (el cliente ya sabe que debe llevar contabilidad)
-  // NO se genera item para 42
-
-  // ── 55 BENEF. FINALES RUB — 4 actualizaciones ─────────────────
-  [
-    {per:'ene', fecha:'2026-02-02'},
-    {per:'abr', fecha:'2026-05-04'},
-    {per:'ago', fecha:'2026-08-03'},
-    {per:'nov', fecha:'2026-11-03'},
-  ].forEach(function(r){ addItem('55','RUB Actualización '+r.per, r.fecha); });
-
-  console.log('[JNF CAL] Generado NIT',nit,'dígito',ultimoDigito,'resps',ruts,'periodo',periodoIva,'items',items.length);
-  return items;
-};
-
-// Botón para regenerar calendario desde datos oficiales hardcodeados
-window._oblRegenerarCalendario = window.oblRegenerarCalendario = async function oblRegenerarCalendario(){
-  var c = clients.find(function(x){ return x.id === activeClientId; });
-  if(!c || !db) return;
-  var year = activeYear || 2026;
-  if(year !== 2026){ ss('Solo disponible para año 2026','err'); return; }
-
-  if(!confirm('¿Regenerar el calendario de '+( c.razon||c.nit)+' con las fechas oficiales DIAN 2026?')) return;
-
-  var ruts = c.responsabilidades || c.resps || [];
-  var items = window.generarCalendarioDIAN2026(c.nit, ruts);
-
-  var key = 'calendario_' + c.id + '_' + year;
-  try{
-    await db.collection('calendarios').doc(key).set({
-      clienteId: c.id, year: year, items: items,
-      updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
-    });
-    ss('Calendario regenerado: '+items.length+' obligaciones ✓','ok');
-    oblCargar();
-  } catch(e){
-    ss('Error: '+e.message,'err');
-  }
-};
-
-// Regenerar para TODOS los clientes
-window._oblRegenerarTodos = window.oblRegenerarTodos = async function oblRegenerarTodos(){
-  if(!db) return;
-  if(!confirm('¿Regenerar el calendario DIAN 2026 para TODOS los clientes?')) return;
-
-  var actualizados = 0;
-  for(var i=0; i<clients.length; i++){
-    var c = clients[i];
-    var ruts = c.responsabilidades || c.resps || [];
-    if(ruts.length === 0) continue;
-    var items = window.generarCalendarioDIAN2026(c.nit, ruts, c.periodo_iva || 'bimestral', c.regimen || '05');
-    if(items.length === 0) continue;
-    var key = 'calendario_' + c.id + '_2026';
-    try{
-      await db.collection('calendarios').doc(key).set({
-        clienteId: c.id, year: 2026, items: items,
-        updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
-      });
-      actualizados++;
-    } catch(e){ console.warn('[JNF] Error cliente '+c.id, e); }
-  }
-  ss('Calendario DIAN 2026 regenerado para '+actualizados+' clientes ✓','ok');
-  if(document.getElementById('cal-global-panel') &&
-     document.getElementById('cal-global-panel').style.display !== 'none'){
-    window._calGlobalLoaded = false;
-    if(window.calGlobalCargarTodo) calGlobalCargarTodo();
-  }
-};
-
-
-window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
-  var statusEl = document.getElementById('cal-masivo-status');
-  if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#92400e'; statusEl.innerHTML='⏳ Generando calendarios…'; }
-  if(!db){ if(statusEl) statusEl.innerHTML='❌ Sin conexión a base de datos.'; return; }
-  var actualizados = 0;
-  var sinResps = 0;
-  for(var i=0; i<clients.length; i++){
-    var c = clients[i];
-    var ruts = c.responsabilidades || c.resps || [];
-    if(ruts.length === 0){ sinResps++; continue; }
-    var ruts2 = c.responsabilidades || c.resps || [];
-    var items = window.generarCalendarioDIAN2026
-      ? window.generarCalendarioDIAN2026(c.nit, ruts2, c.periodo_iva || 'bimestral', c.regimen || '05')
-      : [];
-    if(items.length === 0) continue;
-    var key = 'calendario_' + c.id + '_2026';
-    try{
-      await db.collection('calendarios').doc(key).set({
-        clienteId: c.id, year: 2026, items: items,
-        updatedAt: new Date().toISOString(), fuente: 'hardcoded_dian_2026'
-      });
-      actualizados++;
-      if(statusEl) statusEl.innerHTML = '📤 Generando… ' + actualizados + ' de ' + clients.length + ' clientes';
-    } catch(e){ console.warn('[JNF] Error cliente '+c.id, e); }
-  }
-  if(statusEl){
-    statusEl.style.color = '#065f46';
-    statusEl.innerHTML = '✅ Calendario DIAN 2026 generado para <strong>'+actualizados+' clientes</strong>'
-      + (sinResps > 0 ? ' · '+sinResps+' sin responsabilidades' : '')
-      + ' · ' + new Date().toLocaleString('es-CO');
-  }
-  // Recargar tabla global
-  if(document.getElementById('cal-global-panel') &&
-     document.getElementById('cal-global-panel').style.display !== 'none'){
-    window._calGlobalLoaded = false;
-    if(window.calGlobalCargarTodo) calGlobalCargarTodo();
-  }
-};
-</script>
-
+<script>
 </body>
 </html>
