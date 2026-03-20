@@ -2770,11 +2770,25 @@ function oblRender(){
     newSel.addEventListener('change', function(){ oblFiltrar(this.value); });
   }
 
-  // Ordenar: vencidas → proximas → ok → presentadas, luego por fecha
-  var pri = {vencida:0, proxima:1, ok:2, presentada:3};
-  var sorted = items.slice().sort(function(a,b){
-    var pa = pri[oblGetEstado(a.fecha, a.id)];
-    var pb = pri[oblGetEstado(b.fecha, b.id)];
+  // Aplicar filtro activo ANTES de renderizar
+  var filtroActivo = typeof _oblFiltroActivo !== 'undefined' ? _oblFiltroActivo : 'todas';
+  var itemsFiltrados = filtroActivo === 'todas'
+    ? items.slice()
+    : items.filter(function(it){ return oblGetEstado(it.fecha, it.id) === filtroActivo; });
+
+  if(itemsFiltrados.length === 0 && filtroActivo !== 'todas'){
+    itemsEl.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--t3);">'
+      + '<div style="font-size:32px;margin-bottom:8px;">🔍</div>'
+      + '<div style="font-size:13px;font-weight:700;color:var(--t2);">Sin obligaciones para este filtro</div>'
+      + '</div>';
+    return;
+  }
+
+  // Ordenar: vencidas → proximas → ok → presentadas → extemporáneas, luego por fecha
+  var pri = {vencida:0, proxima:1, ok:2, presentada:3, extemporanea:4};
+  var sorted = itemsFiltrados.sort(function(a,b){
+    var pa = pri[oblGetEstado(a.fecha, a.id)] || 0;
+    var pb = pri[oblGetEstado(b.fecha, b.id)] || 0;
     if(pa !== pb) return pa - pb;
     return new Date(a.fecha) - new Date(b.fecha);
   });
