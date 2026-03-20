@@ -1496,9 +1496,11 @@ window._goBack = window.goBack = function goBack(){
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
       else if(s==='obligaciones'){
-        // Recargar la pantalla de módulos con el cliente y año actuales
-        if(activeClientId && activeYear) openAnio(activeClientId, activeYear);
-        else showScreen('contabilidad');
+        if(activeClientId && activeYear){
+          openAnio(activeClientId, parseInt(activeYear));
+        } else {
+          showScreen('contabilidad');
+        }
       }
       else if(s==='calendario') showScreen('contabilidad');
       else if(s==='contabilidad') showScreen('anio');
@@ -3924,6 +3926,11 @@ window._openFicha = window.openFicha = function openFicha(clientId){
 
   document.getElementById('ficha-titulo').textContent = (c.razon||c.nit) + ' · NIT: ' + (c.nit||'') + (c.dv?'-'+c.dv:'');
   document.getElementById('modal-ficha').style.display = 'flex';
+  // Conectar botones estáticos a las funciones reales
+  var editBtn = document.getElementById('ficha-edit-btn');
+  var closeBtn = document.getElementById('ficha-close-btn');
+  if(editBtn) editBtn.onclick = function(){ openFicha_edit(); };
+  if(closeBtn) closeBtn.onclick = function(){ closeFicha(); };
 
   var jur = c.tipo !== 'PN';
   var initials = (c.razon||'?').split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
@@ -4596,6 +4603,10 @@ function poblarFiltroContador(){
     </div>
     <!-- Body -->
     <div id="ficha-body" style="padding:24px;"></div>
+    <div style="display:flex;gap:10px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fff;border-radius:0 0 16px 16px;">
+      <button id="ficha-edit-btn" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex:1;">✏️ Editar cliente</button>
+      <button id="ficha-close-btn" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex:1;">Cerrar</button>
+    </div>
   </div>
 </div>
 
