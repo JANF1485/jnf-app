@@ -806,7 +806,15 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
           <select id="f_regimen">
             <option value="05">05 - Renta ordinario</option>
             <option value="04">04 - Gran contribuyente</option>
-            <option value="O">Otro</option>
+            <option value="RST">RST - Régimen Simple de Tributación</option>
+            <option value="O">Otro / No aplica</option>
+          </select>
+        </div>
+        <div class="fi"><label>Periodicidad IVA</label>
+          <select id="f_periodo_iva">
+            <option value="bimestral">Bimestral (grandes contrib. / declarantes renta)</option>
+            <option value="cuatrimestral">Cuatrimestral (pequeños responsables)</option>
+            <option value="no_aplica">No aplica / No responsable IVA</option>
           </select>
         </div>
         <div class="fi"><label>Dirección seccional DIAN</label><input id="f_seccional" type="text" placeholder="Santa Marta"/></div>
@@ -1028,6 +1036,7 @@ function fillForm(d){
   set('f_rl_n2',d.rl_n2);set('f_rl_cc',d.rl_cc);set('f_rl_cargo',d.rl_cargo);
   if(d.tipo)document.getElementById('f_tipo').value=d.tipo;
   if(d.regimen)document.getElementById('f_regimen').value=d.regimen;
+  if(d.periodo_iva){ var piv=document.getElementById('f_periodo_iva'); if(piv) piv.value=d.periodo_iva; }
   (d.resps||[]).forEach(function(cod){
     var padded = String(cod).padStart(2,'0');
     var cb = document.getElementById('resp_'+padded) || document.getElementById('resp_'+String(cod));
@@ -1044,7 +1053,7 @@ function getForm(){
   return{
     id: editingId || Date.now().toString(),
     razon:v('f_razon'),nit:v('f_nit').replace(/[^0-9]/g,''),dv:v('f_dv'),
-    sigla:v('f_sigla'),tipo:v('f_tipo'),regimen:v('f_regimen'),
+    sigla:v('f_sigla'),tipo:v('f_tipo'),regimen:v('f_regimen'),periodo_iva:v('f_periodo_iva'),
     dir:v('f_dir'),dpto:v('f_dpto'),ciudad:v('f_ciudad'),cp:v('f_cp'),
     tel:v('f_tel'),email:v('f_email'),ciiu:v('f_ciiu'),ciiu2:v('f_ciiu2'),ciiu3:v('f_ciiu3'),ciiu4:v('f_ciiu4'),
     seccional:v('f_seccional'),notas:v('f_notas'),
@@ -4056,6 +4065,7 @@ window._openFicha = window.openFicha = function openFicha(clientId){
     + row('CIIU Secundario', c.ciiu2||'', '🏭')
     + row('Otras Actividades', [c.ciiu3,c.ciiu4].filter(Boolean).join(' · ')||'', '🏭')
     + row('Régimen', c.regimen||'', '📋')
+    + (c.periodo_iva && c.periodo_iva!=='no_aplica' ? row('Periodicidad IVA', c.periodo_iva==='bimestral'?'Bimestral':'Cuatrimestral', '🗓️') : '')
 
     // Representante legal
     + (c.rl_n1 ? '<div style="font-size:10px;font-weight:800;color:#1a2580;text-transform:uppercase;letter-spacing:.8px;'
@@ -5467,6 +5477,26 @@ window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps
     {per:'nov-dic', fechas:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
   ];
 
+  // ── IVA CUATRIMESTRAL (cod 48) ───────────────────────────────
+  var iva_cuatri = [
+    {per:'ene-abr', fechas:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
+    {per:'may-ago', fechas:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
+    {per:'sep-dic', fechas:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
+  ];
+
+  // ── RST DECLARACIÓN ANUAL (cod 48 bajo RST) ──────────────────
+  // RST Consolidada de IVA: Hasta Febrero, dígito 9 = Feb 20
+  var rst_iva_consolidada = ['02-16','02-17','02-18','02-19','02-20','02-21','02-22','02-23','02-24','02-20'];
+  // RST Anticipo bimestral
+  var rst_anticipos = [
+    {per:'ene-feb', fechas:['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26']},
+    {per:'mar-abr', fechas:['06-10','06-11','06-12','06-16','06-17','06-18','06-19','06-22','06-23','06-24']},
+    {per:'may-jun', fechas:['07-09','07-10','07-13','07-14','07-15','07-16','07-17','07-21','07-22','07-23']},
+    {per:'jul-ago', fechas:['09-09','09-10','09-11','09-14','09-15','09-16','09-17','09-18','09-21','09-22']},
+    {per:'sep-oct', fechas:['11-11','11-12','11-13','11-17','11-18','11-19','11-20','11-23','11-24','11-25']},
+    {per:'nov-dic', fechas:['2027-01-13','2027-01-14','2027-01-15','2027-01-18','2027-01-19','2027-01-20','2027-01-21','2027-01-22','2027-01-25','2027-01-26']},
+  ];
+
   // ── RENTA PERSONAS JURÍDICAS (cod 05) ───────────────────────
   // Solo declaración y pago 1a cuota (Mayo) — es la declaración
   var renta_pj_decl = ['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26'];
@@ -5513,11 +5543,29 @@ window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps
     addItem('07', 'Retención en la fuente ' + r.mes, f.length===10 ? f : '2026-'+f);
   });
 
-  // IVA Bimestral (48)
-  iva_bim.forEach(function(r){
-    var f = r.fechas[idx];
-    addItem('48', 'IVA Bimestral ' + r.per, f.length===10 ? f : '2026-'+f);
-  });
+  // IVA según periodicidad del cliente
+  var periodoIva = resps._periodo_iva || 'bimestral'; // default bimestral
+  var regimenCliente = resps._regimen || '';
+
+  if(regimenCliente === 'RST'){
+    // RST: declaración anual consolidada + anticipos bimestrales
+    addItem('48', 'RST Declaración consolidada IVA', '2026-'+rst_iva_consolidada[idx]);
+    rst_anticipos.forEach(function(r){
+      var f = r.fechas[idx];
+      addItem('48', 'RST Anticipo IVA ' + r.per, f.length===10 ? f : '2026-'+f);
+    });
+  } else if(periodoIva === 'cuatrimestral'){
+    iva_cuatri.forEach(function(r){
+      var f = r.fechas[idx];
+      addItem('48', 'IVA Cuatrimestral ' + r.per, f.length===10 ? f : '2026-'+f);
+    });
+  } else if(periodoIva !== 'no_aplica'){
+    // Bimestral por defecto
+    iva_bim.forEach(function(r){
+      var f = r.fechas[idx];
+      addItem('48', 'IVA Bimestral ' + r.per, f.length===10 ? f : '2026-'+f);
+    });
+  }
 
   // Renta PJ (05) — solo declaración Mayo
   addItem('05', 'Renta personas jurídicas — declaración y pago 1a cuota', '2026-'+renta_pj_decl[idx]);
@@ -5598,7 +5646,10 @@ window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
     var c = clients[i];
     var ruts = c.responsabilidades || c.resps || [];
     if(ruts.length === 0){ sinResps++; continue; }
-    var items = window.generarCalendarioDIAN2026 ? window.generarCalendarioDIAN2026(c.nit, ruts) : [];
+    var ruts2 = (c.responsabilidades || c.resps || []).slice();
+    ruts2._periodo_iva = c.periodo_iva || 'bimestral';
+    ruts2._regimen = c.regimen || '';
+    var items = window.generarCalendarioDIAN2026 ? window.generarCalendarioDIAN2026(c.nit, ruts2) : [];
     if(items.length === 0) continue;
     var key = 'calendario_' + c.id + '_2026';
     try{
