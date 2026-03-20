@@ -2545,31 +2545,37 @@ window._openObligaciones = window.openObligaciones = function openObligaciones()
   oblCargar();
 };
 
+var _oblResps = []; // resps del cliente leídos frescos de Firestore
+
 function oblCargar(){
   if(!db || !activeClientId) return;
   var year = activeYear || new Date().getFullYear();
-  var key  = 'calendario_' + activeClientId + '_' + year;
+  var calKey = 'calendario_'    + activeClientId + '_' + year;
+  var presKey = 'calendario_'   + activeClientId + '_' + year;
 
-  // Leer cliente fresco de Firestore para tener resps actualizados
+  // Paso 1: leer resps frescos del cliente desde Firestore
   db.collection('clientes').doc(activeClientId).get().then(function(cDoc){
     if(cDoc.exists){
-      var cData = cDoc.data();
-      // Actualizar resps en el array local si no están
+      var d = cDoc.data();
+      _oblResps = d.resps || d.responsabilidades || [];
+      // Sincronizar en memoria local también
       var cLocal = clients.find(function(x){ return x.id === activeClientId; });
-      if(cLocal && (!cLocal.resps || cLocal.resps.length === 0)){
-        cLocal.resps = cData.resps || cData.responsabilidades || [];
-      }
+      if(cLocal) cLocal.resps = _oblResps;
+    } else {
+      _oblResps = [];
     }
-    return db.collection('calendarios').doc(key).get();
+    // Paso 2: leer el calendario
+    return db.collection('calendarios').doc(calKey).get();
   }).then(function(doc){
     _oblItems = doc.exists ? (doc.data().items || []) : [];
-    return db.collection('presentaciones').doc(key).get();
+    // Paso 3: leer presentaciones
+    return db.collection('presentaciones').doc(presKey).get();
   }).then(function(pDoc){
     _oblPres = pDoc.exists ? (pDoc.data().registros || {}) : {};
     oblRender();
   }).catch(function(e){
     console.warn('[JNF] oblCargar error:', e);
-    _oblItems = []; _oblPres = {};
+    _oblItems = []; _oblPres = {}; _oblResps = [];
     oblRender();
   });
 }
@@ -2585,12 +2591,12 @@ function oblGetEstado(fecha, id){
 }
 
 function oblRender(){
-  var c     = clients.find(function(x){ return x.id === activeClientId; });
-  var ruts  = (c && (c.responsabilidades || c.resps)) || [];
-  // Filtrar SIEMPRE por resps del RUT del cliente
+  // Usar resps leídos frescos de Firestore por oblCargar
+  var ruts  = _oblResps || [];
+  // Filtrar SIEMPRE por resps — si no hay resps, lista vacía
   var items = ruts.length > 0
     ? _oblItems.filter(function(it){ return ruts.indexOf(it.cod) >= 0; })
-    : _oblItems.slice(); // si no hay resps aún, mostrar lo que hay (oblCargar los cargará frescos)
+    : [];
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
