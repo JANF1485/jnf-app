@@ -2606,15 +2606,32 @@ function oblRender(){
     return String(r).padStart(2,'0');
   });
 
-  // Filtrar items normalizando también el cod del item
-  var items = ruts.length > 0
+  // Palabras que identifican cuotas/pagos (NO son fechas de presentación)
+  var EXCLUIR_PALABRAS = [
+    'cuota','pago anticip','anticipo','pes ','pagos anticip',
+    'abono','fraccion','fracció','rub ','1a cuota','2a cuota',
+    '3a cuota','1ra','2da','3ra','primera cuota','segunda cuota',
+    'tercera cuota','prestadores exterior'
+  ];
+
+  // Filtrar por resps del RUT
+  var itemsPorRut = ruts.length > 0
     ? _oblItems.filter(function(it){
         var cod = String(it.cod || '').padStart(2,'0');
         return ruts.indexOf(cod) >= 0;
       })
     : [];
-  console.log('[JNF OBL] resps:', ruts, '| items total:', _oblItems.length, '| items filtrados:', items.length);
-  console.log('[JNF OBL] items filtrados detalle:', items.map(function(it){ return it.cod + ':' + it.desc.slice(0,20) + ':' + it.fecha; }));
+
+  // Excluir cuotas y pagos anticipados — solo fechas de presentación
+  var items = itemsPorRut.filter(function(it){
+    var desc = (it.desc || '').toLowerCase();
+    for(var i=0; i<EXCLUIR_PALABRAS.length; i++){
+      if(desc.indexOf(EXCLUIR_PALABRAS[i]) >= 0) return false;
+    }
+    return true;
+  });
+
+  console.log('[JNF OBL] resps:', ruts, '| raw:', _oblItems.length, '| por rut:', itemsPorRut.length, '| tras excluir cuotas:', items.length);
 
   var emptyEl  = document.getElementById('obl-empty');
   var listaEl  = document.getElementById('obl-lista');
