@@ -317,7 +317,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <div style="font-size:9px;color:rgba(255,255,255,0.35);">✏ Editar nombre</div>
     </div>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
-    <button id="btn-mi-cuenta" onclick="var m=document.getElementById('modal-password');if(m){var t=document.getElementById('pwd-tab-reset');var c=document.getElementById('pwd-tab-change');if(t)t.style.display='none';if(c)c.style.display='block';var ti=document.getElementById('pwd-modal-title');if(ti)ti.textContent='Mi Cuenta';var em=document.getElementById('pwd-current-email');if(em&&window.currentUser)em.textContent=window.currentUser.email;m.style.display='flex';}" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
+    <button id="btn-mi-cuenta" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
     <div id="atom-indicator" style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-right:6px;">
       <div id="atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
         <svg id="atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;pointer-events:none;">
@@ -5717,5 +5717,24 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
     © Aviso de derechos de autor
   </button>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('btn-mi-cuenta');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    var modal = document.getElementById('modal-password');
+    if(!modal) return;
+    var tabReset  = document.getElementById('pwd-tab-reset');
+    var tabChange = document.getElementById('pwd-tab-change');
+    var title     = document.getElementById('pwd-modal-title');
+    var emailEl   = document.getElementById('pwd-current-email');
+    if(tabReset)  tabReset.style.display  = 'none';
+    if(tabChange) tabChange.style.display = 'block';
+    if(title)     title.textContent       = 'Mi Cuenta — Cambio de Contraseña';
+    if(emailEl && window.currentUser) emailEl.textContent = window.currentUser.email;
+    modal.style.display = 'flex';
+  });
+});
+</script>
 </body>
 </html>
