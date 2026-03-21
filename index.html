@@ -5736,5 +5736,71 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 </script>
+
+<!-- ═══ MODAL DERECHOS DE AUTOR ══════════════════════════ -->
+<div id="modal-derechos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:10002;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);max-height:90vh;overflow-y:auto;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;
+      padding:20px 24px;border-radius:16px 16px 0 0;
+      display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="https://janf1485.github.io/jnf-interno/logo.jpg"
+          style="width:36px;height:36px;border-radius:50%;border:2px solid #c9a227;object-fit:cover;"/>
+        <div>
+          <div style="font-size:14px;font-weight:800;">Aviso de Derechos de Autor</div>
+          <div style="font-size:10px;opacity:.7;margin-top:1px;">© Asesorías y Consultorías JNF S.A.S.</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('modal-derechos').style.display='none'"
+        style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;
+        border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Cuerpo -->
+    <div style="padding:24px;">
+      <div style="font-size:12px;color:#374151;line-height:1.8;margin-bottom:16px;">
+        Este sistema y todos sus componentes — incluyendo código fuente, diseño, estructura,
+        base de datos y contenidos — son propiedad exclusiva de
+        <strong style="color:#1a2580;">Asesorías y Consultorías JNF S.A.S.</strong>
+        y están protegidos por las siguientes normas:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+        <div style="background:#f0f4ff;border-left:3px solid #1a2580;border-radius:0 8px 8px 0;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:800;color:#1a2580;">Ley 23 de 1982</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Sobre derechos de autor en Colombia</div>
+        </div>
+        <div style="background:#f0f4ff;border-left:3px solid #1a2580;border-radius:0 8px 8px 0;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:800;color:#1a2580;">Decisión Andina 351 de 1993</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Régimen común sobre derechos de autor y conexos</div>
+        </div>
+        <div style="background:#f0f4ff;border-left:3px solid #1a2580;border-radius:0 8px 8px 0;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:800;color:#1a2580;">Ley 1915 de 2018</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Por la cual se modifica la Ley 23 de 1982</div>
+        </div>
+        <div style="background:#f0f4ff;border-left:3px solid #1a2580;border-radius:0 8px 8px 0;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:800;color:#1a2580;">Convenio de Berna</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Protección internacional de obras literarias y artísticas</div>
+        </div>
+      </div>
+      <div style="background:#fee2e2;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:800;color:#b91c1c;margin-bottom:6px;">🚫 Queda estrictamente prohibido:</div>
+        <ul style="font-size:11px;color:#7f1d1d;line-height:1.8;padding-left:18px;margin:0;">
+          <li>Copiar, reproducir o distribuir este software sin autorización</li>
+          <li>Modificar, descompilar o realizar ingeniería inversa</li>
+          <li>Usar el sistema para fines distintos a los autorizados</li>
+          <li>Compartir credenciales de acceso con terceros</li>
+        </ul>
+      </div>
+      <div style="text-align:center;font-size:10px;color:#9ca3af;">
+        Versión 1.0.0 · Marzo 2026 · Contacto:
+        <a href="mailto:asesoriasyconsultoriasjnfsas@gmail.com"
+          style="color:#1a2580;font-weight:700;">asesoriasyconsultoriasjnfsas@gmail.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
