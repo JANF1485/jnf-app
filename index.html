@@ -3015,8 +3015,33 @@ window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function 
       ['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26'][idx]);
   }
 
-  // ── 14 EXÓGENA ────────────────────────────────────────────────
-  addItem('14','Información exógena año gravable 2025','2026-04-27');
+  // ── 14 EXÓGENA — fechas reales por dos últimos dígitos del NIT ──
+  // Fuente: Res. 000227 DIAN 2025, Art. 65 Res. 000162/2023 mod. Art. 10 Res. 000188/2024
+  // Solo aplica a personas jurídicas y naturales (no grandes contribuyentes)
+  (function(){
+    var dosDigitos = parseInt(nitStr.slice(-2)) || 100;
+    if(dosDigitos === 0) dosDigitos = 100;
+    var EXOGENA_PJ = [
+      {rango:[1,10],   fecha:'2026-05-14'},
+      {rango:[11,20],  fecha:'2026-05-15'},
+      {rango:[21,30],  fecha:'2026-05-19'},
+      {rango:[31,40],  fecha:'2026-05-20'},
+      {rango:[41,50],  fecha:'2026-05-21'},
+      {rango:[51,60],  fecha:'2026-05-22'},
+      {rango:[61,70],  fecha:'2026-05-26'},
+      {rango:[71,80],  fecha:'2026-05-27'},
+      {rango:[81,90],  fecha:'2026-05-28'},
+      {rango:[91,100], fecha:'2026-06-12'},
+    ];
+    var fechaExo = '2026-05-20'; // fallback
+    for(var i=0;i<EXOGENA_PJ.length;i++){
+      if(dosDigitos >= EXOGENA_PJ[i].rango[0] && dosDigitos <= EXOGENA_PJ[i].rango[1]){
+        fechaExo = EXOGENA_PJ[i].fecha;
+        break;
+      }
+    }
+    addItem('14','Información exógena año gravable 2025', fechaExo);
+  })();
 
   // ── 42 OBLIGADO A LLEVAR CONTABILIDAD ─────────────────────────
   // No tiene fecha de vencimiento propia — es una obligación permanente
