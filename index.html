@@ -1987,17 +1987,46 @@ window._openAdminPanel = window.openAdminPanel = function openAdminPanel(){
           ?'<span style="background:#e8eaf6;color:#1a2580;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;">Admin</span>'
           :'<span style="background:#dcfce7;color:#166534;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;">Contador</span>';
         var isMe = currentUser && u.uid===currentUser.uid;
-        return '<tr style="border-bottom:1px solid var(--br);font-size:12px;">'
-          +'<td style="padding:8px 6px;font-weight:600;color:var(--tx);">'+(u.nombre||'-')+(isMe?' <span style="font-size:9px;color:var(--t3);">(tú)</span>':'')+'</td>'
-          +'<td style="padding:8px 6px;color:var(--t2);">'+u.email+'</td>'
-          +'<td style="padding:8px 6px;">'+badge+'</td>'
-          +'<td style="padding:8px 6px;color:var(--t2);">'+(u.clientesAsignados||[]).length+' clientes</td>'
-          +'<td style="padding:8px 6px;text-align:right;">'
-          +(!isMe?'<button class="btn btn-sm btn-edit" onclick="editUsuario(&quot;'+u.uid+'&quot;)">✏️ Editar</button>':'')
-          +'</td></tr>';
+        var suspendido = u.suspendido === true;
+        var suspBadge = suspendido ? '<span style="background:#fee2e2;color:#b91c1c;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;">SUSPENDIDO</span>' : '';
+        var btnEdit = '<button class="btn btn-sm btn-edit" onclick="editUsuario(\'' + u.uid + '\')" style="padding:4px 8px;" title="Editar">✏️</button>';
+        var btnSusp = '<button onclick="suspenderUsuario(\'' + u.uid + '\',' + !suspendido + ')" style="padding:4px 8px;background:' + (suspendido ? '#dcfce7' : '#fef3c7') + ';color:' + (suspendido ? '#166534' : '#92400e') + ';border:none;border-radius:6px;cursor:pointer;font-size:12px;" title="' + (suspendido ? 'Reactivar' : 'Suspender') + '">' + (suspendido ? '▶️' : '⏸️') + '</button>';
+        var btnDel = '<button onclick="eliminarUsuario(\'' + u.uid + '\')" style="padding:4px 8px;background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;cursor:pointer;font-size:12px;" title="Eliminar">🗑️</button>';
+        var btnAcciones = !isMe
+          ? '<div style="display:flex;gap:4px;justify-content:flex-end;">' + btnEdit + btnSusp + btnDel + '</div>'
+          : '<span style="font-size:10px;color:var(--t3);">—</span>';
+        var trStyle = 'border-bottom:1px solid var(--br);font-size:12px;opacity:' + (suspendido ? '.55' : '1') + ';';
+        return '<tr style="' + trStyle + '">'
+          + '<td style="padding:8px 6px;font-weight:600;color:var(--tx);">' + (u.nombre||'-') + (isMe ? ' <span style="font-size:9px;color:var(--t3);">(tú)</span>' : '') + suspBadge + '</td>'
+          + '<td style="padding:8px 6px;color:var(--t2);">' + u.email + '</td>'
+          + '<td style="padding:8px 6px;">' + badge + '</td>'
+          + '<td style="padding:8px 6px;color:var(--t2);">' + (u.clientesAsignados||[]).length + ' clientes</td>'
+          + '<td style="padding:8px 6px;">' + btnAcciones + '</td>'
+          + '</tr>';
       }).join('')+'</tbody></table>';
   }).catch(function(e){list.innerHTML='<div style="color:var(--re);padding:10px;">Error: '+e.message+'</div>';});
 }
+
+
+window.suspenderUsuario = function suspenderUsuario(uid, suspender){
+  var accion = suspender ? 'suspender' : 'reactivar';
+  if(!confirm('¿Deseas '+accion+' este usuario?')) return;
+  db.collection('usuarios').doc(uid).update({suspendido: suspender}).then(function(){
+    ss(suspender ? 'Usuario suspendido.' : 'Usuario reactivado.', 'ok');
+    openAdminPanel();
+  }).catch(function(e){ ss('Error: '+e.message,'err'); });
+};
+
+window.eliminarUsuario = function eliminarUsuario(uid){
+  var u = (window._usuariosGlobal||[]).find(function(x){ return x.uid===uid; });
+  var nombre = u ? (u.nombre||u.email) : uid;
+  if(!confirm('¿Eliminar permanentemente a '+nombre+'? Esta acción no se puede deshacer.')) return;
+  // Eliminar de Firestore (no elimina de Auth por seguridad)
+  db.collection('usuarios').doc(uid).delete().then(function(){
+    ss('Usuario eliminado de la base de datos.','ok');
+    openAdminPanel();
+  }).catch(function(e){ ss('Error: '+e.message,'err'); });
+};
 
 var editingUserId = null;
 
