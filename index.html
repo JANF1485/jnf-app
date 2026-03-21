@@ -279,7 +279,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <!-- Átomo online/offline en el splash -->
   <div id="splash-atom-indicator" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
     <div id="splash-atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;">
-      <svg id="splash-atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;">
+      <svg id="splash-atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;pointer-events:none;">
         <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(0 43 43)"/>
         <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(60 43 43)"/>
         <ellipse cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(120 43 43)"/>
@@ -319,8 +319,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
     <button id="btn-mi-cuenta" onclick="var m=document.getElementById('modal-password');if(m){var t=document.getElementById('pwd-tab-reset');var c=document.getElementById('pwd-tab-change');if(t)t.style.display='none';if(c)c.style.display='block';var ti=document.getElementById('pwd-modal-title');if(ti)ti.textContent='Mi Cuenta';var em=document.getElementById('pwd-current-email');if(em&&window.currentUser)em.textContent=window.currentUser.email;m.style.display='flex';}" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
     <div id="atom-indicator" style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-right:6px;">
-      <div id="atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;">
-        <svg id="atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;">
+      <div id="atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <svg id="atom-svg" viewBox="0 0 86 86" width="43" height="43" style="position:absolute;pointer-events:none;">
           <ellipse id="orb1" cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(0 43 43)"/>
           <ellipse id="orb2" cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(60 43 43)"/>
           <ellipse id="orb3" cx="43" cy="43" rx="40" ry="16" fill="none" stroke="#c9a227" stroke-width="2" transform="rotate(120 43 43)"/>
