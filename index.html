@@ -1868,6 +1868,13 @@ function showApp(){
   document.getElementById('screen-splash').style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
+  // Conectar botón Mi cuenta directamente a la función real
+  var btnCuenta = document.getElementById('btn-mi-cuenta');
+  if(btnCuenta){
+    btnCuenta.onclick = function(){
+      window._showCambiarPassword ? window._showCambiarPassword() : null;
+    };
+  }
   showScreen('clientes');
   var nameEl = document.getElementById('hdr-user-name');
   if(nameEl) nameEl.textContent = currentPerfil.nombre||currentPerfil.email;
@@ -5092,14 +5099,7 @@ function poblarFiltroContador(){
   if(!navigator.onLine){ setOffline(); } else { setOnline(); }
 })();
 
-// Conectar botón Mi cuenta directamente
-(function(){
-  var btn = document.getElementById('btn-mi-cuenta');
-  if(btn) btn.addEventListener('click', function(){
-    if(window._showCambiarPassword) window._showCambiarPassword();
-    else if(window.showCambiarPassword) window.showCambiarPassword();
-  });
-})();
+
 
 // ── EDITAR NOMBRE ─────────────────────────────────────────
 window._openEditNombreModal = window.openEditNombreModal = function openEditNombreModal(){
