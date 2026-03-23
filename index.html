@@ -4097,8 +4097,16 @@ function inc_procesar(){
   document.getElementById('inc-resultado').style.display='block';
   document.getElementById('inc-resultado').scrollIntoView({behavior:'smooth'});
   inc_ss('Formulario 310 liquidado correctamente ✓','ok');
-  try{var _k='jnf_inc_'+activeClientId+'_'+inc_anio+'_'+inc_pCod;
-  if(window.fbSaveResult)window.fbSaveResult(_k,window._f310Data);}catch(e){}
+  // Guardar automáticamente en Archivo de Reportes
+  try{
+    var _k = ('jnf_inc_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(window._f310Data) window._f310Data.clienteId = activeClientId;
+    if(window.fbSaveResult && activeClientId){
+      fbSaveResult(_k, window._f310Data).then(function(){
+        inc_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
+      }).catch(function(e){ console.warn('[INC save]',e); });
+    }
+  }catch(e){ console.warn('[INC save]',e); }
 }
 
 async function inc_descargarPDF(){
