@@ -1549,11 +1549,11 @@ window._showScreen = window.showScreen = function showScreen(name){
 // Definición de módulos
 const MODULES = [
   {
-    id:'exogena',icon:'📊',iconBg:'#e8eaf6',
-    title:'Información Exógena AG 2025',
-    desc:'Consolida los formatos 1001 · 1005 · 1006 · 1007 para la DIAN a partir del Excel de facturación del cliente.',
-    tags:['Formato 1001','Formato 1005','Formato 1006','Formato 1007'],
-    active:true, action:'openExogena()'
+    id:'obligaciones',icon:'📅',iconBg:'#fef3c7',
+    title:'Obligaciones Tributarias',
+    desc:'Consulta los vencimientos del cliente según su RUT. Registra la fecha de presentación de cada obligación.',
+    tags:['Vencimientos','Presentaciones','Alertas DIAN'],
+    active:true, action:'openObligaciones()'
   },
   {
     id:'f300',icon:'🧾',iconBg:'#e8f5e9',
@@ -1563,6 +1563,13 @@ const MODULES = [
     active:true, action:'openF300()'
   },
   {
+    id:'f350',icon:'🧾',iconBg:'#e8eaf6',
+    title:'Retención en la Fuente — Formulario 350',
+    desc:'Liquida mensualmente la declaración de retenciones en la fuente. Calcula retenciones a PJ, PN, autorretenciones e IVA según el Formulario 350 DIAN.',
+    tags:['Renta PJ','Renta PN','Autorretenciones','Ret. IVA'],
+    active:true, action:'openF350()'
+  },
+  {
     id:'inc',icon:'🍽️',iconBg:'#ede9fe',
     title:'Impuesto Nacional al Consumo — Formulario 310',
     desc:'Liquida el Impuesto Nacional al Consumo (8%) para restaurantes y servicios. Genera el PDF del formulario 310.',
@@ -1570,26 +1577,18 @@ const MODULES = [
     active:true, action:'openINC()'
   },
   {
+    id:'exogena',icon:'📊',iconBg:'#e8eaf6',
+    title:'Información Exógena AG 2025',
+    desc:'Consolida los formatos 1001 · 1005 · 1006 · 1007 para la DIAN a partir del Excel de facturación del cliente.',
+    tags:['Formato 1001','Formato 1005','Formato 1006','Formato 1007'],
+    active:true, action:'openExogena()'
+  },
+  {
     id:'guardado',icon:'💾',iconBg:'#d1fae5',
     title:'Archivo de Reportes',
     desc:'Consulta y descarga los reportes de exógena, IVA e INC guardados para este cliente y año gravable.',
     tags:['Exógena','F300 IVA','F310 INC'],
     active:true, action:'openGuardado()'
-  },
-  {
-    id:'obligaciones',icon:'📅',iconBg:'#fef3c7',
-    title:'Obligaciones Tributarias',
-    desc:'Consulta los vencimientos del cliente según su RUT. Registra la fecha de presentación de cada obligación.',
-    tags:['Vencimientos','Presentaciones','Alertas DIAN'],
-    active:true, action:'openObligaciones()'
-  },
-
-  {
-    id:'f350',icon:'🧾',iconBg:'#e8eaf6',
-    title:'Retención en la Fuente — Formulario 350',
-    desc:'Liquida mensualmente la declaración de retenciones en la fuente. Calcula retenciones a PJ, PN, autorretenciones e IVA según el Formulario 350 DIAN.',
-    tags:['Renta PJ','Renta PN','Autorretenciones','Ret. IVA'],
-    active:true, action:'openF350()'
   },
   {
     id:'docs',icon:'📁',iconBg:'#f3f4f6',
