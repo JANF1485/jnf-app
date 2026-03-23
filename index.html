@@ -4144,29 +4144,78 @@ window._openAuditoria = window.openAuditoria = function openAuditoria(){
 function audPoblarUsuarios(){
   var sel = document.getElementById('aud-f-usuario');
   if(!sel) return;
-  while(sel.options.length > 1) sel.remove(1);
-  var usuariosGlobal = window._usuariosGlobal || [];
-  usuariosGlobal.forEach(function(u){
-    var opt = document.createElement('option');
-    opt.value = u.uid || u.email;
-    opt.textContent = u.nombre || u.email;
-    sel.appendChild(opt);
-    _audUsuarios[u.uid || u.email] = u.nombre || u.email;
+
+  function llenarSelect(users){
+    while(sel.options.length > 1) sel.remove(1);
+    users.forEach(function(u){
+      var nombre = u.nombre || u.email || u.uid || '—';
+      var uid    = u.uid || u.email || nombre;
+      var opt = document.createElement('option');
+      opt.value       = uid;
+      opt.textContent = nombre;
+      sel.appendChild(opt);
+      _audUsuarios[uid] = nombre;
+    });
+  }
+
+  // Intentar con _usuariosGlobal primero (ya cargado)
+  var global = window._usuariosGlobal || [];
+  if(global.length > 0){
+    llenarSelect(global);
+    return;
+  }
+
+  // Si no está cargado aún, leer directo de Firestore
+  if(!db) return;
+  db.collection('usuarios').get().then(function(snap){
+    var users = [];
+    snap.forEach(function(doc){
+      users.push(Object.assign({uid: doc.id}, doc.data()));
+    });
+    window._usuariosGlobal = users;
+    llenarSelect(users);
+  }).catch(function(e){
+    console.warn('[AUD] Error cargando usuarios:', e);
+    // Fallback: extraer usuarios únicos de los logs ya cargados
+    var vistos = {}, fromLogs = [];
+    _audLogs.forEach(function(r){
+      if(r.usuario && r.usuario !== '—' && !vistos[r.usuario]){
+        vistos[r.usuario] = true;
+        fromLogs.push({uid: r.usuario, nombre: r.usuario});
+      }
+    });
+    llenarSelect(fromLogs);
   });
 }
 
-// ── Cargar logs desde Firestore ─────────────────────────
+// Repoblar selector de usuarios después de cargar los logs
+function audRepoblarUsuariosDeLogs(){
+  var sel = document.getElementById('aud-f-usuario');
+  if(!sel) return;
+  var yaEnSelect = {};
+  for(var i=0; i<sel.options.length; i++){
+    yaEnSelect[sel.options[i].value] = true;
+  }
+  _audLogs.forEach(function(r){
+    if(r.usuario && r.usuario !== '—' && !yaEnSelect[r.usuario]){
+      yaEnSelect[r.usuario] = true;
+      var opt = document.createElement('option');
+      opt.value       = r.usuario;
+      opt.textContent = r.usuario;
+      sel.appendChild(opt);
+      _audUsuarios[r.usuario] = r.usuario;
+    }
+  });
+}
+
 function audCargar(){
   var tbody = document.getElementById('aud-tbody');
   if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--t3);font-size:12px;">⏳ Cargando registros…</td></tr>';
 
-  if(!db){
-    audCargarDemo();
-    return;
-  }
+  if(!db){ audCargarDemo(); return; }
 
   db.collection('auditoria')
-    .orderBy('fecha', 'desc')
+    .orderBy('fecha','desc')
     .limit(500)
     .get()
     .then(function(snap){
@@ -4174,19 +4223,20 @@ function audCargar(){
       snap.forEach(function(doc){
         var d = doc.data();
         _audLogs.push({
-          id:       doc.id,
-          fecha:    d.fecha || '',
-          usuarioId:d.usuarioId || '',
-          usuario:  d.usuario || '—',
-          accion:   d.accion || '—',
-          modulo:   d.modulo || '—',
-          clienteId:d.clienteId || '',
-          cliente:  d.cliente || '—',
-          detalle:  d.detalle || ''
+          id:        doc.id,
+          fecha:     d.fecha      || '',
+          usuarioId: d.usuarioId  || '',
+          usuario:   d.usuario    || '—',
+          accion:    d.accion     || '—',
+          modulo:    d.modulo     || '—',
+          clienteId: d.clienteId  || '',
+          cliente:   d.cliente    || '—',
+          detalle:   d.detalle    || ''
         });
       });
       audRenderResumen();
       audRender();
+      audRepoblarUsuariosDeLogs();
     })
     .catch(function(e){
       console.warn('[AUD] Error cargando:', e);
@@ -4194,7 +4244,6 @@ function audCargar(){
     });
 }
 
-// ── Demo si no hay datos aún ────────────────────────────
 function audCargarDemo(){
   _audLogs = [];
   audRenderResumen();
