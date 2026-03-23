@@ -3165,6 +3165,146 @@ window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async functio
     if(window.calGlobalCargarTodo) calGlobalCargarTodo();
   }
 };
+
+
+window._openGuardado = window.openGuardado = function openGuardado(){
+  // Buscar cliente — múltiples estrategias
+  var c = null;
+  if(activeClientId){
+    c = clients.find(function(x){return x.id===activeClientId;});
+    if(!c){
+      // Reconstruir desde breadcrumb visible
+      var bnEl = document.getElementById('breadcrumb-name');
+      var razon = bnEl ? bnEl.textContent : '';
+      if(!razon){
+        var bcEl = document.getElementById('bc2-name');
+        razon = bcEl ? bcEl.textContent.split(' · ')[0] : activeClientId;
+      }
+      c = {id: activeClientId, razon: razon, nit: ''};
+    }
+  }
+  if(!c){ss('Selecciona un cliente primero','err');return;}
+  var yr = activeYear||new Date().getFullYear();
+  var gi = document.getElementById('guardado-cliente-info');
+  if(gi) gi.textContent = (c.razon||c.nit) + ' · Año ' + yr;
+  var isAdmin = currentPerfil && currentPerfil.rol==='admin';
+  var perms = isAdmin ? ['exogena','f300','inc'] : (currentPerfil&&currentPerfil.modulosPermitidos||[]);
+  ['exogena','f300','inc'].forEach(function(mod){
+    var el = document.getElementById('guardado-'+mod+'-section');
+    if(el) el.style.display = perms.indexOf(mod)>=0 ? '' : 'none';
+  });
+  showScreen('guardado');
+  cargarArchivo(c.id, yr);
+}
+
+
+function cargarArchivo(clientId, year){
+  var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
+  // Recuperar db si es null
+  if(!db && typeof firebase !== 'undefined' && firebase.apps.length){
+    db = firebase.firestore();
+  }
+
+  // ── Cargar Exógena ────────────────────────────────────────
+  var exoDiv = document.getElementById('guardado-exogena');
+  var exoSection = document.getElementById('guardado-exogena-section');
+  var exoList = document.getElementById('guardado-exogena-list');
+  if(db){
+    var exoKey = ('jnf_cons_'+clientId+'_'+year).replace(/[^a-zA-Z0-9_-]/g,'_');
+    db.collection('resultados').doc(exoKey).get().then(function(doc){
+      if(!doc.exists){
+        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
+        if(exoDiv) exoDiv.style.display='none'; return;
+      }
+      var data = JSON.parse(doc.data().data||'{}');
+      if(!data.cons){
+        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
+        if(exoDiv) exoDiv.style.display='none'; return;
+      }
+      if(exoList) exoList.style.display='none';
+      exoDiv.style.display='block';
+      var fecha = new Date(data.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      document.getElementById('guardado-exogena-fecha').textContent='✓ Guardado el '+fecha;
+      document.getElementById('guardado-exogena-counts').textContent=
+        ['f1001','f1005','f1006','f1007'].map(function(f){return f.replace('f','')+': '+(data.cons[f]||[]).length+' terceros';}).join(' · ');
+      var tots=data.totales||{};
+      document.getElementById('guardado-exogena-totals').innerHTML=[
+        {lbl:'Total 1001',val:tots.f1001||0,color:'#1a2580',bg:'#eef1ff'},
+        {lbl:'IVA Desct. 1005',val:tots.f1005||0,color:'#065f46',bg:'#d1fae5'},
+        {lbl:'IVA Gen. 1006',val:tots.f1006||0,color:'#9f1239',bg:'#fee2e2'},
+        {lbl:'Ingresos 1007',val:tots.f1007||0,color:'#6d28d9',bg:'#ede9fe'},
+      ].map(function(t){return '<div style="background:'+t.bg+';border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:9px;font-weight:700;color:'+t.color+';text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">'+t.lbl+'</div>'
+        +'<div style="font-size:14px;font-weight:800;color:'+t.color+';">'+fmtM(t.val)+'</div></div>';}).join('');
+      document.getElementById('guardado-exogena-btns').innerHTML=
+        ['1001','1005','1006','1007'].map(function(n){
+          var rows=(data.cons['f'+n]||[]).length;
+          if(!rows) return '';
+          return '<button onclick="downloadSaved(\x27'+clientId+'\x27,\x27'+n+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">⬇ Formato '+n+' <span style="opacity:.7;font-size:10px;">('+rows+' reg.)</span></button>';
+        }).join('');
+      // Add delete button for exogena
+      var delBtn = document.createElement('button');
+      delBtn.innerHTML = '🗑 Eliminar reporte';
+      delBtn.style.cssText = 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-top:12px;';
+      delBtn.onclick = function(){ eliminarReporte('exogena', exoKey, exoSection||exoDiv); };
+      document.getElementById('guardado-exogena-btns').appendChild(delBtn);
+    }).catch(function(){exoDiv.style.display='none';});
+  }
+
+  // ── Cargar F300 ───────────────────────────────────────────
+  var f300List = document.getElementById('guardado-f300-list');
+  var f300Html = '';
+  var f300Promises = ['01','02','03'].map(function(p){
+    var key = ('jnf_f300_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    return db.collection('resultados').doc(key).get().then(function(doc){
+      if(!doc.exists) return null;
+      var d = JSON.parse(doc.data().data||'{}');
+      if(!d.c67) return null;
+      var label = d.pLabel||('Período '+p);
+      var badge = d.c88>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c88)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c89)+'</span>';
+      window._archivo_f300 = window._archivo_f300||{};
+      window._archivo_f300[p] = d;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:8px;">'
+        +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+label+'</div>'
+        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">IVA Generado: '+fmtM(d.c67)+' · Descontable: '+fmtM(d.c81)+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+        +'<button onclick="f300_abrirDesde(\x27'+p+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+        +'</div></div>';
+      _guardadoCache[key] = d;
+    }).catch(function(){return null;});
+  });
+  Promise.all(f300Promises).then(function(results){
+    var html = results.filter(Boolean).join('');
+    f300List.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+  });
+
+  // ── Cargar INC ────────────────────────────────────────────
+  var incList = document.getElementById('guardado-inc-list');
+  var incPromises = ['01','02','03','04','05','06'].map(function(p){
+    var key = ('jnf_inc_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
+    return db.collection('resultados').doc(key).get().then(function(doc){
+      if(!doc.exists) return null;
+      var d = JSON.parse(doc.data().data||'{}');
+      if(!d.c56) return null;
+      var label = d.pLabel||('Bimestre '+p);
+      var badge = d.c64>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c64)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c65)+'</span>';
+      window._archivo_inc = window._archivo_inc||{};
+      window._archivo_inc[p] = d;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#faf5ff;border:1px solid #ede9fe;border-radius:8px;margin-bottom:8px;">'
+        +'<div><div style="font-size:12px;font-weight:700;color:#6d28d9;">'+label+'</div>'
+        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Base Neta: '+fmtM(d.c29)+' · IPO: '+fmtM(d.c56)+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+        +'<button onclick="inc_abrirDesde(\x27'+p+'\x27)" style="background:#6d28d9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+        +'</div></div>';
+      _guardadoCache[key] = d;
+    }).catch(function(){return null;});
+  });
+  Promise.all(incPromises).then(function(results){
+    var html = results.filter(Boolean).join('');
+    incList.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+  });
+}
+
 </script>
 
 </script>
@@ -4431,141 +4571,7 @@ window._closeFicha = window.closeFicha = function closeFicha(){
 })();
 
 
-window._openGuardado = window.openGuardado = function openGuardado(){
-  // Buscar cliente — múltiples estrategias
-  var c = null;
-  if(activeClientId){
-    c = clients.find(function(x){return x.id===activeClientId;});
-    if(!c){
-      // Reconstruir desde breadcrumb visible
-      var bnEl = document.getElementById('breadcrumb-name');
-      var razon = bnEl ? bnEl.textContent : '';
-      if(!razon){
-        var bcEl = document.getElementById('bc2-name');
-        razon = bcEl ? bcEl.textContent.split(' · ')[0] : activeClientId;
-      }
-      c = {id: activeClientId, razon: razon, nit: ''};
-    }
-  }
-  if(!c){ss('Selecciona un cliente primero','err');return;}
-  var yr = activeYear||new Date().getFullYear();
-  var gi = document.getElementById('guardado-cliente-info');
-  if(gi) gi.textContent = (c.razon||c.nit) + ' · Año ' + yr;
-  var isAdmin = currentPerfil && currentPerfil.rol==='admin';
-  var perms = isAdmin ? ['exogena','f300','inc'] : (currentPerfil&&currentPerfil.modulosPermitidos||[]);
-  ['exogena','f300','inc'].forEach(function(mod){
-    var el = document.getElementById('guardado-'+mod+'-section');
-    if(el) el.style.display = perms.indexOf(mod)>=0 ? '' : 'none';
-  });
-  showScreen('guardado');
-  cargarArchivo(c.id, yr);
-}
-function cargarArchivo(clientId, year){
-  var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
-  // Recuperar db si es null
-  if(!db && typeof firebase !== 'undefined' && firebase.apps.length){
-    db = firebase.firestore();
-  }
-
-  // ── Cargar Exógena ────────────────────────────────────────
-  var exoDiv = document.getElementById('guardado-exogena');
-  var exoSection = document.getElementById('guardado-exogena-section');
-  var exoList = document.getElementById('guardado-exogena-list');
-  if(db){
-    var exoKey = ('jnf_cons_'+clientId+'_'+year).replace(/[^a-zA-Z0-9_-]/g,'_');
-    db.collection('resultados').doc(exoKey).get().then(function(doc){
-      if(!doc.exists){
-        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
-        if(exoDiv) exoDiv.style.display='none'; return;
-      }
-      var data = JSON.parse(doc.data().data||'{}');
-      if(!data.cons){
-        if(exoList) exoList.textContent='No hay informacion exogena guardada para este ano.';
-        if(exoDiv) exoDiv.style.display='none'; return;
-      }
-      if(exoList) exoList.style.display='none';
-      exoDiv.style.display='block';
-      var fecha = new Date(data.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      document.getElementById('guardado-exogena-fecha').textContent='✓ Guardado el '+fecha;
-      document.getElementById('guardado-exogena-counts').textContent=
-        ['f1001','f1005','f1006','f1007'].map(function(f){return f.replace('f','')+': '+(data.cons[f]||[]).length+' terceros';}).join(' · ');
-      var tots=data.totales||{};
-      document.getElementById('guardado-exogena-totals').innerHTML=[
-        {lbl:'Total 1001',val:tots.f1001||0,color:'#1a2580',bg:'#eef1ff'},
-        {lbl:'IVA Desct. 1005',val:tots.f1005||0,color:'#065f46',bg:'#d1fae5'},
-        {lbl:'IVA Gen. 1006',val:tots.f1006||0,color:'#9f1239',bg:'#fee2e2'},
-        {lbl:'Ingresos 1007',val:tots.f1007||0,color:'#6d28d9',bg:'#ede9fe'},
-      ].map(function(t){return '<div style="background:'+t.bg+';border-radius:8px;padding:10px 12px;">'
-        +'<div style="font-size:9px;font-weight:700;color:'+t.color+';text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">'+t.lbl+'</div>'
-        +'<div style="font-size:14px;font-weight:800;color:'+t.color+';">'+fmtM(t.val)+'</div></div>';}).join('');
-      document.getElementById('guardado-exogena-btns').innerHTML=
-        ['1001','1005','1006','1007'].map(function(n){
-          var rows=(data.cons['f'+n]||[]).length;
-          if(!rows) return '';
-          return '<button onclick="downloadSaved(\x27'+clientId+'\x27,\x27'+n+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">⬇ Formato '+n+' <span style="opacity:.7;font-size:10px;">('+rows+' reg.)</span></button>';
-        }).join('');
-      // Add delete button for exogena
-      var delBtn = document.createElement('button');
-      delBtn.innerHTML = '🗑 Eliminar reporte';
-      delBtn.style.cssText = 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin-top:12px;';
-      delBtn.onclick = function(){ eliminarReporte('exogena', exoKey, exoSection||exoDiv); };
-      document.getElementById('guardado-exogena-btns').appendChild(delBtn);
-    }).catch(function(){exoDiv.style.display='none';});
-  }
-
-  // ── Cargar F300 ───────────────────────────────────────────
-  var f300List = document.getElementById('guardado-f300-list');
-  var f300Html = '';
-  var f300Promises = ['01','02','03'].map(function(p){
-    var key = ('jnf_f300_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
-    return db.collection('resultados').doc(key).get().then(function(doc){
-      if(!doc.exists) return null;
-      var d = JSON.parse(doc.data().data||'{}');
-      if(!d.c67) return null;
-      var label = d.pLabel||('Período '+p);
-      var badge = d.c88>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c88)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c89)+'</span>';
-      window._archivo_f300 = window._archivo_f300||{};
-      window._archivo_f300[p] = d;
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:8px;">'
-        +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+label+'</div>'
-        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">IVA Generado: '+fmtM(d.c67)+' · Descontable: '+fmtM(d.c81)+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
-        +'<button onclick="f300_abrirDesde(\x27'+p+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
-        +'</div></div>';
-      _guardadoCache[key] = d;
-    }).catch(function(){return null;});
-  });
-  Promise.all(f300Promises).then(function(results){
-    var html = results.filter(Boolean).join('');
-    f300List.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
-  });
-
-  // ── Cargar INC ────────────────────────────────────────────
-  var incList = document.getElementById('guardado-inc-list');
-  var incPromises = ['01','02','03','04','05','06'].map(function(p){
-    var key = ('jnf_inc_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
-    return db.collection('resultados').doc(key).get().then(function(doc){
-      if(!doc.exists) return null;
-      var d = JSON.parse(doc.data().data||'{}');
-      if(!d.c56) return null;
-      var label = d.pLabel||('Bimestre '+p);
-      var badge = d.c64>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c64)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c65)+'</span>';
-      window._archivo_inc = window._archivo_inc||{};
-      window._archivo_inc[p] = d;
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#faf5ff;border:1px solid #ede9fe;border-radius:8px;margin-bottom:8px;">'
-        +'<div><div style="font-size:12px;font-weight:700;color:#6d28d9;">'+label+'</div>'
-        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Base Neta: '+fmtM(d.c29)+' · IPO: '+fmtM(d.c56)+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
-        +'<button onclick="inc_abrirDesde(\x27'+p+'\x27)" style="background:#6d28d9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
-        +'</div></div>';
-      _guardadoCache[key] = d;
-    }).catch(function(){return null;});
-  });
-  Promise.all(incPromises).then(function(results){
-    var html = results.filter(Boolean).join('');
-    incList.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
-  });
-}
+// openGuardado movida al script principal// cargarArchivo movida al script principal
 
 
 window._openFicha_edit = window.openFicha_edit = function openFicha_edit(){
