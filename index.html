@@ -372,7 +372,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <div id="stbar" class="st"></div>
 
   <div class="toolbar">
-    <button class="btn btn-gold" onclick="openModal('add')">
+    <button id="btn-agregar-cliente" class="btn btn-gold" onclick="openModal('add')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Agregar cliente
     </button>
@@ -1398,6 +1398,7 @@ window._renderClients = window.renderClients = function renderClients(){
   var filterC  = (document.getElementById('filterContador')||{}).value||'';
   searchQ = searchQ.toLowerCase().trim();
 
+  var isAdminRender = currentPerfil && currentPerfil.rol === 'admin';
   var lista = clients.filter(function(c){
     // Filtro búsqueda
     var nombre = (c.razon||c.nombre||'').toLowerCase();
@@ -1492,7 +1493,7 @@ window._renderClients = window.renderClients = function renderClients(){
       +  '<button class="btn btn-sm btn-gold cc-btn-abrir" data-id="'+c.id+'">📂 Abrir</button>'
       +  '<button class="btn btn-sm btn-ol cc-btn-ficha" data-id="'+c.id+'">📋 Ficha</button>'
       +  '<button class="btn btn-sm btn-ol cc-btn-edit" data-id="'+c.id+'">✏️</button>'
-      +  '<button class="btn btn-sm btn-ol cc-btn-del" data-id="'+c.id+'" style="color:var(--re);border-color:var(--re);">🗑</button>'
+      +  (isAdminRender ? '<button class="btn btn-sm btn-ol cc-btn-del" data-id="'+c.id+'" style="color:var(--re);border-color:var(--re);">🗑</button>' : '')
       +'</div>'
       +'</div>';
   }).join('');
@@ -2318,8 +2319,26 @@ function showApp(){
   if(adminBtn) adminBtn.style.display = currentPerfil.rol==='admin'?'':'none';
   var auditBtn=document.getElementById('audit-menu-btn');
   if(auditBtn) auditBtn.style.display = currentPerfil.rol==='admin'?'':'none';
+
+  // Controles exclusivos de admin en pantalla clientes
+  var isAdmin = currentPerfil.rol==='admin';
+  var btnAgregar = document.getElementById('btn-agregar-cliente');
+  if(btnAgregar) btnAgregar.style.display = isAdmin ? '' : 'none';
+  var selContador = document.getElementById('filterContador');
+  if(selContador) selContador.style.display = isAdmin ? '' : 'none';
+  // Cambiar título y subtítulo según rol
+  var pageTitle = document.querySelector('#screen-clientes .page-title');
+  var pageSub   = document.querySelector('#screen-clientes .page-sub');
+  if(!isAdmin){
+    if(pageTitle) pageTitle.textContent = 'Mis Clientes';
+    if(pageSub)   pageSub.textContent   = 'Clientes asignados a tu cuenta y sus módulos de contabilidad.';
+  } else {
+    if(pageTitle) pageTitle.textContent = 'Gestión de Clientes';
+    if(pageSub)   pageSub.textContent   = 'Registra clientes desde su RUT y accede a sus módulos de contabilidad.';
+  }
+
   renderClients();
-  if(currentPerfil && currentPerfil.rol==='admin'){
+  if(isAdmin){
     poblarFiltroContador();
   }
 }
