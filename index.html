@@ -4142,73 +4142,60 @@ window._openAuditoria = window.openAuditoria = function openAuditoria(){
 
 // ── Poblar selector de usuarios ─────────────────────────
 function audPoblarUsuarios(){
-  var sel = document.getElementById('aud-f-usuario');
-  if(!sel) return;
-
-  function llenarSelect(users){
-    while(sel.options.length > 1) sel.remove(1);
-    users.forEach(function(u){
-      var nombre = u.nombre || u.email || u.uid || '—';
-      var uid    = u.uid || u.email || nombre;
-      var opt = document.createElement('option');
-      opt.value       = uid;
-      opt.textContent = nombre;
-      sel.appendChild(opt);
-      _audUsuarios[uid] = nombre;
-    });
-  }
-
-  // Intentar con _usuariosGlobal primero (ya cargado)
-  var global = window._usuariosGlobal || [];
-  if(global.length > 0){
-    llenarSelect(global);
-    return;
-  }
-
-  // Si no está cargado aún, leer directo de Firestore
-  if(!db) return;
+  // Cargar desde Firestore siempre, luego fusionar con logs
+  if(!db){ audPoblarDesdeLogsYGlobal(); return; }
   db.collection('usuarios').get().then(function(snap){
     var users = [];
     snap.forEach(function(doc){
-      users.push(Object.assign({uid: doc.id}, doc.data()));
+      users.push(Object.assign({uid:doc.id}, doc.data()));
     });
     window._usuariosGlobal = users;
-    llenarSelect(users);
-  }).catch(function(e){
-    console.warn('[AUD] Error cargando usuarios:', e);
-    // Fallback: extraer usuarios únicos de los logs ya cargados
-    var vistos = {}, fromLogs = [];
-    _audLogs.forEach(function(r){
-      if(r.usuario && r.usuario !== '—' && !vistos[r.usuario]){
-        vistos[r.usuario] = true;
-        fromLogs.push({uid: r.usuario, nombre: r.usuario});
-      }
-    });
-    llenarSelect(fromLogs);
+    audConstruirSelector();
+  }).catch(function(){
+    audConstruirDesdeLogsYGlobal();
   });
 }
 
-// Repoblar selector de usuarios después de cargar los logs
 function audRepoblarUsuariosDeLogs(){
+  audConstruirSelector();
+}
+
+function audConstruirSelector(){
   var sel = document.getElementById('aud-f-usuario');
   if(!sel) return;
-  // Construir mapa de valores Y textos ya presentes para evitar duplicados
-  var yaEnSelect = {};
-  for(var i=0; i<sel.options.length; i++){
-    yaEnSelect[sel.options[i].value.toLowerCase()]       = true;
-    yaEnSelect[sel.options[i].textContent.toLowerCase()] = true;
-  }
+
+  // Mapa nombre.toLowerCase() -> {value, label}
+  // Prioridad: Firestore (tiene uid real) > logs (solo nombre)
+  var mapa = {};
+
+  // 1. Desde _usuariosGlobal (Firestore)
+  var global = window._usuariosGlobal || [];
+  global.forEach(function(u){
+    var nombre = (u.nombre || u.email || '').trim();
+    if(!nombre) return;
+    var key = nombre.toLowerCase();
+    mapa[key] = {value: u.uid || u.email, label: nombre};
+    _audUsuarios[u.uid || u.email] = nombre;
+  });
+
+  // 2. Desde logs — solo agregar si el nombre no está ya
   _audLogs.forEach(function(r){
     if(!r.usuario || r.usuario === '—') return;
-    var key = r.usuario.toLowerCase();
-    if(!yaEnSelect[key]){
-      yaEnSelect[key] = true;
-      var opt = document.createElement('option');
-      opt.value       = r.usuario;
-      opt.textContent = r.usuario;
-      sel.appendChild(opt);
+    var key = r.usuario.trim().toLowerCase();
+    if(!mapa[key]){
+      mapa[key] = {value: r.usuario, label: r.usuario};
       _audUsuarios[r.usuario] = r.usuario;
     }
+  });
+
+  // Reconstruir selector limpio
+  while(sel.options.length > 1) sel.remove(1);
+  Object.keys(mapa).sort().forEach(function(key){
+    var item = mapa[key];
+    var opt = document.createElement('option');
+    opt.value       = item.value;
+    opt.textContent = item.label;
+    sel.appendChild(opt);
   });
 }
 
