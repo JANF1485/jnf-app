@@ -3254,56 +3254,177 @@ function cargarArchivo(clientId, year){
   // ── Cargar F300 ───────────────────────────────────────────
   var f300List = document.getElementById('guardado-f300-list');
   var f300Html = '';
-  var f300Promises = ['01','02','03'].map(function(p){
-    var key = ('jnf_f300_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
-    return db.collection('resultados').doc(key).get().then(function(doc){
-      if(!doc.exists) return null;
-      var d = JSON.parse(doc.data().data||'{}');
-      if(!d.c67) return null;
-      var label = d.pLabel||('Período '+p);
-      var badge = d.c88>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c88)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c89)+'</span>';
-      window._archivo_f300 = window._archivo_f300||{};
-      window._archivo_f300[p] = d;
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:8px;">'
-        +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+label+'</div>'
-        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">IVA Generado: '+fmtM(d.c67)+' · Descontable: '+fmtM(d.c81)+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
-        +'<button onclick="f300_abrirDesde(\x27'+p+'\x27)" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
-        +'</div></div>';
-      _guardadoCache[key] = d;
-    }).catch(function(){return null;});
-  });
-  Promise.all(f300Promises).then(function(results){
-    var html = results.filter(Boolean).join('');
-    f300List.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
-  });
+  // Cargar historial F300 desde resultados_historico
+  db.collection('resultados_historico')
+    .where('clienteId','==',clientId)
+    .where('anio','==',String(year))
+    .where('tipo','==','f300')
+    .get().then(function(snap){
+      var grupos = {};
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var p = d.pCod||'01';
+        if(!grupos[p]) grupos[p]=[];
+        grupos[p].push({key:doc.id, meta:d, data:JSON.parse(d.data||'{}')});
+      });
+      Object.keys(grupos).forEach(function(p){
+        grupos[p].sort(function(a,b){ return b.meta.fechaLiquidacion > a.meta.fechaLiquidacion ? 1:-1; });
+      });
+      var periodos = ['01','02','03','04','05','06'].filter(function(p){ return grupos[p]; });
+      if(!periodos.length){
+        f300List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+        return;
+      }
+      var html = '';
+      periodos.forEach(function(p){
+        var versiones = grupos[p];
+        var d0 = versiones[0].data;
+        var label = d0.pLabel||('Período '+p);
+        var badge = d0.c88>0
+          ?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d0.c88)+'</span>'
+          :'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d0.c89)+'</span>';
+        window._archivo_f300 = window._archivo_f300||{};
+        window._archivo_f300[p] = d0;
+        html += '<div style="background:#f8faff;border:1px solid #e5e7f0;border-radius:10px;margin-bottom:12px;overflow:hidden;">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #e5e7f0;">'
+          +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+label+'</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">'+versiones.length+' liquidación(es) · IVA Generado: '+fmtM(d0.c67)+' · Descontable: '+fmtM(d0.c81)+'</div></div>'
+          +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+          +'<button onclick="f300_abrirDesde(\''+p+'\')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:10px;font-weight:700;cursor:pointer;">Ver último</button>'
+          +'</div></div>';
+        versiones.forEach(function(v, idx){
+          var fecha = v.meta.fechaLiquidacion ? new Date(v.meta.fechaLiquidacion).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Sin fecha';
+          var esUltimo = idx===0;
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:'+(esUltimo?'#eef1ff':'#fff')+';border-bottom:1px solid #f0f0f0;">'
+            +'<div style="display:flex;align-items:center;gap:8px;">'
+            +(esUltimo?'<span style="background:#1a2580;color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;">ÚLTIMO</span>':'<span style="background:#e5e7eb;color:#6b7280;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;">v'+(versiones.length-idx)+'</span>')
+            +'<span style="font-size:11px;color:#374151;">'+fecha+'</span>'
+            +'<span style="font-size:10px;color:#9ca3af;">IVA gen: '+fmtM(v.data.c67||0)+'</span>'
+            +'</div>'
+            +'<div style="display:flex;gap:6px;">'
+            +'<button onclick="f300_verVersion(\''+v.key+'\')" style="background:#f3f4f6;color:#374151;border:none;border-radius:5px;padding:4px 10px;font-size:10px;cursor:pointer;">Ver</button>'
+            +'<button onclick="f300_eliminarVersion(\''+v.key+'\')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:5px;padding:4px 8px;font-size:10px;cursor:pointer;">✕</button>'
+            +'</div></div>';
+        });
+        html += '</div>';
+      });
+      f300List.innerHTML = html;
+    }).catch(function(){
+      f300List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+    });
+
+;
 
   // ── Cargar INC ────────────────────────────────────────────
   var incList = document.getElementById('guardado-inc-list');
-  var incPromises = ['01','02','03','04','05','06'].map(function(p){
-    var key = ('jnf_inc_'+clientId+'_'+year+'_'+p).replace(/[^a-zA-Z0-9_-]/g,'_');
-    return db.collection('resultados').doc(key).get().then(function(doc){
-      if(!doc.exists) return null;
-      var d = JSON.parse(doc.data().data||'{}');
-      if(!d.c56) return null;
-      var label = d.pLabel||('Bimestre '+p);
-      var badge = d.c64>0?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d.c64)+'</span>':'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d.c65)+'</span>';
-      window._archivo_inc = window._archivo_inc||{};
-      window._archivo_inc[p] = d;
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#faf5ff;border:1px solid #ede9fe;border-radius:8px;margin-bottom:8px;">'
-        +'<div><div style="font-size:12px;font-weight:700;color:#6d28d9;">'+label+'</div>'
-        +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Base Neta: '+fmtM(d.c29)+' · IPO: '+fmtM(d.c56)+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;">'+badge
-        +'<button onclick="inc_abrirDesde(\x27'+p+'\x27)" style="background:#6d28d9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
-        +'</div></div>';
-      _guardadoCache[key] = d;
-    }).catch(function(){return null;});
-  });
-  Promise.all(incPromises).then(function(results){
-    var html = results.filter(Boolean).join('');
-    incList.innerHTML = html || '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
-  });
+  // Cargar historial INC desde resultados_historico
+  db.collection('resultados_historico')
+    .where('clienteId','==',clientId)
+    .where('anio','==',String(year))
+    .where('tipo','==','inc')
+    .get().then(function(snap){
+      var grupos = {};
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var p = d.pCod||'01';
+        if(!grupos[p]) grupos[p]=[];
+        grupos[p].push({key:doc.id, meta:d, data:JSON.parse(d.data||'{}')});
+      });
+      Object.keys(grupos).forEach(function(p){
+        grupos[p].sort(function(a,b){ return b.meta.fechaLiquidacion > a.meta.fechaLiquidacion ? 1:-1; });
+      });
+      var periodos = ['01','02','03','04','05','06'].filter(function(p){ return grupos[p]; });
+      if(!periodos.length){
+        incList.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+        return;
+      }
+      var html = '';
+      periodos.forEach(function(p){
+        var versiones = grupos[p];
+        var d0 = versiones[0].data;
+        var label = d0.pLabel||('Bimestre '+p);
+        var badge = d0.c64>0
+          ?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A pagar: '+fmtM(d0.c64)+'</span>'
+          :'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">A favor: '+fmtM(d0.c65)+'</span>';
+        window._archivo_inc = window._archivo_inc||{};
+        window._archivo_inc[p] = d0;
+        html += '<div style="background:#faf5ff;border:1px solid #ede9fe;border-radius:10px;margin-bottom:12px;overflow:hidden;">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #ede9fe;">'
+          +'<div><div style="font-size:12px;font-weight:700;color:#6d28d9;">'+label+'</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">'+versiones.length+' liquidación(es) · Base Neta: '+fmtM(d0.c29)+' · IPO: '+fmtM(d0.c56)+'</div></div>'
+          +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+          +'<button onclick="inc_abrirDesde(\''+p+'\')" style="background:#6d28d9;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:10px;font-weight:700;cursor:pointer;">Ver último</button>'
+          +'</div></div>';
+        versiones.forEach(function(v, idx){
+          var fecha = v.meta.fechaLiquidacion ? new Date(v.meta.fechaLiquidacion).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Sin fecha';
+          var esUltimo = idx===0;
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:'+(esUltimo?'#f5f3ff':'#fff')+';border-bottom:1px solid #f0f0f0;">'
+            +'<div style="display:flex;align-items:center;gap:8px;">'
+            +(esUltimo?'<span style="background:#6d28d9;color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;">ÚLTIMO</span>':'<span style="background:#e5e7eb;color:#6b7280;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;">v'+(versiones.length-idx)+'</span>')
+            +'<span style="font-size:11px;color:#374151;">'+fecha+'</span>'
+            +'<span style="font-size:10px;color:#9ca3af;">IPO: '+fmtM(v.data.c56||0)+'</span>'
+            +'</div>'
+            +'<div style="display:flex;gap:6px;">'
+            +'<button onclick="inc_verVersion(\''+v.key+'\')" style="background:#f3f4f6;color:#374151;border:none;border-radius:5px;padding:4px 10px;font-size:10px;cursor:pointer;">Ver</button>'
+            +'<button onclick="inc_eliminarVersion(\''+v.key+'\')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:5px;padding:4px 8px;font-size:10px;cursor:pointer;">✕</button>'
+            +'</div></div>';
+        });
+        html += '</div>';
+      });
+      incList.innerHTML = html;
+    }).catch(function(){
+      incList.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+    });
+
+;
 }
+window.f300_verVersion = function(key){
+  db.collection('resultados_historico').doc(key).get().then(function(doc){
+    if(!doc.exists){ alert('No se encontró esta versión.'); return; }
+    var d = JSON.parse(doc.data().data||'{}');
+    var p = doc.data().pCod||'01';
+    window._archivo_f300 = window._archivo_f300||{};
+    window._archivo_f300[p] = d;
+    window._f300Data = d;
+    f300_renderCasilleros(d);
+    document.getElementById('f300-resultado').style.display='block';
+    showScreen('f300');
+    document.getElementById('f300-resultado').scrollIntoView({behavior:'smooth'});
+  });
+};
+
+window.f300_eliminarVersion = function(key){
+  if(!confirm('¿Eliminar esta versión? No se puede deshacer.')) return;
+  db.collection('resultados_historico').doc(key).delete().then(function(){
+    ss('Versión eliminada','ok');
+    // Recargar archivo de reportes
+    if(window._openGuardado) window._openGuardado();
+  });
+};
+
+window.inc_verVersion = function(key){
+  db.collection('resultados_historico').doc(key).get().then(function(doc){
+    if(!doc.exists){ alert('No se encontró esta versión.'); return; }
+    var d = JSON.parse(doc.data().data||'{}');
+    var p = doc.data().pCod||'01';
+    window._archivo_inc = window._archivo_inc||{};
+    window._archivo_inc[p] = d;
+    window._f310Data = d;
+    inc_renderCasilleros(d);
+    document.getElementById('inc-resultado').style.display='block';
+    showScreen('inc');
+    document.getElementById('inc-resultado').scrollIntoView({behavior:'smooth'});
+  });
+};
+
+window.inc_eliminarVersion = function(key){
+  if(!confirm('¿Eliminar esta versión? No se puede deshacer.')) return;
+  db.collection('resultados_historico').doc(key).delete().then(function(){
+    ss('Versión eliminada','ok');
+    if(window._openGuardado) window._openGuardado();
+  });
+};
+
 
 </script>
 
@@ -3722,12 +3843,26 @@ function f300_procesar(){
   f300_ss('Formulario 300 liquidado correctamente ✓','ok');
   // Guardar en Archivo de Reportes
   try{
-    var _k = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
-    if(window._f300Data && window.fbSaveResult && activeClientId){
+    var _ts = Date.now();
+    var _k = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(window._f300Data && db && activeClientId){
       window._f300Data.clienteId = activeClientId;
-      fbSaveResult(_k, window._f300Data).then(function(){
+      window._f300Data.tipo = 'f300';
+      window._f300Data.pCod = pCod;
+      window._f300Data.anio = anio;
+      window._f300Data.fechaLiquidacion = new Date().toISOString();
+      // Guardar versión histórica
+      db.collection('resultados_historico').doc(_k).set({
+        key: _k, clienteId: activeClientId, tipo: 'f300',
+        anio: anio, pCod: pCod,
+        fechaLiquidacion: new Date().toISOString(),
+        data: JSON.stringify(window._f300Data)
+      }).then(function(){
         f300_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
       }).catch(function(e){ console.warn('[F300 save]',e); });
+      // También sobreescribir el doc principal (para compatibilidad)
+      var _kMain = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
+      if(window.fbSaveResult) fbSaveResult(_kMain, window._f300Data);
     }
   }catch(e){ console.warn('[F300 save]',e); }
   }catch(e){
@@ -4107,12 +4242,25 @@ function inc_procesar(){
   inc_ss('Formulario 310 liquidado correctamente ✓','ok');
   // Guardar automáticamente en Archivo de Reportes
   try{
-    var _k = ('jnf_inc_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
-    if(window._f310Data) window._f310Data.clienteId = activeClientId;
-    if(window.fbSaveResult && activeClientId){
-      fbSaveResult(_k, window._f310Data).then(function(){
+    var _ts = Date.now();
+    var _k = ('jnf_inc_'+activeClientId+'_'+anio+'_'+pCod+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(window._f310Data && db && activeClientId){
+      window._f310Data.clienteId = activeClientId;
+      window._f310Data.tipo = 'inc';
+      window._f310Data.pCod = pCod;
+      window._f310Data.anio = anio;
+      window._f310Data.fechaLiquidacion = new Date().toISOString();
+      db.collection('resultados_historico').doc(_k).set({
+        key: _k, clienteId: activeClientId, tipo: 'inc',
+        anio: anio, pCod: pCod,
+        fechaLiquidacion: new Date().toISOString(),
+        data: JSON.stringify(window._f310Data)
+      }).then(function(){
         inc_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
       }).catch(function(e){ console.warn('[INC save]',e); });
+      // También doc principal para compatibilidad
+      var _kMain = ('jnf_inc_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
+      if(window.fbSaveResult) fbSaveResult(_kMain, window._f310Data);
     }
   }catch(e){ console.warn('[INC save]',e); }
 }
