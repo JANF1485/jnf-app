@@ -219,7 +219,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 <body>
 
 
-<div id="screen-login" style="min-height:100vh;display:none;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;">
+<div id="screen-login" style="position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;z-index:9999;overflow-y:auto;">
   <div style="background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:2px;">ASESORÍAS Y CONSULTORÍAS JNF S.A.S.</div>
@@ -2030,22 +2030,14 @@ var FB_CONFIG = {
 
 window._splashEnter = window.splashEnter = function splashEnter(){
   sessionStorage.setItem('splashSeen','1');
-  var splashEl = document.getElementById('screen-splash');
-  var loginEl  = document.getElementById('screen-login');
-  var appEl    = document.getElementById('screen-app');
-  if(splashEl) splashEl.style.display = 'none';
-  if(appEl)    appEl.style.display    = 'none';
-  // Si ya hay sesion activa confirmada por Firebase, ir directo a la app
+  document.getElementById('screen-splash').style.display='none';
   if(currentUser && currentPerfil){
-    if(loginEl) loginEl.style.display = 'none';
-    if(appEl)   appEl.style.display   = '';
+    // Already logged in - go straight to app
+    document.getElementById('screen-app').style.display='';
     showScreen('clientes');
-    return;
-  }
-  // Mostrar login siempre — sin condiciones
-  if(loginEl){
-    loginEl.style.cssText = loginEl.style.cssText.replace(/display:[^;]+;?/gi, '');
-    loginEl.style.display = 'flex';
+  } else {
+    // Not logged in - show login
+    document.getElementById('screen-login').style.display='flex';
   }
 }
 
@@ -2151,15 +2143,10 @@ function showLoginError(msg){
 }
 
 function showLoginScreen(){
-  var loginEl = document.getElementById('screen-login');
-  var splashEl = document.getElementById('screen-splash');
-  var appEl = document.getElementById('screen-app');
-  if(splashEl) splashEl.style.display = 'none';
-  if(appEl)    appEl.style.display    = 'none';
-  if(loginEl){
-    loginEl.style.cssText = loginEl.style.cssText.replace(/display:[^;]+;?/gi, '');
-    loginEl.style.display = 'flex';
-  }
+  document.getElementById('screen-login').style.display='flex';
+  document.getElementById('screen-splash').style.display='none';
+  var app = document.getElementById('screen-app');
+  if(app) app.style.display='none';
 }
 
 function showApp(){
