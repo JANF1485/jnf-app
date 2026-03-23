@@ -3625,7 +3625,7 @@ async function f300_descargarPDF(){
     doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(blue[0],blue[1],blue[2]);
     doc.text(String(cas),W-50,yy+4.5,{align:'center'});
     doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
+    var rc=val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150];doc.setTextColor(rc[0],rc[1],rc[2]);
     doc.text('$ '+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.5,{align:'right'});
     return yy+lH;
   }
@@ -3998,7 +3998,7 @@ async function inc_descargarPDF(){
     doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(purple[0],purple[1],purple[2]);
     doc.text(String(cas),W-50,yy+4.5,{align:'center'});
     doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.setTextColor(val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150]);
+    var rc=val>0?[6,95,70]:val<0?[153,27,27]:[150,150,150];doc.setTextColor(rc[0],rc[1],rc[2]);
     doc.text('$ '+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.5,{align:'right'});
     return yy+lH;
   }
