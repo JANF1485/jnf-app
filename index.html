@@ -3739,9 +3739,9 @@ function cargarArchivo(clientId, year){
     .get().then(function(snap){
       var meses = {};
       snap.forEach(function(doc){
-        var d = doc.data();
+        var d    = doc.data();
         var data = JSON.parse(d.data||'{}');
-        var mes = data.periodo || d.periodo || '01';
+        var mes  = data.periodo || d.periodo || '01';
         if(!meses[mes] || d.fechaGuardado > (meses[mes].meta.fechaGuardado||'')){
           meses[mes] = {key:doc.id, meta:d, data:data};
         }
@@ -3753,34 +3753,58 @@ function cargarArchivo(clientId, year){
       };
       var periodos = Object.keys(meses).sort();
       if(!periodos.length){
-        if(f350List) f350List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+        if(f350List) f350List.innerHTML = '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
         return;
       }
-      var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
+      var fmtM = function(n){ return n ? '$'+Math.round(n).toLocaleString('es-CO') : '$0'; };
       var html = '';
       periodos.forEach(function(p){
         var r    = meses[p];
         var d    = r.data;
         var c138 = d.c138 || 0;
-        var fecha = r.meta.fechaGuardado ? new Date(r.meta.fechaGuardado).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-        var badge = c138 > 0
+        var fecha = r.meta.fechaGuardado
+          ? new Date(r.meta.fechaGuardado).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+          : '—';
+        var badgeHtml = c138 > 0
           ? '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Pago: '+fmtM(c138)+'</span>'
           : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Sin retenciones</span>';
+        var safeKey = r.key.replace(/"/g,'&quot;');
+        var safePer = p.replace(/"/g,'&quot;');
         html += '<div style="background:#f8faff;border:1px solid #e5e7f0;border-radius:10px;margin-bottom:10px;overflow:hidden;">';
         html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #e5e7f0;">'
-          +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+(MESES_LABEL[p]||p)+' '+year+'</div>'
-          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Guardado: '+fecha+' · C.130: '+fmtM(d.c130||0)+' · IVA: '+fmtM(d.c134||0)+'</div></div>'
-          +'<div style="display:flex;align-items:center;gap:8px;">'+badge
-          +'<button onclick="f350_abrirPer(''+p+'')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
-          +'<button onclick="guardadoEliminarF350(''+r.key+'',''+p+'')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:6px 8px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">✕</button>'
-          +'</div></div>';
+          + '<div>'
+          +   '<div style="font-size:12px;font-weight:700;color:#1a2580;">'+(MESES_LABEL[p]||p)+' '+year+'</div>'
+          +   '<div style="font-size:10px;color:#6b7280;margin-top:2px;">Guardado: '+fecha+' &nbsp;·&nbsp; C.130: '+fmtM(d.c130||0)+' &nbsp;·&nbsp; IVA: '+fmtM(d.c134||0)+'</div>'
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;">'
+          +   badgeHtml
+          +   '<button class="grd-f350-ver" data-per="'+safePer+'" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+          +   '<button class="grd-f350-del" data-key="'+safeKey+'" data-per="'+safePer+'" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:6px 8px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">✕</button>'
+          + '</div>'
+          + '</div>';
         html += '</div>';
       });
-      if(f350List) f350List.innerHTML = html;
+      if(f350List){
+        f350List.innerHTML = html;
+        // Conectar eventos via delegación para evitar comillas en onclick
+        f350List.addEventListener('click', function(e){
+          var btnVer = e.target.closest('.grd-f350-ver');
+          var btnDel = e.target.closest('.grd-f350-del');
+          if(btnVer){
+            var per = btnVer.getAttribute('data-per');
+            if(window.f350_abrirPer) window.f350_abrirPer(per);
+            else if(window.openF350){ window.openF350(); setTimeout(function(){ if(window.f350_abrirPer) window.f350_abrirPer(per); }, 300); }
+          }
+          if(btnDel){
+            var key = btnDel.getAttribute('data-key');
+            var per = btnDel.getAttribute('data-per');
+            window.guardadoEliminarF350(key, per);
+          }
+        });
+      }
     }).catch(function(){
-      if(f350List) f350List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
-    });
-
+      if(f350List) f350List.innerHTML = '<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+    })
 ;
 }
 window.f300_verVersion = function(key){
