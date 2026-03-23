@@ -1429,11 +1429,29 @@ window._renderClients = window.renderClients = function renderClients(){
     return;
   }
 
-  // Obtener nombres de contadores
+  // Obtener nombres de contadores — combinar todas las fuentes disponibles
   var usuMap = {};
+  // Fuente 1: _calGlobalContadores (se puebla en loadUsuarios)
+  if(window._calGlobalContadores){
+    Object.keys(window._calGlobalContadores).forEach(function(uid){
+      usuMap[uid] = window._calGlobalContadores[uid];
+    });
+  }
+  // Fuente 2: _usuariosGlobal
   (window._usuariosGlobal||[]).forEach(function(u){
-    usuMap[u.uid||u.id] = u.nombre||u.email||'';
+    var uid = u.uid || u.id;
+    if(uid) usuMap[uid] = u.nombre || u.email || usuMap[uid] || uid;
   });
+  // Fuente 3: opciones del select de contador (siempre disponible)
+  var selCont = document.getElementById('filterContador');
+  if(selCont){
+    for(var i=0; i<selCont.options.length; i++){
+      var opt = selCont.options[i];
+      if(opt.value && opt.value !== 'sin_asignar' && !usuMap[opt.value]){
+        usuMap[opt.value] = opt.textContent.replace(/\s*\(Admin\)|\s*\(Contador\)/g,'').trim();
+      }
+    }
+  }
 
   grid.innerHTML = lista.map(function(c){
     var jur      = c.tipo !== 'PN';
@@ -1443,7 +1461,8 @@ window._renderClients = window.renderClients = function renderClients(){
     var tipoCls   = jur ? 'cc-tipo'   : 'cc-tipo nat';
     var tipoLabel = jur ? 'Persona Jurídica' : 'Persona Natural';
     var nitStr    = (c.nit||'') + (c.dv ? ' - '+c.dv : '');
-    var contNom   = c.contadorUid ? (usuMap[c.contadorUid]||c.contadorUid) : '';
+    var rawNom    = c.contadorUid ? (usuMap[c.contadorUid]||'') : '';
+    var contNom   = rawNom || (c.contadorUid ? '...' : '');
     var respsHtml = '';
     if(c.resps && c.resps.length){
       respsHtml = '<div class="cc-resp">'
@@ -2385,6 +2404,10 @@ function loadUsuarios(){
     users.forEach(function(u){
       if(u.uid) window._calGlobalContadores[u.uid] = u.nombre || u.email || u.uid;
     });
+    return users;
+  }).then(function(users){
+    // Re-renderizar clientes con nombres de contadores ya cargados
+    if(typeof renderClients === 'function') renderClients();
     return users;
   });
 }
