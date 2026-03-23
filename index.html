@@ -1390,6 +1390,107 @@ function getForm(){
     contadorUid: (document.getElementById('f_contador') ? document.getElementById('f_contador').value : '') || '',
   };
 }
+// ── RENDER CLIENTES ──────────────────────────────────────
+window._renderClients = window.renderClients = function renderClients(){
+  var grid     = document.getElementById('clientsGrid');
+  var badge    = document.getElementById('countBadge');
+  var searchQ  = (document.getElementById('searchBox')||{}).value||'';
+  var filterC  = (document.getElementById('filterContador')||{}).value||'';
+  searchQ = searchQ.toLowerCase().trim();
+
+  var lista = clients.filter(function(c){
+    // Filtro búsqueda
+    var nombre = (c.razon||c.nombre||'').toLowerCase();
+    var nit    = (c.nit||'').toLowerCase();
+    var ok1    = !searchQ || nombre.includes(searchQ) || nit.includes(searchQ);
+    // Filtro contador
+    var ok2    = !filterC ||
+                 c.contadorUid === filterC ||
+                 (filterC === 'sin_asignar' && !c.contadorUid);
+    return ok1 && ok2;
+  });
+
+  if(badge) badge.textContent = lista.length + (lista.length===1?' cliente':' clientes');
+
+  if(!grid) return;
+
+  if(!lista.length){
+    var msg = searchQ
+      ? 'No se encontraron clientes para "'+searchQ+'"'
+      : 'Aún no hay clientes registrados';
+    var sub = searchQ
+      ? 'Intenta con otro nombre o NIT'
+      : 'Haz clic en "Agregar cliente" para comenzar';
+    grid.innerHTML = '<div class="empty-state">'
+      +'<div class="empty-icon">👥</div>'
+      +'<div class="empty-title">'+msg+'</div>'
+      +'<div class="empty-sub">'+sub+'</div>'
+      +'</div>';
+    return;
+  }
+
+  // Obtener nombres de contadores
+  var usuMap = {};
+  (window._usuariosGlobal||[]).forEach(function(u){
+    usuMap[u.uid||u.id] = u.nombre||u.email||'';
+  });
+
+  grid.innerHTML = lista.map(function(c){
+    var jur      = c.tipo !== 'PN';
+    var initials = (c.razon||c.nombre||'?').split(' ').slice(0,2)
+                    .map(function(w){return w[0]||'';}).join('').toUpperCase();
+    var avatarCls = jur ? 'cc-avatar' : 'cc-avatar nat';
+    var tipoCls   = jur ? 'cc-tipo'   : 'cc-tipo nat';
+    var tipoLabel = jur ? 'Persona Jurídica' : 'Persona Natural';
+    var nitStr    = (c.nit||'') + (c.dv ? ' - '+c.dv : '');
+    var contNom   = c.contadorUid ? (usuMap[c.contadorUid]||c.contadorUid) : '';
+    var respsHtml = '';
+    if(c.resps && c.resps.length){
+      respsHtml = '<div class="cc-resp">'
+        + c.resps.slice(0,4).map(function(r){
+            return '<span class="resp-tag">'+r+'</span>';
+          }).join('')
+        + (c.resps.length>4?'<span class="resp-tag">+'+( c.resps.length-4)+'</span>':'')
+        +'</div>';
+    }
+    return '<div class="client-card">'
+      +'<div class="cc-header">'
+      +  '<div class="'+avatarCls+'">'+initials+'</div>'
+      +  '<div class="cc-info">'
+      +    '<div class="cc-name" title="'+(c.razon||c.nombre||'')+'">'+( c.razon||c.nombre||'—')+'</div>'
+      +    '<div class="cc-nit">NIT: '+nitStr+'</div>'
+      +    '<span class="'+tipoCls+'">'+tipoLabel+'</span>'
+      +  '</div>'
+      +'</div>'
+      +'<div class="cc-body">'
+      +  (c.ciiu ? '<span><strong>CIIU:</strong> '+c.ciiu+'</span>' : '')
+      +  (c.regimen ? '<span><strong>Régimen:</strong> '+c.regimen+'</span>' : '')
+      +  (c.ciudad ? '<span><strong>Ciudad:</strong> '+c.ciudad+'</span>' : '')
+      +  (contNom ? '<span><strong>Contador:</strong> '+contNom+'</span>' : '')
+      +'</div>'
+      +respsHtml
+      +'<div class="cc-actions">'
+      +  '<button class="btn btn-sm btn-gold cc-btn-abrir" data-id="'+c.id+'">📂 Abrir</button>'
+      +  '<button class="btn btn-sm btn-ol cc-btn-ficha" data-id="'+c.id+'">📋 Ficha</button>'
+      +  '<button class="btn btn-sm btn-ol cc-btn-edit" data-id="'+c.id+'">✏️</button>'
+      +  '<button class="btn btn-sm btn-ol cc-btn-del" data-id="'+c.id+'" style="color:var(--re);border-color:var(--re);">🗑</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  // Event delegation para botones
+  grid.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-id]');
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    if(btn.classList.contains('cc-btn-abrir')) openContabilidad(id);
+    else if(btn.classList.contains('cc-btn-ficha')) openFicha(id);
+    else if(btn.classList.contains('cc-btn-edit'))  editClient(id);
+    else if(btn.classList.contains('cc-btn-del'))   deleteClient(id);
+  }, {once: true});
+};
+
+
 function saveClient(){
   const d=getForm();
   if(!d.razon){ss('El nombre o razón social es obligatorio','err');return;}
