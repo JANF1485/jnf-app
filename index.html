@@ -3720,8 +3720,16 @@ function f300_procesar(){
   document.getElementById('f300-resultado').style.display='block';
   document.getElementById('f300-resultado').scrollIntoView({behavior:'smooth'});
   f300_ss('Formulario 300 liquidado correctamente ✓','ok');
-  try{var _k='jnf_f300_'+activeClientId+'_'+f300_anio+'_'+f300_pCod;
-  if(window.fbSaveResult)window.fbSaveResult(_k,window._f300Data);}catch(e){}
+  // Guardar en Archivo de Reportes
+  try{
+    var _k = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(window._f300Data && window.fbSaveResult && activeClientId){
+      window._f300Data.clienteId = activeClientId;
+      fbSaveResult(_k, window._f300Data).then(function(){
+        f300_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
+      }).catch(function(e){ console.warn('[F300 save]',e); });
+    }
+  }catch(e){ console.warn('[F300 save]',e); }
   }catch(e){
     f300_ss('Error al liquidar: '+e.message,'err');
     console.error('[F300]',e);
@@ -4330,8 +4338,10 @@ window._openF300 = window.openF300 = function openF300(){
   f300_updatePeriodos();
   var fa=document.getElementById('f300-anio'); if(fa) fa.value=yr;
   var ff=document.getElementById('f300-fileNameDisplay'); if(ff) ff.textContent='';
-  var fb=document.getElementById('f300-btnProcesar'); if(fb) fb.disabled=true;
+  var fb=document.getElementById('f300-btnProcesar'); if(fb) fb.disabled=true; if(fb) fb.style.opacity='.5';
   var fr=document.getElementById('f300-resultado'); if(fr) fr.style.display='none';
+  var fi=document.getElementById('f300-fileInput'); if(fi) fi.value='';
+  var fs=document.getElementById('f300-sheetsDetected'); if(fs) fs.innerHTML='';
   f300_wb=null; f300_sheetMap={};
   f300_loadSaved(c.id, yr);
 }
@@ -4346,8 +4356,10 @@ window._openINC = window.openINC = function openINC(){
   inc_updatePeriodos();
   var ia=document.getElementById('inc-anio'); if(ia) ia.value=yr;
   var ifd=document.getElementById('inc-fileNameDisplay'); if(ifd) ifd.textContent='';
-  var ib=document.getElementById('inc-btnProcesar'); if(ib) ib.disabled=true;
+  var ib=document.getElementById('inc-btnProcesar'); if(ib) ib.disabled=true; if(ib) ib.style.opacity='.5';
   var ir=document.getElementById('inc-resultado'); if(ir) ir.style.display='none';
+  var ifi=document.getElementById('inc-fileInput'); if(ifi) ifi.value='';
+  var isd=document.getElementById('inc-sheetsDetected'); if(isd) isd.innerHTML='';
   inc_wb=null; inc_sheetVentas=null; inc_sheetDevVentas=null;
   inc_loadSaved(c.id, yr);
 }
