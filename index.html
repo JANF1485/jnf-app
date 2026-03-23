@@ -957,14 +957,18 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   <!-- Filtros -->
   <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:180px;position:relative;">
+      <div style="flex:1;min-width:220px;position:relative;display:flex;gap:0;">
         <input type="text" id="aud-buscar" placeholder="Buscar usuario, cliente o detalle…"
-          oninput="audRender();audAutoComplete(this.value)"
+          oninput="audAutoComplete(this.value)"
           onkeydown="audAutoKeyDown(event)"
           autocomplete="off"
-          style="width:100%;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:8px 12px;outline:none;color:var(--tx);"
-          onfocus="this.style.borderColor='var(--blue)';audAutoComplete(this.value)" onblur="setTimeout(function(){audAutoHide();},200)"/>
-        <div id="aud-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--sf);border:1.5px solid var(--blue);border-top:none;border-radius:0 0 8px 8px;z-index:999;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(26,37,128,.15);"></div>
+          style="flex:1;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--bm);border-right:none;border-radius:7px 0 0 7px;padding:8px 12px;outline:none;color:var(--tx);background:var(--sf);"
+          onfocus="this.style.borderColor='var(--blue)';audAutoComplete(this.value)"
+          onblur="setTimeout(function(){audAutoHide();},200)"/>
+        <button onclick="audRender()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;background:var(--bd);color:#fff;border:1.5px solid var(--bd);border-radius:0 7px 7px 0;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar
+        </button>
+        <div id="aud-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:48px;background:var(--sf);border:1.5px solid var(--blue);border-top:none;border-radius:0 0 8px 8px;z-index:9999;max-height:260px;overflow-y:auto;box-shadow:0 6px 20px rgba(26,37,128,.18);"></div>
       </div>
       <select id="aud-f-usuario" onchange="audRender()"
         style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);border-radius:7px;padding:8px 10px;background:var(--sf);color:var(--bd);outline:none;min-width:150px;">
@@ -4419,15 +4423,46 @@ function audAutoComplete(q){
   var drop=document.getElementById('aud-autocomplete');
   if(!drop)return;
   q=(q||'').trim().toLowerCase();
-  if(!q||q.length<2){audAutoHide();return;}
-  var vistos={},sugs=[];
+  if(!q||q.length<1){audAutoHide();return;}
+
+  var vistos={}, sugs=[];
+
+  // ── Fuente 1: clientes registrados en la app ──────────
+  if(typeof clients !== 'undefined'){
+    clients.forEach(function(c){
+      var nombre=(c.razon||'').toLowerCase();
+      var nit=(c.nit||'').toLowerCase();
+      if(nombre.includes(q)||nit.includes(q)){
+        var k='c:'+c.id;
+        if(!vistos[k]){
+          vistos[k]=true;
+          sugs.push({tipo:'cliente',label:c.razon||c.nit,cid:c.id});
+        }
+      }
+    });
+  }
+
+  // ── Fuente 2: usuarios de la app ──────────────────────
+  var usuariosGlobal=window._usuariosGlobal||[];
+  usuariosGlobal.forEach(function(u){
+    var nombre=(u.nombre||u.email||'').toLowerCase();
+    if(nombre.includes(q)){
+      var k='u:'+nombre;
+      if(!vistos[k]){
+        vistos[k]=true;
+        sugs.push({tipo:'usuario',label:u.nombre||u.email,cid:u.uid||''});
+      }
+    }
+  });
+
+  // ── Fuente 3: logs de auditoría ya cargados ───────────
   _audLogs.forEach(function(r){
     if(r.usuario&&r.usuario.toLowerCase().includes(q)){
       var k='u:'+r.usuario;
       if(!vistos[k]){vistos[k]=true;sugs.push({tipo:'usuario',label:r.usuario,cid:''});}
     }
     if(r.cliente&&r.cliente!=='—'&&r.cliente.toLowerCase().includes(q)){
-      var k2='c:'+r.cliente;
+      var k2='c:'+r.clienteId;
       if(!vistos[k2]){vistos[k2]=true;sugs.push({tipo:'cliente',label:r.cliente,cid:r.clienteId||''});}
     }
     if(r.modulo&&r.modulo.toLowerCase().includes(q)){
@@ -4435,19 +4470,37 @@ function audAutoComplete(q){
       if(!vistos[k3]){vistos[k3]=true;sugs.push({tipo:'modulo',label:r.modulo,cid:''});}
     }
   });
-  sugs=sugs.slice(0,8);
-  if(!sugs.length){audAutoHide();return;}
+
+  sugs=sugs.slice(0,10);
+  if(!sugs.length){
+    drop.style.display='block';
+    drop.innerHTML='<div style="padding:12px 14px;font-size:12px;color:var(--t3);">Sin resultados para "'+q.replace(/</g,'&lt;')+'"</div>';
+    return;
+  }
+
   _audACIndex=-1;
   drop.style.display='block';
-  var BADGE={usuario:'background:var(--bl);color:var(--bd)',cliente:'background:var(--gb);color:var(--gr)',modulo:'background:var(--pb);color:var(--pu)'};
+  var BADGE={
+    usuario:'background:var(--bl);color:var(--bd)',
+    cliente:'background:var(--gb);color:var(--gr)',
+    modulo:'background:var(--pb);color:var(--pu)'
+  };
   var BTXT={usuario:'Usuario',cliente:'Cliente',modulo:'Módulo'};
+  var ICONS={
+    usuario:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+    cliente:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>',
+    modulo:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
+  };
+
   drop.innerHTML=sugs.map(function(s,i){
     var safe=s.label.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     return '<div class="aud-ac-item" data-idx="'+i+'" data-tipo="'+s.tipo+'" data-cid="'+s.cid+'" data-label="'+safe+'"'
       +' onmousedown="audAutoSelectEl(this)" onmouseover="audACHover('+i+')"'
-      +' style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--br);font-size:12px;color:var(--tx);">'
-      +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+s.label+'</span>'
-      +'<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;'+BADGE[s.tipo]+'">'+BTXT[s.tipo]+'</span>'
+      +' style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;'
+      +'border-bottom:0.5px solid var(--br);font-size:12px;color:var(--tx);transition:background .1s;">'
+      +'<span style="color:var(--t2);flex-shrink:0;">'+ICONS[s.tipo]+'</span>'
+      +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">'+s.label+'</span>'
+      +'<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;'+BADGE[s.tipo]+'">'+BTXT[s.tipo]+'</span>'
       +'</div>';
   }).join('');
 }
