@@ -712,12 +712,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 </div>
 
 <!-- ═══ PANTALLA 3: CONSOLIDADOR ════════════════════════ -->
-
 <!-- ═══ PANTALLA F350: RETENCIÓN EN LA FUENTE ════════════════════ -->
 <div id="screen-f350" class="main" style="display:none;">
   <div class="gold-bar"></div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-    <button class="btn btn-ol btn-sm" onclick="showScreen('contabilidad');setTimeout(()=>loadSavedResults(activeClientId,activeYear),100);" style="gap:5px;">
+    <button class="btn btn-ol btn-sm" onclick="showScreen('contabilidad');setTimeout(function(){loadSavedResults(activeClientId,activeYear);},100);" style="gap:5px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       Volver a módulos
     </button>
@@ -727,17 +726,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     <span style="font-size:10px;font-weight:700;color:var(--bd);">🧾 Retención en la Fuente — Formulario 350</span>
     <span id="f350-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
   </div>
-
   <div id="f350-status" style="display:none;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;"></div>
-
-  <!-- Selector período + controles -->
   <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:18px 22px;margin-bottom:20px;">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:200px;">
         <label style="font-size:11px;font-weight:700;color:var(--t2);white-space:nowrap;">Período (mes):</label>
-        <select id="f350-periodo" onchange="f350_changePeriodo()"
-          style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--bm);
-          border-radius:8px;padding:8px 12px;background:var(--sf);color:var(--bd);outline:none;min-width:180px;">
+        <select id="f350-periodo" onchange="f350_changePeriodo()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--bm);border-radius:8px;padding:8px 12px;background:var(--sf);color:var(--bd);outline:none;min-width:180px;">
           <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
           <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
           <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
@@ -746,24 +740,18 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button onclick="f350_guardar()" class="btn" style="background:var(--gr);color:#fff;gap:5px;font-size:11px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Guardar
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
         </button>
         <button onclick="f350_limpiar()" class="btn btn-ol" style="font-size:11px;gap:5px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.79"/></svg>
-          Limpiar
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.79"/></svg>Limpiar
         </button>
         <button onclick="f350_generarPDF()" class="btn" style="background:var(--bd);color:#fff;gap:5px;font-size:11px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Exportar resumen
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar
         </button>
       </div>
     </div>
   </div>
-
   <div style="display:grid;grid-template-columns:1fr;gap:20px;">
-
-    <!-- RETENCIONES PERSONAS JURÍDICAS -->
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#1a2580,#2535a8);padding:12px 18px;display:flex;align-items:center;gap:10px;">
         <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">PJ</div>
@@ -774,7 +762,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:#f8faff;">
             <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base sujeta a retención ($)</th>
+            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base ($)</th>
             <th style="text-align:center;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:70px;">Tarifa %</th>
             <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--bd);border-bottom:2px solid var(--br);min-width:140px;">Retención ($)</th>
           </tr></thead>
@@ -786,8 +774,6 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </table>
       </div>
     </div>
-
-    <!-- RETENCIONES PERSONAS NATURALES -->
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#065f46,#0d7e5e);padding:12px 18px;display:flex;align-items:center;gap:10px;">
         <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">PN</div>
@@ -798,7 +784,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:#f0fdf4;">
             <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base sujeta a retención ($)</th>
+            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base ($)</th>
             <th style="text-align:center;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:70px;">Tarifa %</th>
             <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--gr);border-bottom:2px solid var(--br);min-width:140px;">Retención ($)</th>
           </tr></thead>
@@ -810,20 +796,17 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </table>
       </div>
     </div>
-
-    <!-- AUTORRETENCIONES PJ -->
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#92400e,#b45309);padding:12px 18px;display:flex;align-items:center;gap:10px;">
         <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">AR</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Autorretenciones — Personas Jurídicas (Art. 114-1 E.T.)</div>
+        <div style="font-size:12px;font-weight:800;color:#fff;">Autorretenciones — PJ (Art. 114-1 E.T.)</div>
         <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.6);">Casillas 59–76</div>
       </div>
       <div style="padding:16px 18px;overflow-x:auto;">
         <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:14px;align-items:end;">
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Casilla 27 — Actividad económica principal (CIIU)</label>
-            <select id="f350-ciiu-ar" onchange="f350_calcularTarifaAR()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:7px 10px;background:var(--sf);color:var(--tx);outline:none;">
+            <select id="f350-ciiu-ar" onchange="f350_calcularTarifaAR()" style="width:100%;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:7px 10px;background:var(--sf);color:var(--tx);outline:none;">
               <option value="">— Seleccionar actividad económica —</option>
               <option value="0111-0322|0.00">Agropecuarias (0111–0322) · 0.00%</option>
               <option value="0500-0990|0.00">Extracción carbón e hidrocarburos (0500–0990) · 0.00%</option>
@@ -851,8 +834,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:#fef3c7;">
-            <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto (Casillas base/autorretención)</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:160px;">Base (pagos o abonos en cta.) ($)</th>
+            <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
+            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:160px;">Base ($)</th>
             <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--or);border-bottom:2px solid var(--br);min-width:140px;">Autorretención ($)</th>
           </tr></thead>
           <tbody id="f350-tbody-ar"></tbody>
@@ -863,33 +846,24 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </table>
       </div>
     </div>
-
-    <!-- RETENCIONES IVA -->
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#5b21b6,#7c3aed);padding:12px 18px;display:flex;align-items:center;gap:10px;">
         <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">IVA</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Retenciones de IVA — Título de IVA</div>
-        <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.6);">Casillas 131–134</div>
+        <div style="font-size:12px;font-weight:800;color:#fff;">Retenciones de IVA — Título de IVA (Casillas 131–134)</div>
       </div>
       <div style="padding:16px 18px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">131 · A responsables del impuesto sobre las ventas ($)</label>
-            <input type="text" id="f350-c131" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;"
-              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+            <input type="text" id="f350-c131" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">132 · Practicadas por servicios a no residentes ($)</label>
-            <input type="text" id="f350-c132" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;"
-              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+            <input type="text" id="f350-c132" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
           </div>
           <div>
-            <label style="font-size:10px;font-weight:700;color:var(--re);display:block;margin-bottom:4px;">133 · (−) Retenciones IVA en exceso / operaciones anuladas ($)</label>
-            <input type="text" id="f350-c133" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;"
-              onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
+            <label style="font-size:10px;font-weight:700;color:var(--re);display:block;margin-bottom:4px;">133 · (−) Retenciones IVA en exceso / anuladas ($)</label>
+            <input type="text" id="f350-c133" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;" onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
           </div>
           <div style="background:var(--pb);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;">
             <div style="font-size:10px;font-weight:700;color:var(--pu);text-transform:uppercase;margin-bottom:4px;">134 · Total Retenciones IVA</div>
@@ -898,8 +872,6 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </div>
       </div>
     </div>
-
-    <!-- TIMBRE, DEDUCCIONES, SANCIONES -->
     <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
       <div style="background:#374151;padding:12px 18px;">
         <div style="font-size:12px;font-weight:800;color:#fff;">⚙️ Timbre · Deducciones renta · Sanciones</div>
@@ -907,28 +879,20 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <div style="padding:16px 18px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
           <div>
-            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">135 · Retenciones impuesto timbre nacional ($)</label>
-            <input type="text" id="f350-c135" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--tx);text-align:right;"
-              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">135 · Retenciones impuesto timbre ($)</label>
+            <input type="text" id="f350-c135" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--tx);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--re);display:block;margin-bottom:4px;">129 · (−) Retenciones renta en exceso / anuladas ($)</label>
-            <input type="text" id="f350-c129" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;"
-              onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
+            <input type="text" id="f350-c129" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;" onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--or);display:block;margin-bottom:4px;">137 · Sanciones ($)</label>
-            <input type="text" id="f350-c137" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()"
-              style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid #fcd34d;border-radius:7px;padding:9px 12px;outline:none;color:var(--or);text-align:right;"
-              onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='#fcd34d'"/>
+            <input type="text" id="f350-c137" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid #fcd34d;border-radius:7px;padding:9px 12px;outline:none;color:var(--or);text-align:right;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='#fcd34d'"/>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- PANEL TOTALES -->
     <div style="background:linear-gradient(135deg,#1a2580 0%,#2535a8 60%,#1a2580 100%);border-radius:var(--r);padding:24px 28px;">
       <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px;">Liquidación — Formulario 350</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;">
@@ -961,17 +925,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         <div style="font-size:28px;font-weight:900;color:var(--bd);" id="f350-c138-display">$ 0</div>
       </div>
     </div>
-
-    <!-- HISTORIAL -->
     <div>
-      <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">
-        💾 Declaraciones guardadas — Año <span id="f350-hist-year"></span>
-      </div>
+      <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">💾 Declaraciones guardadas — Año <span id="f350-hist-year"></span></div>
       <div id="f350-historial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
         <div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando historial...</div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -3697,360 +3656,281 @@ window.inc_eliminarVersion = function(key){
 
 
 
-// ════════════════════════════════════════════════════════════════════
-// MÓDULO F350 — RETENCIÓN EN LA FUENTE  (Formulario 350 DIAN)
-// ════════════════════════════════════════════════════════════════════
-
-var F350_CONCEPTOS_PJ = [
-  {id:'pj_hon', cas_base:29, cas_ret:42, label:'Honorarios',                        tarifa:10},
-  {id:'pj_com', cas_base:30, cas_ret:43, label:'Comisiones',                        tarifa:11},
-  {id:'pj_ser', cas_base:31, cas_ret:44, label:'Servicios',                         tarifa:4},
-  {id:'pj_rfi', cas_base:32, cas_ret:45, label:'Rendimientos financieros e intereses', tarifa:7},
-  {id:'pj_arr', cas_base:33, cas_ret:46, label:'Arrendamientos (muebles e inmuebles)', tarifa:3.5},
-  {id:'pj_reg', cas_base:34, cas_ret:47, label:'Regalías y explotación prop. intelectual', tarifa:15},
-  {id:'pj_div', cas_base:35, cas_ret:48, label:'Dividendos y participaciones',       tarifa:7.5},
-  {id:'pj_cmp', cas_base:36, cas_ret:49, label:'Compras',                            tarifa:2.5},
-  {id:'pj_tar', cas_base:37, cas_ret:50, label:'Transacciones tarjetas débito/crédito', tarifa:1.5},
-  {id:'pj_con', cas_base:38, cas_ret:51, label:'Contratos de construcción',          tarifa:1},
-  {id:'pj_lot', cas_base:39, cas_ret:52, label:'Loterías, rifas, apuestas y similares', tarifa:20},
-  {id:'pj_hid', cas_base:40, cas_ret:53, label:'Hidrocarburos, carbón y minerales',  tarifa:1},
-  {id:'pj_otr', cas_base:41, cas_ret:54, label:'Otros pagos sujetos a retención',    tarifa:2.5},
+<script>
+// ════════════════════════════════════════════════════════
+// MÓDULO F350 — RETENCIÓN EN LA FUENTE  (Formulario 350)
+// ════════════════════════════════════════════════════════
+var F350_PJ=[
+  {id:'pj_hon',cb:29,cr:42,label:'Honorarios',t:10},
+  {id:'pj_com',cb:30,cr:43,label:'Comisiones',t:11},
+  {id:'pj_ser',cb:31,cr:44,label:'Servicios',t:4},
+  {id:'pj_rfi',cb:32,cr:45,label:'Rendimientos financieros e intereses',t:7},
+  {id:'pj_arr',cb:33,cr:46,label:'Arrendamientos (muebles e inmuebles)',t:3.5},
+  {id:'pj_reg',cb:34,cr:47,label:'Regalías y explotación prop. intelectual',t:15},
+  {id:'pj_div',cb:35,cr:48,label:'Dividendos y participaciones',t:7.5},
+  {id:'pj_cmp',cb:36,cr:49,label:'Compras',t:2.5},
+  {id:'pj_tar',cb:37,cr:50,label:'Transacciones tarjetas débito/crédito',t:1.5},
+  {id:'pj_con',cb:38,cr:51,label:'Contratos de construcción',t:1},
+  {id:'pj_lot',cb:39,cr:52,label:'Loterías, rifas, apuestas y similares',t:20},
+  {id:'pj_hid',cb:40,cr:53,label:'Hidrocarburos, carbón y minerales',t:1},
+  {id:'pj_otr',cb:41,cr:54,label:'Otros pagos sujetos a retención',t:2.5}
 ];
-
-var F350_CONCEPTOS_PN = [
-  {id:'pn_tra', cas_base:77, cas_ret:93,  label:'Rentas de trabajo (salarios, comisiones…)', tarifa:null, nota:'Tabla Art. 383 E.T.'},
-  {id:'pn_pen', cas_base:78, cas_ret:94,  label:'Rentas de pensiones (>1000 UVT)',           tarifa:null, nota:'Tabla pensiones'},
-  {id:'pn_hon', cas_base:79, cas_ret:95,  label:'Honorarios',                                tarifa:10},
-  {id:'pn_com', cas_base:80, cas_ret:96,  label:'Comisiones',                                tarifa:11},
-  {id:'pn_ser', cas_base:81, cas_ret:97,  label:'Servicios',                                 tarifa:4},
-  {id:'pn_rfi', cas_base:82, cas_ret:98,  label:'Rendimientos financieros e intereses',      tarifa:7},
-  {id:'pn_arr', cas_base:83, cas_ret:99,  label:'Arrendamientos (muebles e inmuebles)',      tarifa:3.5},
-  {id:'pn_reg', cas_base:84, cas_ret:100, label:'Regalías y explotación prop. intelectual',  tarifa:15},
-  {id:'pn_div', cas_base:85, cas_ret:101, label:'Dividendos y participaciones',              tarifa:7.5},
-  {id:'pn_cmp', cas_base:86, cas_ret:102, label:'Compras',                                   tarifa:2.5},
-  {id:'pn_tar', cas_base:87, cas_ret:103, label:'Transacciones tarjetas débito/crédito',    tarifa:1.5},
-  {id:'pn_con', cas_base:88, cas_ret:104, label:'Contratos de construcción',                 tarifa:1},
-  {id:'pn_enj', cas_base:89, cas_ret:105, label:'Enajenación activos fijos (notarios/tránsito)', tarifa:1, nota:'Solo notarios/tránsito'},
-  {id:'pn_lot', cas_base:90, cas_ret:106, label:'Loterías, rifas, apuestas y similares',    tarifa:20},
-  {id:'pn_hid', cas_base:91, cas_ret:107, label:'Hidrocarburos, carbón y minerales',        tarifa:1},
-  {id:'pn_otr', cas_base:92, cas_ret:108, label:'Otros pagos sujetos a retención',          tarifa:2.5},
+var F350_PN=[
+  {id:'pn_tra',cb:77,cr:93, label:'Rentas de trabajo (salarios, comisiones…)',t:null,nota:'Tabla Art. 383 E.T.'},
+  {id:'pn_pen',cb:78,cr:94, label:'Rentas de pensiones (>1000 UVT)',t:null,nota:'Tabla pensiones'},
+  {id:'pn_hon',cb:79,cr:95, label:'Honorarios',t:10},
+  {id:'pn_com',cb:80,cr:96, label:'Comisiones',t:11},
+  {id:'pn_ser',cb:81,cr:97, label:'Servicios',t:4},
+  {id:'pn_rfi',cb:82,cr:98, label:'Rendimientos financieros e intereses',t:7},
+  {id:'pn_arr',cb:83,cr:99, label:'Arrendamientos (muebles e inmuebles)',t:3.5},
+  {id:'pn_reg',cb:84,cr:100,label:'Regalías y explotación prop. intelectual',t:15},
+  {id:'pn_div',cb:85,cr:101,label:'Dividendos y participaciones',t:7.5},
+  {id:'pn_cmp',cb:86,cr:102,label:'Compras',t:2.5},
+  {id:'pn_tar',cb:87,cr:103,label:'Transacciones tarjetas débito/crédito',t:1.5},
+  {id:'pn_con',cb:88,cr:104,label:'Contratos de construcción',t:1},
+  {id:'pn_enj',cb:89,cr:105,label:'Enajenación activos fijos (notarios/tránsito)',t:1,nota:'Solo notarios/tránsito'},
+  {id:'pn_lot',cb:90,cr:106,label:'Loterías, rifas, apuestas y similares',t:20},
+  {id:'pn_hid',cb:91,cr:107,label:'Hidrocarburos, carbón y minerales',t:1},
+  {id:'pn_otr',cb:92,cr:108,label:'Otros pagos sujetos a retención',t:2.5}
 ];
-
-var F350_CONCEPTOS_AR = [
-  {id:'ar_ven', cas_base:60, cas_ret:69, label:'Ventas'},
-  {id:'ar_hon', cas_base:61, cas_ret:70, label:'Honorarios'},
-  {id:'ar_com', cas_base:62, cas_ret:71, label:'Comisiones'},
-  {id:'ar_ser', cas_base:63, cas_ret:72, label:'Servicios'},
-  {id:'ar_rfi', cas_base:64, cas_ret:73, label:'Rendimientos financieros'},
-  {id:'ar_otr', cas_base:67, cas_ret:76, label:'Otros conceptos'},
+var F350_AR=[
+  {id:'ar_ven',cb:60,cr:69,label:'Ventas'},
+  {id:'ar_hon',cb:61,cr:70,label:'Honorarios'},
+  {id:'ar_com',cb:62,cr:71,label:'Comisiones'},
+  {id:'ar_ser',cb:63,cr:72,label:'Servicios'},
+  {id:'ar_rfi',cb:64,cr:73,label:'Rendimientos financieros'},
+  {id:'ar_otr',cb:67,cr:76,label:'Otros conceptos'}
 ];
+var _f350Per='01', _f350TAR=0;
 
-var _f350Periodo = '01';
-var _f350TarifaAR = 0;
+if(!window['openF350'])window['openF350']=function(){var a=arguments,t=this;var r=function(){if(window['_openF350'])window['_openF350'].apply(t,a);else setTimeout(r,50);};r();};
 
-if(!window['openF350']) window['openF350'] = function(){
-  if(window['_openF350']) window['_openF350'].apply(this, arguments);
-  else setTimeout(function(){ if(window['_openF350']) window['_openF350'](); }, 50);
-};
-
-window._openF350 = window.openF350 = function openF350(){
-  var c = clients.find(function(x){ return x.id === activeClientId; });
-  if(!c) return;
-  document.getElementById('f350-client-name').textContent = c.razon || c.nit;
-  document.getElementById('f350-year-badge').textContent  = activeYear || new Date().getFullYear();
-  document.getElementById('f350-hist-year').textContent   = activeYear || new Date().getFullYear();
-
+window._openF350=window.openF350=function openF350(){
+  var c=clients.find(function(x){return x.id===activeClientId;});
+  if(!c)return;
+  document.getElementById('f350-client-name').textContent=c.razon||c.nit;
+  document.getElementById('f350-year-badge').textContent=activeYear||new Date().getFullYear();
+  document.getElementById('f350-hist-year').textContent=activeYear||new Date().getFullYear();
   if(c.ciiu){
-    var selCiiu = document.getElementById('f350-ciiu-ar');
-    if(selCiiu){
-      var ciiuNum = parseInt(c.ciiu);
-      for(var i=0; i<selCiiu.options.length; i++){
-        var val = selCiiu.options[i].value;
-        if(!val) continue;
-        var parts = val.split('|');
-        var rango = parts[0].split('-');
-        if(ciiuNum >= parseInt(rango[0]) && ciiuNum <= parseInt(rango[1]||rango[0])){
-          selCiiu.value = val; break;
-        }
+    var sc=document.getElementById('f350-ciiu-ar');
+    if(sc){
+      var n=parseInt(c.ciiu);
+      for(var i=0;i<sc.options.length;i++){
+        var v=sc.options[i].value;if(!v)continue;
+        var p=v.split('|'),r=p[0].split('-');
+        if(n>=parseInt(r[0])&&n<=parseInt(r[1]||r[0])){sc.value=v;break;}
       }
       f350_calcularTarifaAR();
     }
   }
-
   f350_renderTablas();
-
-  var ahora = new Date();
-  var mesPor = ahora.getMonth() === 0 ? '12' : String(ahora.getMonth()).padStart(2,'0');
-  document.getElementById('f350-periodo').value = mesPor;
-  _f350Periodo = mesPor;
-
+  var ahora=new Date();
+  var mp=ahora.getMonth()===0?'12':String(ahora.getMonth()).padStart(2,'0');
+  document.getElementById('f350-periodo').value=mp;
+  _f350Per=mp;
   showScreen('f350');
   f350_cargarPeriodo();
   f350_cargarHistorial();
 };
 
 function f350_renderTablas(){
-  var tbPJ = document.getElementById('f350-tbody-pj');
-  if(tbPJ) tbPJ.innerHTML = F350_CONCEPTOS_PJ.map(function(c){ return f350_filaRetenc(c,'pj'); }).join('');
-  var tbPN = document.getElementById('f350-tbody-pn');
-  if(tbPN) tbPN.innerHTML = F350_CONCEPTOS_PN.map(function(c){ return f350_filaRetenc(c,'pn'); }).join('');
-  var tbAR = document.getElementById('f350-tbody-ar');
-  if(tbAR) tbAR.innerHTML = F350_CONCEPTOS_AR.map(function(c){ return f350_filaAR(c); }).join('');
+  var tpj=document.getElementById('f350-tbody-pj');
+  if(tpj)tpj.innerHTML=F350_PJ.map(function(c){return f350_filaR(c,'pj');}).join('');
+  var tpn=document.getElementById('f350-tbody-pn');
+  if(tpn)tpn.innerHTML=F350_PN.map(function(c){return f350_filaR(c,'pn');}).join('');
+  var tar=document.getElementById('f350-tbody-ar');
+  if(tar)tar.innerHTML=F350_AR.map(function(c){return f350_filaAR(c);}).join('');
 }
 
-function f350_filaRetenc(conc,tipo){
-  var nota = conc.nota ? '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+conc.nota+'</div>' : '';
-  return '<tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f8faff'" onmouseout="this.style.background=''">'
-    +'<td style="padding:8px 10px;"><div style="font-weight:600;color:var(--tx);">'+conc.label+'</div>'
-    +'<div style="font-size:9px;color:var(--t3);">Casillas '+conc.cas_base+'/'+conc.cas_ret+'</div>'+nota+'</td>'
-    +'<td style="padding:8px 10px;text-align:right;">'
-    +'<input type="text" id="f350-base-'+conc.id+'" placeholder="0"'
-    +' oninput="f350_formatInput(this);f350_recalcFila(''+conc.id+'',''+tipo+'')"'
-    +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);border-radius:6px;padding:6px 10px;width:100%;text-align:right;outline:none;color:var(--tx);"'
-    +' onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/></td>'
-    +'<td style="padding:8px 10px;text-align:center;">'
-    +(conc.tarifa!==null
-      ?'<input type="number" id="f350-tar-'+conc.id+'" value="'+(conc.tarifa||0)+'" min="0" max="100" step="0.1"'
-        +' oninput="f350_recalcFila(''+conc.id+'',''+tipo+'')"'
-        +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--br);border-radius:6px;padding:5px 6px;width:60px;text-align:center;outline:none;color:var(--bd);"'
-        +' onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>'
-      :'<span style="color:var(--t3);font-size:10px;">Tabla</span>')
-    +'</td>'
-    +'<td style="padding:8px 10px;text-align:right;"><div id="f350-ret-'+conc.id+'" style="font-size:12px;font-weight:700;color:var(--bd);">$ 0</div></td>'
+function f350_filaR(c,tipo){
+  var nota=c.nota?'<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+c.nota+'</div>':'';
+  var inp='<input type="text" id="f350-base-'+c.id+'" placeholder="0"'
+    +' oninput="f350_fmtI(this);f350_rcF(\''+c.id+'\',\''+tipo+'\')"'
+    +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);'
+    +'border-radius:6px;padding:6px 10px;width:100%;text-align:right;outline:none;color:var(--tx);"'
+    +' onfocus="this.style.borderColor=\'var(--blue)\'"'
+    +' onblur="this.style.borderColor=\'var(--br)\'"/>';
+  var tar_inp=c.t!==null
+    ?'<input type="number" id="f350-tar-'+c.id+'" value="'+(c.t||0)+'" min="0" max="100" step="0.1"'
+      +' oninput="f350_rcF(\''+c.id+'\',\''+tipo+'\')"'
+      +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--br);'
+      +'border-radius:6px;padding:5px 6px;width:60px;text-align:center;outline:none;color:var(--bd);"'
+      +' onfocus="this.style.borderColor=\'var(--blue)\'"'
+      +' onblur="this.style.borderColor=\'var(--br)\'"/>'
+    :'<span style="color:var(--t3);font-size:10px;">Tabla</span>';
+  return '<tr style="border-bottom:1px solid #f3f4f6;">'
+    +'<td style="padding:8px 10px;"><div style="font-weight:600;color:var(--tx);">'+c.label+'</div>'
+    +'<div style="font-size:9px;color:var(--t3);">Casillas '+c.cb+'/'+c.cr+'</div>'+nota+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;">'+inp+'</td>'
+    +'<td style="padding:8px 10px;text-align:center;">'+tar_inp+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;"><div id="f350-ret-'+c.id+'" style="font-size:12px;font-weight:700;color:var(--bd);">$ 0</div></td>'
     +'</tr>';
 }
 
-function f350_filaAR(conc){
-  return '<tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''">'
-    +'<td style="padding:8px 10px;"><div style="font-weight:600;color:var(--tx);">'+conc.label+'</div>'
-    +'<div style="font-size:9px;color:var(--t3);">Casillas '+conc.cas_base+' / '+conc.cas_ret+'</div></td>'
-    +'<td style="padding:8px 10px;text-align:right;">'
-    +'<input type="text" id="f350-base-'+conc.id+'" placeholder="0"'
-    +' oninput="f350_formatInput(this);f350_recalcAR(''+conc.id+'')"'
-    +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);border-radius:6px;padding:6px 10px;width:100%;text-align:right;outline:none;color:var(--tx);"'
-    +' onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--br)'"/></td>'
-    +'<td style="padding:8px 10px;text-align:right;"><div id="f350-ret-'+conc.id+'" style="font-size:12px;font-weight:700;color:var(--or);">$ 0</div></td>'
+function f350_filaAR(c){
+  var inp='<input type="text" id="f350-base-'+c.id+'" placeholder="0"'
+    +' oninput="f350_fmtI(this);f350_rcAR(\''+c.id+'\')"'
+    +' style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);'
+    +'border-radius:6px;padding:6px 10px;width:100%;text-align:right;outline:none;color:var(--tx);"'
+    +' onfocus="this.style.borderColor=\'var(--gold)\'"'
+    +' onblur="this.style.borderColor=\'var(--br)\'"/>';
+  return '<tr style="border-bottom:1px solid #f3f4f6;">'
+    +'<td style="padding:8px 10px;"><div style="font-weight:600;color:var(--tx);">'+c.label+'</div>'
+    +'<div style="font-size:9px;color:var(--t3);">Casillas '+c.cb+' / '+c.cr+'</div></td>'
+    +'<td style="padding:8px 10px;text-align:right;">'+inp+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;"><div id="f350-ret-'+c.id+'" style="font-size:12px;font-weight:700;color:var(--or);">$ 0</div></td>'
     +'</tr>';
 }
 
-function f350_recalcFila(id,tipo){
-  var baseEl=document.getElementById('f350-base-'+id);
-  var tarEl=document.getElementById('f350-tar-'+id);
-  var retEl=document.getElementById('f350-ret-'+id);
-  if(!baseEl||!retEl) return;
-  var base=f350_parseNum(baseEl.value);
-  var tar=tarEl?parseFloat(tarEl.value)||0:0;
-  retEl.textContent=f350_fmt(Math.round(base*tar/100));
+function f350_rcF(id,tipo){
+  var be=document.getElementById('f350-base-'+id),te=document.getElementById('f350-tar-'+id),re=document.getElementById('f350-ret-'+id);
+  if(!be||!re)return;
+  re.textContent=f350_fmt(Math.round(f350_pN(be.value)*(te?parseFloat(te.value)||0:0)/100));
   f350_calcularTotales();
 }
-
-function f350_recalcAR(id){
-  var baseEl=document.getElementById('f350-base-'+id);
-  var retEl=document.getElementById('f350-ret-'+id);
-  if(!baseEl||!retEl) return;
-  var base=f350_parseNum(baseEl.value);
-  retEl.textContent=f350_fmt(Math.round(base*_f350TarifaAR/100));
+function f350_rcAR(id){
+  var be=document.getElementById('f350-base-'+id),re=document.getElementById('f350-ret-'+id);
+  if(!be||!re)return;
+  re.textContent=f350_fmt(Math.round(f350_pN(be.value)*_f350TAR/100));
   f350_calcularTotales();
 }
-
 function f350_calcularTarifaAR(){
-  var sel=document.getElementById('f350-ciiu-ar');
-  var disp=document.getElementById('f350-tarifa-ar-display');
-  if(!sel||!sel.value){_f350TarifaAR=0;if(disp)disp.textContent='0%';return;}
-  _f350TarifaAR=parseFloat(sel.value.split('|')[1])||0;
-  if(disp) disp.textContent=_f350TarifaAR+'%';
-  F350_CONCEPTOS_AR.forEach(function(c){f350_recalcAR(c.id);});
+  var sel=document.getElementById('f350-ciiu-ar'),disp=document.getElementById('f350-tarifa-ar-display');
+  if(!sel||!sel.value){_f350TAR=0;if(disp)disp.textContent='0%';return;}
+  _f350TAR=parseFloat(sel.value.split('|')[1])||0;
+  if(disp)disp.textContent=_f350TAR+'%';
+  F350_AR.forEach(function(c){f350_rcAR(c.id);});
 }
-
 function f350_calcularTotales(){
-  var subPJ=0; F350_CONCEPTOS_PJ.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)subPJ+=f350_parseNum(e.textContent.replace('$',''));});
-  var subPN=0; F350_CONCEPTOS_PN.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)subPN+=f350_parseNum(e.textContent.replace('$',''));});
-  var subAR=0; F350_CONCEPTOS_AR.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)subAR+=f350_parseNum(e.textContent.replace('$',''));});
-  var c129=f350_parseNum((document.getElementById('f350-c129')||{}).value||'0');
-  var c130=subPJ+subPN+subAR-c129;
-  var c131=f350_parseNum((document.getElementById('f350-c131')||{}).value||'0');
-  var c132=f350_parseNum((document.getElementById('f350-c132')||{}).value||'0');
-  var c133=f350_parseNum((document.getElementById('f350-c133')||{}).value||'0');
+  var sPJ=0;F350_PJ.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)sPJ+=f350_pN(e.textContent.replace('$',''));});
+  var sPN=0;F350_PN.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)sPN+=f350_pN(e.textContent.replace('$',''));});
+  var sAR=0;F350_AR.forEach(function(c){var e=document.getElementById('f350-ret-'+c.id);if(e)sAR+=f350_pN(e.textContent.replace('$',''));});
+  var c129=f350_pN((document.getElementById('f350-c129')||{}).value||'0');
+  var c130=sPJ+sPN+sAR-c129;
+  var c131=f350_pN((document.getElementById('f350-c131')||{}).value||'0');
+  var c132=f350_pN((document.getElementById('f350-c132')||{}).value||'0');
+  var c133=f350_pN((document.getElementById('f350-c133')||{}).value||'0');
   var c134=c131+c132-c133;
-  var c135=f350_parseNum((document.getElementById('f350-c135')||{}).value||'0');
+  var c135=f350_pN((document.getElementById('f350-c135')||{}).value||'0');
   var c136=c130+c134+c135;
-  var c137=f350_parseNum((document.getElementById('f350-c137')||{}).value||'0');
+  var c137=f350_pN((document.getElementById('f350-c137')||{}).value||'0');
   var c138=c136+c137;
-  var elPJ=document.getElementById('f350-sub-pj'); if(elPJ) elPJ.textContent=f350_fmt(subPJ);
-  var elPN=document.getElementById('f350-sub-pn'); if(elPN) elPN.textContent=f350_fmt(subPN);
-  var elAR=document.getElementById('f350-sub-ar'); if(elAR) elAR.textContent=f350_fmt(subAR);
-  var ids={'f350-c130-display':c130,'f350-c134-display':c134,'f350-c134-display2':c134,'f350-c135-display':c135,'f350-c137-display':c137,'f350-c136-display':c136,'f350-c138-display':c138};
+  var ids={
+    'f350-sub-pj':sPJ,'f350-sub-pn':sPN,'f350-sub-ar':sAR,
+    'f350-c130-display':c130,'f350-c134-display':c134,'f350-c134-display2':c134,
+    'f350-c135-display':c135,'f350-c137-display':c137,'f350-c136-display':c136,'f350-c138-display':c138
+  };
   Object.keys(ids).forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=f350_fmt(ids[id]);});
-  return {subPJ:subPJ,subPN:subPN,subAR:subAR,c129:c129,c130:c130,c131:c131,c132:c132,c133:c133,c134:c134,c135:c135,c136:c136,c137:c137,c138:c138};
+  return {sPJ:sPJ,sPN:sPN,sAR:sAR,c129:c129,c130:c130,c131:c131,c132:c132,c133:c133,c134:c134,c135:c135,c136:c136,c137:c137,c138:c138};
 }
-
-function f350_changePeriodo(){
-  var sel=document.getElementById('f350-periodo');
-  if(!sel) return;
-  _f350Periodo=sel.value;
-  f350_cargarPeriodo();
-}
-
-function f350_keyFirestore(){
-  return 'f350_'+activeClientId+'_'+(activeYear||new Date().getFullYear())+'_'+_f350Periodo;
-}
-
+function f350_changePeriodo(){var s=document.getElementById('f350-periodo');if(s){_f350Per=s.value;f350_cargarPeriodo();}}
+function f350_key(){return 'f350_'+activeClientId+'_'+(activeYear||new Date().getFullYear())+'_'+_f350Per;}
 function f350_cargarPeriodo(){
   if(!db||!activeClientId){f350_limpiarCampos();return;}
-  db.collection('resultados').doc(f350_keyFirestore()).get().then(function(doc){
+  db.collection('resultados').doc(f350_key()).get().then(function(doc){
     if(!doc.exists){f350_limpiarCampos();return;}
-    var data=JSON.parse(doc.data().data||'{}');
-    f350_llenarCampos(data);
-    f350_calcularTotales();
-    f350_showStatus('✓ Período cargado · '+(data.fecha?new Date(data.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):''),'ok');
+    var d=JSON.parse(doc.data().data||'{}');
+    f350_llenar(d);f350_calcularTotales();
+    f350_st('✓ Período cargado · '+(d.fecha?new Date(d.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):''),'ok');
   }).catch(function(){f350_limpiarCampos();});
 }
-
 function f350_guardar(){
-  if(!db||!activeClientId){f350_showStatus('Sin conexión a base de datos.','err');return;}
+  if(!db||!activeClientId){f350_st('Sin conexión.','err');return;}
   var tot=f350_calcularTotales();
-  var data=f350_recolectarDatos(tot);
-  db.collection('resultados').doc(f350_keyFirestore()).set({
-    clienteId:activeClientId,
-    anio:String(activeYear||new Date().getFullYear()),
-    periodo:_f350Periodo,
-    tipo:'f350',
-    data:JSON.stringify(data),
-    fechaGuardado:new Date().toISOString()
-  }).then(function(){
-    f350_showStatus('✅ Declaración F350 guardada — '+f350_mesMostrar(_f350Periodo),'ok');
-    f350_cargarHistorial();
-  }).catch(function(e){f350_showStatus('❌ Error: '+e.message,'err');});
+  var d=f350_recolectar(tot);
+  db.collection('resultados').doc(f350_key()).set({clienteId:activeClientId,anio:String(activeYear||new Date().getFullYear()),periodo:_f350Per,tipo:'f350',data:JSON.stringify(d),fechaGuardado:new Date().toISOString()})
+  .then(function(){f350_st('✅ Guardado — '+f350_mes(_f350Per),'ok');f350_cargarHistorial();})
+  .catch(function(e){f350_st('❌ Error: '+e.message,'err');});
 }
-
-function f350_recolectarDatos(tot){
-  var vals={};
-  F350_CONCEPTOS_PJ.forEach(function(c){
-    vals['base_'+c.id]=f350_parseNum((document.getElementById('f350-base-'+c.id)||{}).value||'0');
-    vals['tar_'+c.id]=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.tarifa||0;
-    vals['ret_'+c.id]=f350_parseNum(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
+function f350_recolectar(tot){
+  var v={};
+  F350_PJ.forEach(function(c){
+    v['b_'+c.id]=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0');
+    v['t_'+c.id]=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.t||0;
+    v['r_'+c.id]=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
   });
-  F350_CONCEPTOS_PN.forEach(function(c){
-    vals['base_'+c.id]=f350_parseNum((document.getElementById('f350-base-'+c.id)||{}).value||'0');
-    vals['tar_'+c.id]=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.tarifa||0;
-    vals['ret_'+c.id]=f350_parseNum(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
+  F350_PN.forEach(function(c){
+    v['b_'+c.id]=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0');
+    v['t_'+c.id]=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.t||0;
+    v['r_'+c.id]=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
   });
-  F350_CONCEPTOS_AR.forEach(function(c){
-    vals['base_'+c.id]=f350_parseNum((document.getElementById('f350-base-'+c.id)||{}).value||'0');
-    vals['ret_'+c.id]=f350_parseNum(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
+  F350_AR.forEach(function(c){
+    v['b_'+c.id]=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0');
+    v['r_'+c.id]=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
   });
-  vals.ciiu_ar=(document.getElementById('f350-ciiu-ar')||{}).value||'';
-  vals.tarifa_ar=_f350TarifaAR;
-  vals.c129=tot.c129;vals.c130=tot.c130;vals.c131=tot.c131;vals.c132=tot.c132;vals.c133=tot.c133;
-  vals.c134=tot.c134;vals.c135=tot.c135;vals.c136=tot.c136;vals.c137=tot.c137;vals.c138=tot.c138;
-  vals.fecha=new Date().toISOString();
-  vals.periodo=_f350Periodo;
-  vals.periodoLabel=f350_mesMostrar(_f350Periodo);
-  return vals;
+  v.ciiu_ar=(document.getElementById('f350-ciiu-ar')||{}).value||'';
+  v.tarifa_ar=_f350TAR;
+  Object.assign(v,tot);
+  v.fecha=new Date().toISOString();v.periodo=_f350Per;v.periodoLabel=f350_mes(_f350Per);
+  return v;
 }
-
-function f350_llenarCampos(data){
-  if(!data) return;
-  F350_CONCEPTOS_PJ.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id); var te=document.getElementById('f350-tar-'+c.id);
-    if(be) be.value=f350_fmtInput(data['base_'+c.id]||0);
-    if(te) te.value=data['tar_'+c.id]!==undefined?data['tar_'+c.id]:(c.tarifa||0);
-    f350_recalcFila(c.id,'pj');
+function f350_llenar(d){
+  if(!d)return;
+  F350_PJ.forEach(function(c){
+    var be=document.getElementById('f350-base-'+c.id),te=document.getElementById('f350-tar-'+c.id);
+    if(be)be.value=f350_fmtV(d['b_'+c.id]||0);
+    if(te)te.value=d['t_'+c.id]!==undefined?d['t_'+c.id]:(c.t||0);
+    f350_rcF(c.id,'pj');
   });
-  F350_CONCEPTOS_PN.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id); var te=document.getElementById('f350-tar-'+c.id);
-    if(be) be.value=f350_fmtInput(data['base_'+c.id]||0);
-    if(te) te.value=data['tar_'+c.id]!==undefined?data['tar_'+c.id]:(c.tarifa||0);
-    f350_recalcFila(c.id,'pn');
+  F350_PN.forEach(function(c){
+    var be=document.getElementById('f350-base-'+c.id),te=document.getElementById('f350-tar-'+c.id);
+    if(be)be.value=f350_fmtV(d['b_'+c.id]||0);
+    if(te)te.value=d['t_'+c.id]!==undefined?d['t_'+c.id]:(c.t||0);
+    f350_rcF(c.id,'pn');
   });
-  if(data.ciiu_ar){var sc=document.getElementById('f350-ciiu-ar');if(sc){sc.value=data.ciiu_ar;f350_calcularTarifaAR();}}
-  F350_CONCEPTOS_AR.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id);
-    if(be) be.value=f350_fmtInput(data['base_'+c.id]||0);
-    f350_recalcAR(c.id);
-  });
+  if(d.ciiu_ar){var sc=document.getElementById('f350-ciiu-ar');if(sc){sc.value=d.ciiu_ar;f350_calcularTarifaAR();}}
+  F350_AR.forEach(function(c){var be=document.getElementById('f350-base-'+c.id);if(be)be.value=f350_fmtV(d['b_'+c.id]||0);f350_rcAR(c.id);});
   var flds={c129:'f350-c129',c131:'f350-c131',c132:'f350-c132',c133:'f350-c133',c135:'f350-c135',c137:'f350-c137'};
-  Object.keys(flds).forEach(function(k){var el=document.getElementById(flds[k]);if(el&&data[k])el.value=f350_fmtInput(data[k]||0);});
+  Object.keys(flds).forEach(function(k){var el=document.getElementById(flds[k]);if(el&&d[k])el.value=f350_fmtV(d[k]||0);});
 }
-
 function f350_limpiarCampos(){
-  F350_CONCEPTOS_PJ.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id);var te=document.getElementById('f350-tar-'+c.id);var re=document.getElementById('f350-ret-'+c.id);
-    if(be)be.value='';if(te)te.value=c.tarifa||0;if(re)re.textContent='$ 0';
-  });
-  F350_CONCEPTOS_PN.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id);var te=document.getElementById('f350-tar-'+c.id);var re=document.getElementById('f350-ret-'+c.id);
-    if(be)be.value='';if(te)te.value=c.tarifa||0;if(re)re.textContent='$ 0';
-  });
-  F350_CONCEPTOS_AR.forEach(function(c){
-    var be=document.getElementById('f350-base-'+c.id);var re=document.getElementById('f350-ret-'+c.id);
-    if(be)be.value='';if(re)re.textContent='$ 0';
-  });
+  F350_PJ.forEach(function(c){var be=document.getElementById('f350-base-'+c.id),te=document.getElementById('f350-tar-'+c.id),re=document.getElementById('f350-ret-'+c.id);if(be)be.value='';if(te)te.value=c.t||0;if(re)re.textContent='$ 0';});
+  F350_PN.forEach(function(c){var be=document.getElementById('f350-base-'+c.id),te=document.getElementById('f350-tar-'+c.id),re=document.getElementById('f350-ret-'+c.id);if(be)be.value='';if(te)te.value=c.t||0;if(re)re.textContent='$ 0';});
+  F350_AR.forEach(function(c){var be=document.getElementById('f350-base-'+c.id),re=document.getElementById('f350-ret-'+c.id);if(be)be.value='';if(re)re.textContent='$ 0';});
   ['f350-c129','f350-c131','f350-c132','f350-c133','f350-c135','f350-c137'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   f350_calcularTotales();
 }
-
-function f350_limpiar(){
-  if(!confirm('¿Limpiar todos los valores del período '+f350_mesMostrar(_f350Periodo)+'?')) return;
-  f350_limpiarCampos();
-  f350_showStatus('Período limpiado.','info');
-}
-
+function f350_limpiar(){if(!confirm('¿Limpiar período '+f350_mes(_f350Per)+'?'))return;f350_limpiarCampos();f350_st('Período limpiado.','info');}
 function f350_cargarHistorial(){
-  var histEl=document.getElementById('f350-historial');
-  if(!histEl||!db||!activeClientId) return;
-  histEl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando...</div>';
+  var he=document.getElementById('f350-historial');
+  if(!he||!db||!activeClientId)return;
+  he.innerHTML='<div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando...</div>';
   var year=String(activeYear||new Date().getFullYear());
-  var meses=['01','02','03','04','05','06','07','08','09','10','11','12'];
-  Promise.all(meses.map(function(mes){
-    var key='f350_'+activeClientId+'_'+year+'_'+mes;
+  Promise.all(['01','02','03','04','05','06','07','08','09','10','11','12'].map(function(m){
+    var key='f350_'+activeClientId+'_'+year+'_'+m;
     return db.collection('resultados').doc(key).get().then(function(doc){
-      if(!doc.exists) return null;
-      var data=JSON.parse(doc.data().data||'{}');
-      return {mes:mes,data:data,key:key};
+      if(!doc.exists)return null;
+      var d=JSON.parse(doc.data().data||'{}');
+      return {mes:m,data:d,key:key};
     }).catch(function(){return null;});
-  })).then(function(resultados){
-    var guardados=resultados.filter(Boolean);
-    if(!guardados.length){histEl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:20px 0;">No hay declaraciones guardadas para este año.</div>';return;}
-    histEl.innerHTML=guardados.map(function(r){
+  })).then(function(res){
+    var g=res.filter(Boolean);
+    if(!g.length){he.innerHTML='<div style="color:var(--t3);font-size:12px;padding:20px 0;">No hay declaraciones guardadas para este año.</div>';return;}
+    he.innerHTML=g.map(function(r){
       var c138=r.data.c138||0;
       var fecha=r.data.fecha?new Date(r.data.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
-      var badgeCol=c138>0?'#b91c1c':'#065f46';
-      var badgeBg=c138>0?'#fee2e2':'#dcfce7';
-      var badgeTxt=c138>0?'Pago: '+f350_fmt(c138):'Sin retenciones';
+      var bc=c138>0?'#b91c1c':'#065f46',bb=c138>0?'#fee2e2':'#dcfce7',bt=c138>0?'Pago: '+f350_fmt(c138):'Sin retenciones';
       return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
-        +'<div><div style="font-size:13px;font-weight:800;color:var(--bd);">'+f350_mesMostrar(r.mes)+'</div>'
+        +'<div><div style="font-size:13px;font-weight:800;color:var(--bd);">'+f350_mes(r.mes)+'</div>'
         +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">Guardado: '+fecha+'</div></div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-        +'<span style="background:'+badgeBg+';color:'+badgeCol+';font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;">'+badgeTxt+'</span>'
-        +'<button onclick="f350_abrirPeriodo(''+r.mes+'')" style="background:var(--bd);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Abrir</button>'
-        +'<button onclick="f350_eliminarPeriodo(''+r.key+'',''+r.mes+'')" style="background:var(--rb);color:var(--re);border:none;border-radius:6px;padding:6px 10px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">✕</button>'
+        +'<span style="background:'+bb+';color:'+bc+';font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;">'+bt+'</span>'
+        +'<button onclick="f350_abrirPer(\''+r.mes+'\')" style="background:var(--bd);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Abrir</button>'
+        +'<button onclick="f350_eliminar(\''+r.key+'\',\''+r.mes+'\')" style="background:var(--rb);color:var(--re);border:none;border-radius:6px;padding:6px 10px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">✕</button>'
         +'</div></div>';
     }).join('');
-  }).catch(function(){histEl.innerHTML='<div style="color:var(--re);font-size:12px;">Error cargando historial.</div>';});
+  }).catch(function(){he.innerHTML='<div style="color:var(--re);font-size:12px;">Error cargando historial.</div>';});
 }
-
-function f350_abrirPeriodo(mes){
-  document.getElementById('f350-periodo').value=mes;
-  _f350Periodo=mes;
-  f350_cargarPeriodo();
-  window.scrollTo({top:0,behavior:'smooth'});
+function f350_abrirPer(m){document.getElementById('f350-periodo').value=m;_f350Per=m;f350_cargarPeriodo();window.scrollTo({top:0,behavior:'smooth'});}
+function f350_eliminar(key,m){
+  if(!confirm('¿Eliminar declaración de '+f350_mes(m)+'?'))return;
+  db.collection('resultados').doc(key).delete().then(function(){f350_st('Eliminado.','ok');f350_cargarHistorial();if(_f350Per===m)f350_limpiarCampos();}).catch(function(e){f350_st('Error: '+e.message,'err');});
 }
-
-function f350_eliminarPeriodo(key,mes){
-  if(!confirm('¿Eliminar la declaración de '+f350_mesMostrar(mes)+'?')) return;
-  db.collection('resultados').doc(key).delete().then(function(){
-    f350_showStatus('Declaración de '+f350_mesMostrar(mes)+' eliminada.','ok');
-    f350_cargarHistorial();
-    if(_f350Periodo===mes) f350_limpiarCampos();
-  }).catch(function(e){f350_showStatus('Error: '+e.message,'err');});
-}
-
 function f350_generarPDF(){
   var tot=f350_calcularTotales();
-  var c=clients.find(function(x){return x.id===activeClientId;})||{};
-  var year=activeYear||new Date().getFullYear();
-  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>F350 '+f350_mesMostrar(_f350Periodo)+' '+year+'</title>'
+  var cl=clients.find(function(x){return x.id===activeClientId;})||{};
+  var yr=activeYear||new Date().getFullYear();
+  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>F350 '+f350_mes(_f350Per)+' '+yr+'</title>'
     +'<style>body{font-family:Montserrat,sans-serif;margin:0;padding:20px;color:#111827;font-size:12px;}'
     +'h1{font-size:16px;color:#1a2580;margin:0 0 3px;}h2{font-size:11px;color:#6b7280;font-weight:500;margin:0 0 14px;}'
     +'table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:11px;}'
@@ -4060,68 +3940,56 @@ function f350_generarPDF(){
     +'.tot{background:#1a2580;color:#fff;padding:12px 16px;border-radius:8px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;}'
     +'@media print{body{padding:8px;}}</style></head><body>'
     +'<h1>Declaración Retención en la Fuente — Formulario 350</h1>'
-    +'<h2>'+c.razon+' · NIT '+c.nit+(c.dv?'-'+c.dv:'')+' · '+f350_mesMostrar(_f350Periodo)+' '+year+'</h2>'
+    +'<h2>'+(cl.razon||'')+' · NIT '+(cl.nit||'')+(cl.dv?'-'+cl.dv:'')+' · '+f350_mes(_f350Per)+' '+yr+'</h2>'
     +'<hr style="border:none;border-top:2px solid #c9a227;margin-bottom:14px;">';
-  
-  html+='<div class="sec">Retenciones a Personas Jurídicas</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:center">Tarifa</th><th style="text-align:right">Retención</th></tr></thead><tbody>';
-  F350_CONCEPTOS_PJ.forEach(function(conc){
-    var base=f350_parseNum((document.getElementById('f350-base-'+conc.id)||{}).value||'0');
-    var ret=f350_parseNum(((document.getElementById('f350-ret-'+conc.id)||{}).textContent||'').replace('$',''));
-    var tar=parseFloat((document.getElementById('f350-tar-'+conc.id)||{}).value)||conc.tarifa||0;
-    if(base>0||ret>0) html+='<tr><td>'+conc.label+'</td><td>'+conc.cas_base+'/'+conc.cas_ret+'</td><td style="text-align:right">'+f350_fmt(base)+'</td><td style="text-align:center">'+tar+'%</td><td style="text-align:right;font-weight:700">'+f350_fmt(ret)+'</td></tr>';
+  html+='<div class="sec">Retenciones PJ</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:center">Tarifa</th><th style="text-align:right">Retención</th></tr></thead><tbody>';
+  F350_PJ.forEach(function(c){
+    var b=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0'),r=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$','')),t=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.t||0;
+    if(b>0||r>0)html+='<tr><td>'+c.label+'</td><td>'+c.cb+'/'+c.cr+'</td><td style="text-align:right">'+f350_fmt(b)+'</td><td style="text-align:center">'+t+'%</td><td style="text-align:right;font-weight:700">'+f350_fmt(r)+'</td></tr>';
   });
   html+='</tbody></table>';
-
-  html+='<div class="sec">Retenciones a Personas Naturales</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:center">Tarifa</th><th style="text-align:right">Retención</th></tr></thead><tbody>';
-  F350_CONCEPTOS_PN.forEach(function(conc){
-    var base=f350_parseNum((document.getElementById('f350-base-'+conc.id)||{}).value||'0');
-    var ret=f350_parseNum(((document.getElementById('f350-ret-'+conc.id)||{}).textContent||'').replace('$',''));
-    var tar=parseFloat((document.getElementById('f350-tar-'+conc.id)||{}).value)||conc.tarifa||0;
-    if(base>0||ret>0) html+='<tr><td>'+conc.label+'</td><td>'+conc.cas_base+'/'+conc.cas_ret+'</td><td style="text-align:right">'+f350_fmt(base)+'</td><td style="text-align:center">'+(tar?tar+'%':'Tabla')+'</td><td style="text-align:right;font-weight:700">'+f350_fmt(ret)+'</td></tr>';
+  html+='<div class="sec">Retenciones PN</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:center">Tarifa</th><th style="text-align:right">Retención</th></tr></thead><tbody>';
+  F350_PN.forEach(function(c){
+    var b=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0'),r=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$','')),t=parseFloat((document.getElementById('f350-tar-'+c.id)||{}).value)||c.t||0;
+    if(b>0||r>0)html+='<tr><td>'+c.label+'</td><td>'+c.cb+'/'+c.cr+'</td><td style="text-align:right">'+f350_fmt(b)+'</td><td style="text-align:center">'+(t?t+'%':'Tabla')+'</td><td style="text-align:right;font-weight:700">'+f350_fmt(r)+'</td></tr>';
   });
   html+='</tbody></table>';
-
-  html+='<div class="sec">Autorretenciones (Art. 114-1 E.T.) · Tarifa '+_f350TarifaAR+'%</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:right">Autorretención</th></tr></thead><tbody>';
-  F350_CONCEPTOS_AR.forEach(function(conc){
-    var base=f350_parseNum((document.getElementById('f350-base-'+conc.id)||{}).value||'0');
-    var ret=f350_parseNum(((document.getElementById('f350-ret-'+conc.id)||{}).textContent||'').replace('$',''));
-    if(base>0||ret>0) html+='<tr><td>'+conc.label+'</td><td>'+conc.cas_base+'/'+conc.cas_ret+'</td><td style="text-align:right">'+f350_fmt(base)+'</td><td style="text-align:right;font-weight:700">'+f350_fmt(ret)+'</td></tr>';
+  html+='<div class="sec">Autorretenciones · Tarifa '+_f350TAR+'%</div><table><thead><tr><th>Concepto</th><th>Cas.</th><th style="text-align:right">Base</th><th style="text-align:right">Autorretención</th></tr></thead><tbody>';
+  F350_AR.forEach(function(c){
+    var b=f350_pN((document.getElementById('f350-base-'+c.id)||{}).value||'0'),r=f350_pN(((document.getElementById('f350-ret-'+c.id)||{}).textContent||'').replace('$',''));
+    if(b>0||r>0)html+='<tr><td>'+c.label+'</td><td>'+c.cb+'/'+c.cr+'</td><td style="text-align:right">'+f350_fmt(b)+'</td><td style="text-align:right;font-weight:700">'+f350_fmt(r)+'</td></tr>';
   });
   html+='</tbody></table>';
-
   html+='<div class="sec">Resumen de casillas</div><table><tbody>'
-    +'<tr><td>129 · Menos retenciones en exceso (renta)</td><td style="text-align:right">('+f350_fmt(tot.c129)+')</td></tr>'
+    +'<tr><td>129 · Ret. renta en exceso/anuladas</td><td style="text-align:right">('+f350_fmt(tot.c129)+')</td></tr>'
     +'<tr><td><strong>130 · Total retenciones renta</strong></td><td style="text-align:right;font-weight:700">'+f350_fmt(tot.c130)+'</td></tr>'
-    +'<tr><td>131+132−133 · Retenciones IVA</td><td style="text-align:right">'+f350_fmt(tot.c131)+' + '+f350_fmt(tot.c132)+' − '+f350_fmt(tot.c133)+'</td></tr>'
     +'<tr><td><strong>134 · Total retenciones IVA</strong></td><td style="text-align:right;font-weight:700">'+f350_fmt(tot.c134)+'</td></tr>'
     +'<tr><td>135 · Timbre nacional</td><td style="text-align:right">'+f350_fmt(tot.c135)+'</td></tr>'
     +'<tr><td><strong>136 · Total retenciones</strong></td><td style="text-align:right;font-weight:700">'+f350_fmt(tot.c136)+'</td></tr>'
     +'<tr><td>137 · Sanciones</td><td style="text-align:right">'+f350_fmt(tot.c137)+'</td></tr>'
     +'</tbody></table>'
-    +'<div class="tot"><div><div style="font-size:10px;opacity:.8;">CASILLA 138 / 980 · Pago Total · '+f350_mesMostrar(_f350Periodo)+' '+year+'</div></div>'
+    +'<div class="tot"><div style="font-size:10px;opacity:.8;">CASILLA 138 / 980 · Pago Total · '+f350_mes(_f350Per)+' '+yr+'</div>'
     +'<div style="font-size:20px;font-weight:900;">'+f350_fmt(tot.c138)+'</div></div>'
-    +'<div style="margin-top:16px;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;">Generado por JNF App · Asesorías y Consultorías JNF S.A.S. · '+new Date().toLocaleString('es-CO')+'</div>'
+    +'<div style="margin-top:16px;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;">JNF App · Asesorías y Consultorías JNF S.A.S. · '+new Date().toLocaleString('es-CO')+'</div>'
     +'</body></html>';
-
   var blob=new Blob([html],{type:'text/html'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
-  a.href=url; a.download='F350_'+c.nit+'_'+year+'_'+_f350Periodo+'.html';
-  document.body.appendChild(a); a.click();
+  a.href=url;a.download='F350_'+(cl.nit||'')+'_'+yr+'_'+_f350Per+'.html';
+  document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(url);a.remove();},2000);
-  f350_showStatus('Resumen exportado — ábrelo en Chrome y usa Ctrl+P para guardar como PDF','ok');
+  f350_st('Exportado — abre en Chrome y usa Ctrl+P para PDF','ok');
 }
-
-function f350_fmt(n){n=Math.round(n||0);return '$ '+n.toLocaleString('es-CO');}
-function f350_fmtInput(n){return Math.round(n||0).toLocaleString('es-CO');}
-function f350_parseNum(s){if(typeof s==='number') return Math.round(s);return Math.round(parseFloat(String(s||'').replace(/\./g,'').replace(/,/g,'.'))||0);}
-function f350_formatInput(el){var raw=el.value.replace(/[^\d]/g,'');var n=parseInt(raw)||0;el.value=n>0?n.toLocaleString('es-CO'):'';}
-function f350_mesMostrar(cod){var M={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};return M[cod]||('Período '+cod);}
-function f350_showStatus(msg,tipo){
+function f350_fmt(n){return '$ '+Math.round(n||0).toLocaleString('es-CO');}
+function f350_fmtV(n){return Math.round(n||0).toLocaleString('es-CO');}
+function f350_pN(s){if(typeof s==='number')return Math.round(s);return Math.round(parseFloat(String(s||'').replace(/\./g,'').replace(/,/g,'.'))||0);}
+function f350_fmtI(el){var r=el.value.replace(/[^\d]/g,''),n=parseInt(r)||0;el.value=n>0?n.toLocaleString('es-CO'):'';}
+function f350_mes(c){var M={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};return M[c]||('Período '+c);}
+function f350_st(msg,tipo){
   var el=document.getElementById('f350-status');if(!el)return;
   el.textContent=msg;
-  var estilos={ok:'background:#dcfce7;color:#065f46;',err:'background:#fee2e2;color:#b91c1c;',info:'background:#e8eaf6;color:#1a2580;'};
-  el.style.cssText=(estilos[tipo]||estilos.info)+'display:block;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;';
+  var e={ok:'background:#dcfce7;color:#065f46;',err:'background:#fee2e2;color:#b91c1c;',info:'background:#e8eaf6;color:#1a2580;'};
+  el.style.cssText=(e[tipo]||e.info)+'display:block;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;';
   setTimeout(function(){el.style.display='none';},5000);
 }
 
