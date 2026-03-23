@@ -1497,8 +1497,8 @@ window._renderClients = window.renderClients = function renderClients(){
       +'</div>';
   }).join('');
 
-  // Event delegation para botones
-  grid.addEventListener('click', function(e){
+  // Event delegation para botones — sin {once} para que siempre funcione
+  grid.onclick = function(e){
     var btn = e.target.closest('button[data-id]');
     if(!btn) return;
     var id = btn.getAttribute('data-id');
@@ -1506,7 +1506,7 @@ window._renderClients = window.renderClients = function renderClients(){
     else if(btn.classList.contains('cc-btn-ficha')) openFicha(id);
     else if(btn.classList.contains('cc-btn-edit'))  editClient(id);
     else if(btn.classList.contains('cc-btn-del'))   deleteClient(id);
-  }, {once: true});
+  };
 };
 
 
