@@ -2035,8 +2035,8 @@ window._splashEnter = window.splashEnter = function splashEnter(){
     document.getElementById('screen-app').style.display='';
     showScreen('clientes');
   } else {
-    var l = document.getElementById('screen-login');
-    l.setAttribute('style', 'min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;');
+    var loginEl = document.getElementById('screen-login');
+    loginEl.setAttribute('style','min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;');
   }
 }
 
@@ -2154,6 +2154,7 @@ function showApp(){
   var sb = document.getElementById('stbar');
   if(sb) { sb.style.display='none'; sb.textContent=''; }
   document.getElementById('screen-splash').style.display='none';
+  sessionStorage.setItem('splashSeen','1');
   var app = document.getElementById('screen-app');
   if(app) app.style.display='';
   // Conectar botón Mi cuenta directamente a la función real
@@ -4837,7 +4838,6 @@ window.addEventListener('load', function(){
   if(login) login.style.display='none';
   var app = document.getElementById('screen-app');
   if(app) app.style.display='none';
-  sessionStorage.removeItem('splashSeen');
   initFirebase();
 });
 // ════════════════════════════════════════════════════
