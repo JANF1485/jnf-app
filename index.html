@@ -4192,13 +4192,17 @@ function audPoblarUsuarios(){
 function audRepoblarUsuariosDeLogs(){
   var sel = document.getElementById('aud-f-usuario');
   if(!sel) return;
+  // Construir mapa de valores Y textos ya presentes para evitar duplicados
   var yaEnSelect = {};
   for(var i=0; i<sel.options.length; i++){
-    yaEnSelect[sel.options[i].value] = true;
+    yaEnSelect[sel.options[i].value.toLowerCase()]       = true;
+    yaEnSelect[sel.options[i].textContent.toLowerCase()] = true;
   }
   _audLogs.forEach(function(r){
-    if(r.usuario && r.usuario !== '—' && !yaEnSelect[r.usuario]){
-      yaEnSelect[r.usuario] = true;
+    if(!r.usuario || r.usuario === '—') return;
+    var key = r.usuario.toLowerCase();
+    if(!yaEnSelect[key]){
+      yaEnSelect[key] = true;
       var opt = document.createElement('option');
       opt.value       = r.usuario;
       opt.textContent = r.usuario;
@@ -4207,6 +4211,7 @@ function audRepoblarUsuariosDeLogs(){
     }
   });
 }
+
 
 function audCargar(){
   var tbody = document.getElementById('aud-tbody');
