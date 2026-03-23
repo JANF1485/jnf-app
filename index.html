@@ -1379,6 +1379,7 @@ function saveClient(){
     else{if(clients.find(c=>c.nit===d.nit)){ss('Ya existe un cliente con ese NIT','err');return;}clients.push(d);}
     closeModal('add');renderClients();
     ss(editingId?'Cliente actualizado ✓':'Cliente agregado ✓','ok');
+    audRegistrar(editingId?'Editar':'Crear','Clientes',d.id,d.razon||d.nit,editingId?'Datos actualizados':'Cliente registrado · NIT '+d.nit);
     // Update contador's clientesAsignados in Firestore
     setTimeout(function(){ actualizarClientesDeContador(d); }, 500);
   }).catch(function(e){ss('Error guardando: '+e.message,'err');});
@@ -1428,6 +1429,7 @@ window._deleteClient = window.deleteClient = function deleteClient(id){
     clients=clients.filter(function(c){return c.id!==id;});
     renderClients();
     ss('Cliente "'+nombre+'" eliminado correctamente','ok');
+      audRegistrar('Eliminar','Clientes','',nombre,'Cliente eliminado del sistema');
   }).catch(function(e){
     if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
       ss('Contraseña incorrecta. No se eliminó el cliente.','err');
@@ -2054,6 +2056,7 @@ window.addEventListener('message', function(e){
       // Refresh saved panel if we're on contabilidad
       if(activeClientId && activeYear){
         loadSavedResults(activeClientId, activeYear);
+        audRegistrar('Guardar','Exógena',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Consolidado AG '+activeYear);
       }
     }catch(err){ console.error('[JNF] Save error:', err); }
   }
@@ -2128,6 +2131,7 @@ function initFirebase(){
           }
           showApp();
           loadClientesFromFirestore();
+          setTimeout(function(){ audRegistrar('Login','Sistema','','','Acceso al sistema · '+new Date().toLocaleString('es-CO')); }, 2000);
         }).catch(function(e){ showLoginError('Error perfil: '+e.message); });
       } else {
         currentUser = null;
@@ -5042,6 +5046,7 @@ function f300_procesar(){
         data: JSON.stringify(window._f300Data)
       }).then(function(){
         f300_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
+        audRegistrar('Guardar','F300',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+(window._f300Data&&window._f300Data.pLabel?window._f300Data.pLabel:pCod)+' · Año '+anio);
       }).catch(function(e){ console.warn('[F300 save]',e); });
       // También sobreescribir el doc principal (para compatibilidad)
       var _kMain = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -5440,6 +5445,7 @@ function inc_procesar(){
         data: JSON.stringify(window._f310Data)
       }).then(function(){
         inc_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
+        audRegistrar('Guardar','F310',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+(window._f310Data&&window._f310Data.pLabel?window._f310Data.pLabel:pCod)+' · Año '+anio);
       }).catch(function(e){ console.warn('[INC save]',e); });
       // También doc principal para compatibilidad
       var _kMain = ('jnf_inc_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
