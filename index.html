@@ -3729,6 +3729,59 @@ function cargarArchivo(clientId, year){
     });
 
 ;
+
+  // ── Cargar F350 ────────────────────────────────────────────
+  var f350List = document.getElementById('guardado-f350-list');
+  db.collection('resultados')
+    .where('clienteId','==',clientId)
+    .where('anio','==',String(year))
+    .where('tipo','==','f350')
+    .get().then(function(snap){
+      var meses = {};
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var data = JSON.parse(d.data||'{}');
+        var mes = data.periodo || d.periodo || '01';
+        if(!meses[mes] || d.fechaGuardado > (meses[mes].meta.fechaGuardado||'')){
+          meses[mes] = {key:doc.id, meta:d, data:data};
+        }
+      });
+      var MESES_LABEL = {
+        '01':'Enero','02':'Febrero','03':'Marzo','04':'Abril',
+        '05':'Mayo','06':'Junio','07':'Julio','08':'Agosto',
+        '09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'
+      };
+      var periodos = Object.keys(meses).sort();
+      if(!periodos.length){
+        if(f350List) f350List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+        return;
+      }
+      var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
+      var html = '';
+      periodos.forEach(function(p){
+        var r    = meses[p];
+        var d    = r.data;
+        var c138 = d.c138 || 0;
+        var fecha = r.meta.fechaGuardado ? new Date(r.meta.fechaGuardado).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        var badge = c138 > 0
+          ? '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Pago: '+fmtM(c138)+'</span>'
+          : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Sin retenciones</span>';
+        html += '<div style="background:#f8faff;border:1px solid #e5e7f0;border-radius:10px;margin-bottom:10px;overflow:hidden;">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #e5e7f0;">'
+          +'<div><div style="font-size:12px;font-weight:700;color:#1a2580;">'+(MESES_LABEL[p]||p)+' '+year+'</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Guardado: '+fecha+' · C.130: '+fmtM(d.c130||0)+' · IVA: '+fmtM(d.c134||0)+'</div></div>'
+          +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+          +'<button onclick="f350_abrirPer(''+p+'')" style="background:#1a2580;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Ver</button>'
+          +'<button onclick="guardadoEliminarF350(''+r.key+'',''+p+'')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:6px 8px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">✕</button>'
+          +'</div></div>';
+        html += '</div>';
+      });
+      if(f350List) f350List.innerHTML = html;
+    }).catch(function(){
+      if(f350List) f350List.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este año.</div>';
+    });
+
+;
 }
 window.f300_verVersion = function(key){
   db.collection('resultados_historico').doc(key).get().then(function(doc){
@@ -3766,6 +3819,14 @@ window.inc_verVersion = function(key){
     document.getElementById('inc-resultado').style.display='block';
     showScreen('inc');
     document.getElementById('inc-resultado').scrollIntoView({behavior:'smooth'});
+  });
+};
+
+window.guardadoEliminarF350 = function(key, mes){
+  if(!confirm('¿Eliminar la declaración F350 de '+mes+'? Esta acción no se puede deshacer.')) return;
+  db.collection('resultados').doc(key).delete().then(function(){
+    ss('Declaración F350 eliminada','ok');
+    if(window._openGuardado) window._openGuardado();
   });
 };
 
@@ -6439,6 +6500,12 @@ function poblarFiltroContador(){
     <div id="guardado-inc-section" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:800;color:#6d28d9;margin-bottom:14px;">🍽️ Declaraciones INC — Formulario 310</div>
       <div id="guardado-inc-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
+    </div>
+
+    <!-- F350 guardados -->
+    <div id="guardado-f350-section" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;">🧾 Retención en la Fuente — Formulario 350</div>
+      <div id="guardado-f350-list" style="font-size:12px;color:#9ca3af;">Cargando...</div>
     </div>
 
   </div>
