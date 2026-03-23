@@ -1198,7 +1198,8 @@ window._confirmarAnio = window.confirmarAnio = function confirmarAnio(){
 
 window._showScreen = window.showScreen = function showScreen(name){
   SCREENS.forEach(s=>{
-    document.getElementById('screen-'+s).style.display = s===name ? '' : 'none';
+    var el=document.getElementById('screen-'+s);
+    if(el) el.style.display = s===name ? '' : 'none';
   });
   window.scrollTo(0,0);
 }
@@ -4431,7 +4432,14 @@ window._closeFicha = window.closeFicha = function closeFicha(){
 
 
 window._openGuardado = window.openGuardado = function openGuardado(){
+  // Buscar cliente en array local o construir objeto mínimo desde activeClientId
   var c = clients.find(function(x){return x.id===activeClientId;});
+  if(!c && activeClientId){
+    // Intentar con el banner que ya está visible en contabilidad
+    var bannerEl = document.getElementById('cont-client-name');
+    var razon = bannerEl ? bannerEl.textContent : activeClientId;
+    c = {id: activeClientId, razon: razon, nit: ''};
+  }
   if(!c){ss('Selecciona un cliente primero','err');return;}
   var yr = activeYear||new Date().getFullYear();
   var gi = document.getElementById('guardado-cliente-info');
@@ -4447,6 +4455,10 @@ window._openGuardado = window.openGuardado = function openGuardado(){
 }
 function cargarArchivo(clientId, year){
   var fmtM = function(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';};
+  // Recuperar db si es null
+  if(!db && typeof firebase !== 'undefined' && firebase.apps.length){
+    db = firebase.firestore();
+  }
 
   // ── Cargar Exógena ────────────────────────────────────────
   var exoDiv = document.getElementById('guardado-exogena');
