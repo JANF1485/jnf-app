@@ -1776,7 +1776,7 @@ function initFirebase(){
             currentPerfil = doc.data();
           } else {
             currentPerfil = {email:user.email, nombre:user.email, rol:'admin',
-              clientesAsignados:[], modulosPermitidos:['exogena']};
+              clientesAsignados:[], modulosPermitidos:['exogena','guardado','f300','inc']};
             db.collection('usuarios').doc(user.uid).set(currentPerfil);
           }
           showApp();
@@ -1962,7 +1962,7 @@ function fbDeleteResult(key){
 // ── ADMIN: USUARIOS ──────────────────────────────────────
 var MODULOS_LIST = [
   {id:'exogena',  lbl:'Información Exógena AG 2025'},
-  {id:'guardado', lbl:'Resultados Guardados — Exógena'},
+  {id:'guardado', lbl:'Archivo de Reportes'},
   {id:'f300',     lbl:'Declaración IVA — Formulario 300'},
   {id:'inc',     lbl:'Declaración INC — Formulario 310'},
   {id:'docs',    lbl:'Documentos y Soportes'},
@@ -4432,13 +4432,20 @@ window._closeFicha = window.closeFicha = function closeFicha(){
 
 
 window._openGuardado = window.openGuardado = function openGuardado(){
-  // Buscar cliente en array local o construir objeto mínimo desde activeClientId
-  var c = clients.find(function(x){return x.id===activeClientId;});
-  if(!c && activeClientId){
-    // Intentar con el banner que ya está visible en contabilidad
-    var bannerEl = document.getElementById('cont-client-name');
-    var razon = bannerEl ? bannerEl.textContent : activeClientId;
-    c = {id: activeClientId, razon: razon, nit: ''};
+  // Buscar cliente — múltiples estrategias
+  var c = null;
+  if(activeClientId){
+    c = clients.find(function(x){return x.id===activeClientId;});
+    if(!c){
+      // Reconstruir desde breadcrumb visible
+      var bnEl = document.getElementById('breadcrumb-name');
+      var razon = bnEl ? bnEl.textContent : '';
+      if(!razon){
+        var bcEl = document.getElementById('bc2-name');
+        razon = bcEl ? bcEl.textContent.split(' · ')[0] : activeClientId;
+      }
+      c = {id: activeClientId, razon: razon, nit: ''};
+    }
   }
   if(!c){ss('Selecciona un cliente primero','err');return;}
   var yr = activeYear||new Date().getFullYear();
