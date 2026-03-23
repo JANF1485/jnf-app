@@ -9,9 +9,9 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -1807,6 +1807,7 @@ window._doLogin = window.doLogin = function doLogin(){
   if(!email||!pass){showLoginError('Completa email y contraseña');return;}
   var btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Ingresando...';
+  if(!auth){showLoginError('Error de conexión. Recarga la página.');btn.disabled=false;btn.textContent='Ingresar';return;}
   auth.signInWithEmailAndPassword(email, pass).catch(function(e){
     btn.disabled = false; btn.textContent = 'Ingresar';
     var msgs = {'auth/user-not-found':'Usuario no encontrado','auth/wrong-password':'Contraseña incorrecta','auth/invalid-credential':'Email o contraseña incorrectos','auth/invalid-email':'Email inválido','auth/too-many-requests':'Demasiados intentos. Espera un momento.'};
