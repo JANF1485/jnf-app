@@ -2030,14 +2030,22 @@ var FB_CONFIG = {
 
 window._splashEnter = window.splashEnter = function splashEnter(){
   sessionStorage.setItem('splashSeen','1');
-  document.getElementById('screen-splash').style.display='none';
+  // Ocultar splash
+  var splash = document.getElementById('screen-splash');
+  if(splash){ splash.style.display='none'; splash.style.visibility='hidden'; }
+  // Ocultar app
+  var appEl = document.getElementById('screen-app');
+  if(appEl) appEl.style.display='none';
   if(currentUser && currentPerfil){
-    // Already logged in - go straight to app
-    document.getElementById('screen-app').style.display='';
+    // Ya autenticado — ir directo a la app
+    if(appEl){ appEl.style.display=''; appEl.style.visibility=''; }
     showScreen('clientes');
   } else {
-    // Not logged in - show login
-    document.getElementById('screen-login').style.display='flex';
+    // No autenticado — mostrar login
+    var loginEl = document.getElementById('screen-login');
+    if(loginEl){
+      loginEl.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;position:fixed;inset:0;z-index:9999;';
+    }
   }
 }
 
