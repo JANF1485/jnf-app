@@ -2023,16 +2023,19 @@ async function readRUT(file){
   document.getElementById('rutZone').style.display='none';
   document.getElementById('rutProcessing').style.display='block';
 
-  var prompt = 'Este es un RUT de la DIAN Colombia. Extrae los datos y responde SOLO con JSON valido sin markdown. Campos: '
-    + '"razon"(PJ=campo35 razon social, PN=apellidos+nombres campos 36-39), '
-    + '"nit"(solo digitos), "dv", "tipo"("PJ" o "PN"), '
-    + '"dir", "dpto", "ciudad", "tel", "email", '
-    + '"ciiu"(actividad principal), "ciiu2", '
-    + '"regimen"(regimen tributario), '
-    + '"periodo_iva"("bimestral" o "cuatrimestral" o vacio), '
-    + '"resps"(array codigos campo 53, ej ["05","07","48"]), '
-    + '"rl_ap1","rl_ap2","rl_n1","rl_n2","rl_cc","rl_cargo". '
-    + 'Campos vacios = "". Solo JSON.';
+  var prompt = 'Eres un extractor de datos de documentos RUT de la DIAN Colombia. '
+    + 'Extrae TODOS los datos del RUT y responde ÚNICAMENTE con un objeto JSON válido. '
+    + 'NO incluyas texto antes ni después del JSON. NO uses markdown ni backticks. '
+    + 'Estructura exacta requerida: '
+    + '{"razon":"NOMBRE O RAZÓN SOCIAL","nit":"SOLO DIGITOS SIN PUNTOS","dv":"DIGITO",'
+    + '"tipo":"PJ o PN","dir":"DIRECCIÓN","dpto":"DEPARTAMENTO","ciudad":"MUNICIPIO",'
+    + '"tel":"TELEFONO","email":"CORREO","ciiu":"COD ACTIVIDAD","ciiu2":"",'
+    + '"regimen":"REGIMEN TRIBUTARIO","periodo_iva":"bimestral o cuatrimestral o vacio",'
+    + '"resps":["05","07"],"rl_ap1":"","rl_ap2":"","rl_n1":"","rl_n2":"","rl_cc":"","rl_cargo":""}. '
+    + 'Para Persona Jurídica: razon = campo 35. '
+    + 'Para Persona Natural: razon = concatenar primer apellido + segundo apellido + primer nombre + otros nombres. '
+    + 'resps = array de strings con códigos de 2 dígitos del campo 53. '
+    + 'Campos no encontrados = cadena vacía. SOLO EL JSON, nada más.';
 
   var reader = new FileReader();
   reader.onload = async function(e){
@@ -2041,72 +2044,69 @@ async function readRUT(file){
       var text = '';
       var lastErr = '';
 
-      // Intentar con el proxy de Cloudflare (Gemini)
-      for(var attempt = 0; attempt < 2; attempt++){
+      for(var attempt = 0; attempt < 3; attempt++){
         try{
+          var promptUsar = attempt < 2 ? prompt
+            : 'Extrae del RUT colombiano y responde SOLO JSON sin texto extra: {"razon":"","nit":"","dv":"","tipo":"PJ o PN","ciudad":"","dpto":"","dir":"","tel":"","email":"","ciiu":"","regimen":"","resps":[]}';
+
           var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
               contents: [{parts: [
                 {inline_data: {mime_type: 'application/pdf', data: b64}},
-                {text: attempt === 0 ? prompt : 'Lee este RUT DIAN y responde solo con JSON: razon, nit, dv, tipo(PJ/PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array codigos). Solo JSON.'}
+                {text: promptUsar}
               ]}],
-              generationConfig: {temperature: 0, maxOutputTokens: 1024}
+              generationConfig: {temperature: 0, maxOutputTokens: 8192}
             })
           });
 
           if(!resp.ok){ lastErr = 'HTTP ' + resp.status; continue; }
           var data = await resp.json();
-          console.log('[RUT] proxy resp intento '+(attempt+1)+':', JSON.stringify(data).slice(0,200));
+          console.log('[RUT] intento ' + (attempt+1) + ' raw:', JSON.stringify(data).slice(0, 300));
 
-          // Verificar si es error de cuota
           if(data && data.error){
-            lastErr = data.error.message || JSON.stringify(data.error);
-            if(lastErr.includes('quota') || lastErr.includes('429')){
-              lastErr = 'Cuota de API agotada temporalmente';
-            }
+            lastErr = (data.error.message || '').includes('quota') ? 'Cuota agotada' : (data.error.message || 'Error API');
             continue;
           }
 
-          text = (data.candidates && data.candidates[0] && data.candidates[0].content &&
-                  data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+          text = (data.candidates &&
+                  data.candidates[0] &&
+                  data.candidates[0].content &&
+                  data.candidates[0].content.parts &&
+                  data.candidates[0].content.parts[0] &&
                   data.candidates[0].content.parts[0].text) || '';
 
-          if(text) break;
-          lastErr = 'Respuesta vacía (finishReason: ' + (data.candidates && data.candidates[0] && data.candidates[0].finishReason || '?') + ')';
+          var finishReason = (data.candidates && data.candidates[0] && data.candidates[0].finishReason) || '';
+          if(text){
+            console.log('[RUT] texto recibido:', text.slice(0, 200));
+            if(finishReason === 'MAX_TOKENS'){
+              console.warn('[RUT] JSON truncado por MAX_TOKENS — intentando completar');
+            }
+            break;
+          }
+          lastErr = 'finishReason=' + finishReason;
 
-        } catch(fetchErr){
-          lastErr = fetchErr.message;
-          await new Promise(function(r){ setTimeout(r, 1000); });
+        } catch(fe){
+          lastErr = fe.message;
+          if(attempt < 2) await new Promise(function(r){ setTimeout(r, 800); });
         }
       }
 
       if(!text){
-        // Mostrar formulario manual con mensaje claro
         document.getElementById('rutZone').style.display='';
         document.getElementById('rutProcessing').style.display='none';
         document.getElementById('rutInput').value='';
-        ss('⚠️ Lectura automática no disponible (' + lastErr.slice(0,80) + '). Por favor completa los datos del cliente manualmente.','err');
-        // Hacer scroll al formulario
-        var form = document.querySelector('.form-grid');
-        if(form) form.scrollIntoView({behavior:'smooth'});
+        ss('⚠️ No se pudo leer el RUT (' + lastErr.slice(0, 80) + '). Completa los datos manualmente.','err');
         return;
       }
 
-      // Parsear JSON robusto
-      var parsed = null;
-      var clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-      var s = clean.indexOf('{'), e2 = clean.lastIndexOf('}');
-      var tries = [clean];
-      if(s >= 0 && e2 > s) tries.push(clean.slice(s, e2+1));
-      for(var ti = 0; ti < tries.length; ti++){
-        try{ parsed = JSON.parse(tries[ti]); break; }catch(pe){}
-      }
+      // Parser JSON ultra-robusto
+      var parsed = rutParseJSON(text);
 
       if(!parsed){
-        ss('RUT recibido pero no pudo interpretarse. Completa los datos manualmente.','err');
-        console.warn('[RUT] texto recibido:', text.slice(0,300));
+        ss('⚠️ RUT leído pero los datos no pudieron extraerse. Completa los datos manualmente.','err');
+        console.warn('[RUT] texto completo:', text);
         return;
       }
 
@@ -2114,7 +2114,7 @@ async function readRUT(file){
       ss('✓ RUT leído correctamente — revisa y corrige si es necesario','ok');
 
     } catch(err){
-      console.error('[RUT] Error:', err);
+      console.error('[RUT] Error general:', err);
       ss('Error leyendo RUT: ' + err.message.slice(0,120) + '. Completa los datos manualmente.','err');
     } finally{
       document.getElementById('rutZone').style.display='';
@@ -2130,41 +2130,105 @@ async function readRUT(file){
   reader.readAsDataURL(file);
 }
 
-// Drag & drop on RUT zone
-const rz=document.getElementById('rutZone');
-rz.addEventListener('dragover',e=>{e.preventDefault();rz.classList.add('drag');});
-rz.addEventListener('dragleave',()=>rz.classList.remove('drag'));
-rz.addEventListener('drop',e=>{e.preventDefault();rz.classList.remove('drag');
-  const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')readRUT(f);});
+function rutParseJSON(text){
+  if(!text) return null;
 
-// Close modal on bg click
-var _mAdd=document.getElementById('modalAdd');
-if(_mAdd) _mAdd.addEventListener('click',function(e){
-  if(e.target===this)closeModal('add');
-});
-var _mCons=document.getElementById('modalConsolidador');
-if(_mCons) _mCons.addEventListener('click',function(e){
-  if(e.target===this)closeModal('consolidador');
-});
+  // Paso 1: limpiar backticks de markdown
+  var bt = String.fromCharCode(96);
+  var clean = text;
+  clean = clean.split(bt+bt+bt+'json').join('');
+  clean = clean.split(bt+bt+bt).join('');
+  clean = clean.trim();
 
-// ── Comunicación con iframe del consolidador via postMessage ──
-window.addEventListener('message', function(e){
-  if(!e.data || !e.data.type) return;
-  if(e.data.type==='JNF_SAVE'){
-    // Save data sent from consolidador iframe
-    try{
-      localStorage.setItem(e.data.key, e.data.data);
-      console.log('[JNF] Saved:', e.data.key);
-      // Refresh saved panel if we're on contabilidad
-      if(activeClientId && activeYear){
-        loadSavedResults(activeClientId, activeYear);
-        audRegistrar('Guardar','Exógena',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Consolidado AG '+activeYear);
-      }
-    }catch(err){ console.error('[JNF] Save error:', err); }
+  // Paso 2: extraer desde el primer { 
+  var s = clean.indexOf('{');
+  if(s < 0) return null;
+  clean = clean.slice(s);
+
+  // Paso 3: si el JSON está truncado, cortarlo en el último campo completo
+  // Un campo completo termina en: "valor", "valor": "algo", true, false, null, numero, ] }
+  var lastGoodClose = -1;
+  // Buscar la última coma o cierre de campo válido antes del truncamiento
+  var e = clean.lastIndexOf('}');
+  if(e < 0){
+    // No tiene cierre — buscar la última coma y cortar ahí
+    var lastComma = clean.lastIndexOf(',');
+    if(lastComma > 0){
+      clean = clean.slice(0, lastComma) + '}';
+    } else {
+      clean = clean + '}';
+    }
+  } else {
+    // Tiene al menos un cierre — usar hasta el último }
+    clean = clean.slice(0, e+1);
   }
-});
 
-// Inject saved data into iframe after it loads
+  // Paso 4: balancear llaves y corchetes
+  var opens = 0, arrOpen = 0;
+  for(var ci=0; ci<clean.length; ci++){
+    if(clean[ci]==='{') opens++;
+    else if(clean[ci]==='}') opens--;
+    else if(clean[ci]==='[') arrOpen++;
+    else if(clean[ci]===']') arrOpen--;
+  }
+  for(var ai=0; ai<arrOpen; ai++) clean += ']';
+  for(var oi=0; oi<opens; oi++) clean += '}';
+
+  // Paso 5: intentar parsear con múltiples estrategias
+  var parsed = null;
+
+  // Intento 1: directo
+  try{ parsed = JSON.parse(clean); }catch(e1){}
+
+  // Intento 2: limpiar trailing comma antes de } o ]
+  if(!parsed){
+    try{
+      var fixed = clean.replace(/,\s*([}\]])/g, '$1');
+      parsed = JSON.parse(fixed);
+    }catch(e2){}
+  }
+
+  // Intento 3: desde { hasta } balanceado
+  if(!parsed){
+    try{
+      var depth2=0, endPos=-1;
+      for(var ji=0; ji<clean.length; ji++){
+        if(clean[ji]==='{') depth2++;
+        else if(clean[ji]==='}'){depth2--; if(depth2===0){endPos=ji;break;}}
+      }
+      if(endPos>0){
+        var seg = clean.slice(0,endPos+1);
+        var seg2 = seg.replace(/,\s*([}\]])/g,'$1');
+        parsed = JSON.parse(seg2);
+      }
+    }catch(e3){}
+  }
+
+  // Intento 4: extracción campo a campo con regex (último recurso)
+  if(!parsed){
+    var result = {};
+    var found = false;
+    var campos = ['razon','nit','dv','tipo','dir','dpto','ciudad','tel','email',
+                  'ciiu','ciiu2','regimen','periodo_iva','rl_ap1','rl_ap2',
+                  'rl_n1','rl_n2','rl_cc','rl_cargo'];
+    campos.forEach(function(campo){
+      var rx = new RegExp('"'+campo+'"\s*:\s*"([^"]*)"');
+      var m = text.match(rx);
+      if(m){ result[campo] = m[1]; found = true; }
+      else { result[campo] = ''; }
+    });
+    var rm = text.match(/"resps"\s*:\s*\[([^\]]*)/);
+    if(rm){
+      var codes = rm[1].match(/"([^"]+)"/g);
+      result.resps = codes ? codes.map(function(c){return c.replace(/"/g,'');}) : [];
+    } else { result.resps = []; }
+    if(found) parsed = result;
+  }
+
+  return parsed;
+}
+
+
 function injectPreloadToIframe(iframe, clientId, year){
   const key='jnf_cons_'+clientId+'_'+year;
   const raw=localStorage.getItem(key);
@@ -3957,10 +4021,17 @@ window.f300_verVersion = function(key){
 
 window.f300_eliminarVersion = function(key){
   pedirConfirmPwd('¿Eliminar esta versión del F300? Esta acción no se puede deshacer.', function(){
+    console.log('[F300] Eliminando versión:', key);
     db.collection('resultados_historico').doc(key).delete().then(function(){
+      console.log('[F300] Eliminado OK');
       ss('Versión F300 eliminada','ok');
       audRegistrar('Eliminar','F300',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Versión eliminada desde Archivo de Reportes');
-      if(window._openGuardado) window._openGuardado();
+      var c = clients.find(function(x){return x.id===activeClientId;});
+      var yr = activeYear||new Date().getFullYear();
+      if(c) cargarArchivo(c.id, yr);
+    }).catch(function(e){
+      console.error('[F300] Error eliminando:', e);
+      ss('Error al eliminar: '+e.message,'err');
     });
   });
 };
@@ -4417,35 +4488,59 @@ window.confirmarConPwd = function(){
   var inputEl = document.getElementById('confirm-pwd-input');
   var errEl   = document.getElementById('confirm-pwd-error');
   var btnEl   = document.getElementById('confirm-pwd-btn');
-  var pwd     = inputEl ? inputEl.value : '';
+  var pwd     = inputEl ? inputEl.value.trim() : '';
 
-  if(!pwd){ 
+  if(!pwd){
     if(errEl){ errEl.textContent='Ingresa tu contraseña.'; errEl.style.display='block'; }
-    return; 
+    return;
   }
-  if(!currentUser){ 
+  if(!currentUser){
     if(errEl){ errEl.textContent='No hay sesión activa.'; errEl.style.display='block'; }
-    return; 
+    return;
   }
 
   if(btnEl){ btnEl.disabled=true; btnEl.textContent='Verificando…'; }
   if(errEl) errEl.style.display='none';
 
-  var credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
-  currentUser.reauthenticateWithCredential(credential).then(function(){
+  // Intentar reautenticación con Firebase
+  var doExecute = function(){
     cerrarConfirmPwd();
     if(typeof _confirmPwdCallback === 'function') _confirmPwdCallback();
-  }).catch(function(e){
+  };
+
+  var doError = function(msg){
     if(btnEl){ btnEl.disabled=false; btnEl.textContent='Confirmar eliminación'; }
-    var msgs = {
-      'auth/wrong-password':      'Contraseña incorrecta. Intenta de nuevo.',
-      'auth/invalid-credential':  'Contraseña incorrecta. Intenta de nuevo.',
-      'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
-    };
-    var msg = msgs[e.code] || 'Error al verificar: '+e.message;
     if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
-  });
+  };
+
+  try {
+    // Intentar con reauthenticateWithCredential
+    var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+    currentUser.reauthenticateWithCredential(cred)
+      .then(doExecute)
+      .catch(function(e){
+        var msgs = {
+          'auth/wrong-password':      'Contraseña incorrecta.',
+          'auth/invalid-credential':  'Contraseña incorrecta.',
+          'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
+        };
+        doError(msgs[e.code] || 'Contraseña incorrecta.');
+      });
+  } catch(ex){
+    // Si EmailAuthProvider falla, usar signInWithEmailAndPassword
+    firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
+      .then(doExecute)
+      .catch(function(e){
+        var msgs = {
+          'auth/wrong-password':      'Contraseña incorrecta.',
+          'auth/invalid-credential':  'Contraseña incorrecta.',
+          'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
+        };
+        doError(msgs[e.code] || 'Contraseña incorrecta.');
+      });
+  }
 };
+
 
 
 function f350_st(msg,tipo){
@@ -6295,7 +6390,8 @@ window._openFicha = window.openFicha = function openFicha(clientId){
 }
 
 window._closeFicha = window.closeFicha = function closeFicha(){
-  document.getElementById('modal-ficha').style.display='none';
+  var mf = document.getElementById('modal-ficha');
+  if(mf) mf.style.display='none';
 }
 
 // Close on background click - wrapped in DOMContentLoaded safety
@@ -6448,17 +6544,16 @@ function doChangePasswordDirect(){
 
 function eliminarReporte(tipo, key, divEl){
   if(!db) return;
-  pedirConfirmPwd('¿Eliminar este reporte de exógena permanentemente? Esta acción no se puede deshacer.', function(){
+  pedirConfirmPwd('¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.', function(){
     var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
+    console.log('[ELIM] Eliminando doc:', docId, 'tipo:', tipo);
     db.collection('resultados').doc(docId).delete().then(function(){
+      console.log('[ELIM] Eliminado correctamente');
       var c = clients.find(function(x){return x.id===activeClientId;});
       var yr = activeYear||new Date().getFullYear();
       audRegistrar('Eliminar','Exógena',activeClientId,(c||{}).razon||'','Reporte eliminado desde Archivo de Reportes');
-      if(tipo==='exogena' && divEl){
-        divEl.style.display='none';
-      } else {
-        cargarArchivo(c.id, yr);
-      }
+      if(divEl) divEl.style.display='none';
+      if(c) cargarArchivo(c.id, yr);
       var sb = document.createElement('div');
       sb.textContent = '✓ Reporte eliminado correctamente';
       sb.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2580;color:#fff;padding:12px 20px;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);';
@@ -7611,7 +7706,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div style="font-size:11px;font-weight:700;color:#b91c1c;" id="confirm-pwd-msg">¿Estás seguro?</div>
       </div>
       <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:6px;">
-        Ingresa tu contraseña para confirmar
+        Ingresa tu contraseña de acceso al sistema
       </label>
       <input id="confirm-pwd-input" type="password" placeholder="••••••••"
         style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:9px 12px;
