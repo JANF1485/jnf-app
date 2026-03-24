@@ -2023,63 +2023,68 @@ async function readRUT(file){
   document.getElementById('rutZone').style.display='none';
   document.getElementById('rutProcessing').style.display='block';
 
-  var prompt1 = 'Este es un RUT de la DIAN Colombia. Responde SOLO con JSON valido. Campos: razon(PJ=campo35, PN=apellidos+nombres campos36-39), nit(solo digitos), dv, tipo(PJ/PN), dir, dpto, ciudad, tel, email, ciiu, ciiu2, regimen, resps(array codigos campo 53 ej ["05","48"]), rl_ap1, rl_ap2, rl_n1, rl_n2, rl_cc, rl_cargo. Campos vacios = "". Solo el JSON.';
-  var prompt2 = 'RUT DIAN Colombia. JSON con: razon, nit, dv, tipo(PJ/PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array). Solo JSON.';
-
   var reader = new FileReader();
   reader.onload = async function(e){
     try{
       var b64 = e.target.result.split(',')[1];
-      var text = '';
-      var lastErr = '';
 
-      for(var attempt=0; attempt<3; attempt++){
-        try{
-          var prom = attempt < 2 ? prompt1 : prompt2;
-          var tokens = attempt < 2 ? 2048 : 1024;
-          var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-              contents:[{parts:[
-                {inline_data:{mime_type:'application/pdf', data:b64}},
-                {text: prom}
-              ]}],
-              generationConfig:{temperature:0, maxOutputTokens: tokens}
-            })
-          });
-          if(!resp.ok){ lastErr='HTTP '+resp.status; continue; }
-          var data = await resp.json();
-          console.log('[RUT] intento '+(attempt+1)+' raw:', JSON.stringify(data).slice(0,250));
-          text = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
-          if(!text && data && data.candidates && data.candidates[0]){
-            lastErr = 'finishReason=' + (data.candidates[0].finishReason||'?');
-          }
-          if(text) break;
-        } catch(fe){
-          lastErr = fe.message;
-          await new Promise(function(r){setTimeout(r, 800*(attempt+1));});
-        }
+      var prompt = 'Este es un RUT de la DIAN Colombia. Extrae los datos y responde SOLO con un objeto JSON valido, sin texto adicional ni markdown. Campos: '
+        + '"razon": razon social si es Persona Juridica (campo 35), o nombre completo si es Persona Natural (concatena apellidos y nombres de los campos 36-39), '
+        + '"nit": solo digitos sin puntos ni espacios, '
+        + '"dv": digito de verificacion, '
+        + '"tipo": "PJ" si es Persona Juridica o "PN" si es Persona Natural, '
+        + '"dir": direccion principal, "dpto": departamento, "ciudad": municipio, '
+        + '"tel": telefono, "email": correo electronico, '
+        + '"ciiu": codigo actividad economica principal, "ciiu2": segunda actividad, '
+        + '"regimen": regimen tributario, '
+        + '"periodo_iva": "bimestral" o "cuatrimestral" segun corresponda o vacio, '
+        + '"resps": array de strings con los codigos de 2 digitos del campo 53, ejemplo ["05","07","48"], '
+        + '"rl_ap1","rl_ap2","rl_n1","rl_n2","rl_cc","rl_cargo": datos del representante legal. '
+        + 'Campos no encontrados usar cadena vacia "". Solo el objeto JSON.';
+
+      var resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: [{
+              type: 'document',
+              source: {type: 'base64', media_type: 'application/pdf', data: b64}
+            },{
+              type: 'text',
+              text: prompt
+            }]
+          }]
+        })
+      });
+
+      if(!resp.ok){
+        var errBody = await resp.text();
+        throw new Error('Error API ' + resp.status + ': ' + errBody.slice(0,150));
       }
 
-      if(!text){
-        ss('No se pudo leer el RUT automáticamente (' + lastErr + '). Completa los datos manualmente.','err');
-        return;
-      }
+      var data = await resp.json();
+      var text = (data.content && data.content[0] && data.content[0].text) || '';
+
+      if(!text) throw new Error('Sin respuesta de la API. Completa los datos manualmente.');
 
       // Parsear JSON robusto
       var parsed = null;
       var clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-      var s = clean.indexOf('{'), e2 = clean.lastIndexOf('}');
-      var candidates2 = [clean];
-      if(s >= 0 && e2 > s) candidates2.push(clean.slice(s, e2+1));
-      for(var ci=0; ci<candidates2.length; ci++){
-        try{ parsed = JSON.parse(candidates2[ci]); break; }catch(pe){}
+      var s = clean.indexOf('{');
+      var e2 = clean.lastIndexOf('}');
+      var tries = [clean];
+      if(s >= 0 && e2 > s) tries.push(clean.slice(s, e2+1));
+      for(var i=0; i<tries.length; i++){
+        try{ parsed = JSON.parse(tries[i]); break; }catch(pe){}
       }
 
       if(!parsed){
         ss('RUT recibido pero no interpretado. Completa manualmente.','err');
-        console.warn('[RUT] texto:', text.slice(0,300));
+        console.warn('[RUT] texto recibido:', text.slice(0,300));
         return;
       }
 
@@ -2088,7 +2093,7 @@ async function readRUT(file){
 
     } catch(err){
       console.error('[RUT] Error:', err);
-      ss('Error: ' + err.message.slice(0,120) + '. Completa los datos manualmente.','err');
+      ss('Error leyendo RUT: ' + err.message.slice(0,150) + '. Completa los datos manualmente.','err');
     } finally{
       document.getElementById('rutZone').style.display='';
       document.getElementById('rutProcessing').style.display='none';
