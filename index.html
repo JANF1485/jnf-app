@@ -2084,8 +2084,50 @@ async function readRUT(file){
     const data = await resp.json();
     console.log('[RUT] Gemini response:', JSON.stringify(data).slice(0,300));
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if(!text) throw new Error('Respuesta vacia de Gemini');
+    // Verificar causa del fallo antes de lanzar error
+    const candidate = data.candidates?.[0];
+    const finishReason = candidate?.finishReason || '';
+    const text = candidate?.content?.parts?.[0]?.text || '';
+    
+    if(!text){
+      // Diagnosticar la causa
+      if(finishReason === 'SAFETY'){
+        throw new Error('El PDF fue bloqueado por filtros de seguridad. Intenta con otro archivo.');
+      } else if(finishReason === 'RECITATION'){
+        throw new Error('Contenido protegido. Intenta de nuevo o ingresa los datos manualmente.');
+      } else if(data.promptFeedback?.blockReason){
+        throw new Error('PDF bloqueado: ' + data.promptFeedback.blockReason + '. Ingresa los datos manualmente.');
+      } else if(!data.candidates || data.candidates.length === 0){
+        throw new Error('El proxy no pudo procesar el PDF. Verifica que sea un RUT válido de la DIAN.');
+      } else {
+        // Puede ser PDF escaneado — intentar de nuevo con prompt simplificado
+        console.warn('[RUT] Respuesta vacía, finishReason:', finishReason, '— reintentando con prompt corto');
+        const promptCorto = 'Este es un RUT de Colombia. Extrae en JSON: razon(nombre/razon social), nit(solo numeros), dv, tipo(PJ o PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array codigos campo 53). Solo JSON.';
+        const resp2 = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            contents:[{parts:[
+              {inline_data:{mime_type:'application/pdf', data:b64}},
+              {text: promptCorto}
+            ]}],
+            generationConfig:{temperature:0, maxOutputTokens:2048}
+          })
+        });
+        const data2 = await resp2.json();
+        const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if(!text2) throw new Error('El PDF no pudo ser leído. Puede ser un PDF escaneado o protegido. Completa los datos manualmente.');
+        // Usar text2 para continuar
+        const parsedRetry = (() => {
+          try{ return JSON.parse(text2); }catch(e){}
+          const s=text2.indexOf('{'), e=text2.lastIndexOf('}');
+          if(s>=0&&e>s){ try{ return JSON.parse(text2.slice(s,e+1)); }catch(e2){} }
+          return null;
+        })();
+        if(parsedRetry){ fillForm(parsedRetry); ss('RUT leído (modo simplificado) — revisa y corrige si es necesario','ok'); return; }
+        throw new Error('No se pudo extraer información del PDF. Completa los datos manualmente.');
+      }
+    }
 
     console.log('[RUT] Text:', text.slice(0,200));
 
@@ -2121,7 +2163,7 @@ async function readRUT(file){
 
   }catch(err){
     console.error('[RUT]', err);
-    ss('No se pudo leer el RUT: ' + err.message.slice(0,100) + '. Completa los datos manualmente.','err');
+    ss('⚠️ ' + err.message.slice(0,150),'err');
   }finally{
     document.getElementById('rutZone').style.display='';
     document.getElementById('rutProcessing').style.display='none';
