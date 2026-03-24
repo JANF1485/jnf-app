@@ -2023,77 +2023,99 @@ async function readRUT(file){
   document.getElementById('rutZone').style.display='none';
   document.getElementById('rutProcessing').style.display='block';
 
+  var prompt = 'Este es un RUT de la DIAN Colombia. Extrae los datos y responde SOLO con JSON valido sin markdown. Campos: '
+    + '"razon"(PJ=campo35 razon social, PN=apellidos+nombres campos 36-39), '
+    + '"nit"(solo digitos), "dv", "tipo"("PJ" o "PN"), '
+    + '"dir", "dpto", "ciudad", "tel", "email", '
+    + '"ciiu"(actividad principal), "ciiu2", '
+    + '"regimen"(regimen tributario), '
+    + '"periodo_iva"("bimestral" o "cuatrimestral" o vacio), '
+    + '"resps"(array codigos campo 53, ej ["05","07","48"]), '
+    + '"rl_ap1","rl_ap2","rl_n1","rl_n2","rl_cc","rl_cargo". '
+    + 'Campos vacios = "". Solo JSON.';
+
   var reader = new FileReader();
   reader.onload = async function(e){
     try{
       var b64 = e.target.result.split(',')[1];
+      var text = '';
+      var lastErr = '';
 
-      var prompt = 'Este es un RUT de la DIAN Colombia. Extrae los datos y responde SOLO con un objeto JSON valido, sin texto adicional ni markdown. Campos: '
-        + '"razon": razon social si es Persona Juridica (campo 35), o nombre completo si es Persona Natural (concatena apellidos y nombres de los campos 36-39), '
-        + '"nit": solo digitos sin puntos ni espacios, '
-        + '"dv": digito de verificacion, '
-        + '"tipo": "PJ" si es Persona Juridica o "PN" si es Persona Natural, '
-        + '"dir": direccion principal, "dpto": departamento, "ciudad": municipio, '
-        + '"tel": telefono, "email": correo electronico, '
-        + '"ciiu": codigo actividad economica principal, "ciiu2": segunda actividad, '
-        + '"regimen": regimen tributario, '
-        + '"periodo_iva": "bimestral" o "cuatrimestral" segun corresponda o vacio, '
-        + '"resps": array de strings con los codigos de 2 digitos del campo 53, ejemplo ["05","07","48"], '
-        + '"rl_ap1","rl_ap2","rl_n1","rl_n2","rl_cc","rl_cargo": datos del representante legal. '
-        + 'Campos no encontrados usar cadena vacia "". Solo el objeto JSON.';
+      // Intentar con el proxy de Cloudflare (Gemini)
+      for(var attempt = 0; attempt < 2; attempt++){
+        try{
+          var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              contents: [{parts: [
+                {inline_data: {mime_type: 'application/pdf', data: b64}},
+                {text: attempt === 0 ? prompt : 'Lee este RUT DIAN y responde solo con JSON: razon, nit, dv, tipo(PJ/PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array codigos). Solo JSON.'}
+              ]}],
+              generationConfig: {temperature: 0, maxOutputTokens: 1024}
+            })
+          });
 
-      var resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          messages: [{
-            role: 'user',
-            content: [{
-              type: 'document',
-              source: {type: 'base64', media_type: 'application/pdf', data: b64}
-            },{
-              type: 'text',
-              text: prompt
-            }]
-          }]
-        })
-      });
+          if(!resp.ok){ lastErr = 'HTTP ' + resp.status; continue; }
+          var data = await resp.json();
+          console.log('[RUT] proxy resp intento '+(attempt+1)+':', JSON.stringify(data).slice(0,200));
 
-      if(!resp.ok){
-        var errBody = await resp.text();
-        throw new Error('Error API ' + resp.status + ': ' + errBody.slice(0,150));
+          // Verificar si es error de cuota
+          if(data && data.error){
+            lastErr = data.error.message || JSON.stringify(data.error);
+            if(lastErr.includes('quota') || lastErr.includes('429')){
+              lastErr = 'Cuota de API agotada temporalmente';
+            }
+            continue;
+          }
+
+          text = (data.candidates && data.candidates[0] && data.candidates[0].content &&
+                  data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+                  data.candidates[0].content.parts[0].text) || '';
+
+          if(text) break;
+          lastErr = 'Respuesta vacía (finishReason: ' + (data.candidates && data.candidates[0] && data.candidates[0].finishReason || '?') + ')';
+
+        } catch(fetchErr){
+          lastErr = fetchErr.message;
+          await new Promise(function(r){ setTimeout(r, 1000); });
+        }
       }
 
-      var data = await resp.json();
-      var text = (data.content && data.content[0] && data.content[0].text) || '';
-
-      if(!text) throw new Error('Sin respuesta de la API. Completa los datos manualmente.');
+      if(!text){
+        // Mostrar formulario manual con mensaje claro
+        document.getElementById('rutZone').style.display='';
+        document.getElementById('rutProcessing').style.display='none';
+        document.getElementById('rutInput').value='';
+        ss('⚠️ Lectura automática no disponible (' + lastErr.slice(0,80) + '). Por favor completa los datos del cliente manualmente.','err');
+        // Hacer scroll al formulario
+        var form = document.querySelector('.form-grid');
+        if(form) form.scrollIntoView({behavior:'smooth'});
+        return;
+      }
 
       // Parsear JSON robusto
       var parsed = null;
       var clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-      var s = clean.indexOf('{');
-      var e2 = clean.lastIndexOf('}');
+      var s = clean.indexOf('{'), e2 = clean.lastIndexOf('}');
       var tries = [clean];
       if(s >= 0 && e2 > s) tries.push(clean.slice(s, e2+1));
-      for(var i=0; i<tries.length; i++){
-        try{ parsed = JSON.parse(tries[i]); break; }catch(pe){}
+      for(var ti = 0; ti < tries.length; ti++){
+        try{ parsed = JSON.parse(tries[ti]); break; }catch(pe){}
       }
 
       if(!parsed){
-        ss('RUT recibido pero no interpretado. Completa manualmente.','err');
+        ss('RUT recibido pero no pudo interpretarse. Completa los datos manualmente.','err');
         console.warn('[RUT] texto recibido:', text.slice(0,300));
         return;
       }
 
       fillForm(parsed);
-      ss('RUT leído correctamente — revisa y corrige si es necesario ✓','ok');
+      ss('✓ RUT leído correctamente — revisa y corrige si es necesario','ok');
 
     } catch(err){
       console.error('[RUT] Error:', err);
-      ss('Error leyendo RUT: ' + err.message.slice(0,150) + '. Completa los datos manualmente.','err');
+      ss('Error leyendo RUT: ' + err.message.slice(0,120) + '. Completa los datos manualmente.','err');
     } finally{
       document.getElementById('rutZone').style.display='';
       document.getElementById('rutProcessing').style.display='none';
