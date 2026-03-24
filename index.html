@@ -1515,6 +1515,8 @@ function saveClient(){
   const d=getForm();
   if(!d.razon){ss('El nombre o razón social es obligatorio','err');return;}
   if(!d.nit){ss('El NIT es obligatorio','err');return;}
+  if(!d.regimen){ss('El régimen tributario es obligatorio — selecciona una opción','err');document.getElementById('f_regimen').focus();return;}
+  if(!d.periodo_iva){ss('La periodicidad de IVA es obligatoria — selecciona una opción','err');document.getElementById('f_periodo_iva').focus();return;}
   fbSaveClient(d).then(function(){
     if(editingId){const i=clients.findIndex(c=>c.id===editingId);if(i>=0)clients[i]=d;else clients.push(d);}
     else{if(clients.find(c=>c.nit===d.nit)){ss('Ya existe un cliente con ese NIT','err');return;}clients.push(d);}
@@ -2021,155 +2023,86 @@ async function readRUT(file){
   document.getElementById('rutZone').style.display='none';
   document.getElementById('rutProcessing').style.display='block';
 
-  try{
-    const b64 = await new Promise((res,rej)=>{
-      const r=new FileReader();
-      r.onload=()=>res(r.result.split(',')[1]);
-      r.onerror=rej;
-      r.readAsDataURL(file);
-    });
+  var prompt1 = 'Este es un RUT de la DIAN Colombia. Responde SOLO con JSON valido. Campos: razon(PJ=campo35, PN=apellidos+nombres campos36-39), nit(solo digitos), dv, tipo(PJ/PN), dir, dpto, ciudad, tel, email, ciiu, ciiu2, regimen, resps(array codigos campo 53 ej ["05","48"]), rl_ap1, rl_ap2, rl_n1, rl_n2, rl_cc, rl_cargo. Campos vacios = "". Solo el JSON.';
+  var prompt2 = 'RUT DIAN Colombia. JSON con: razon, nit, dv, tipo(PJ/PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array). Solo JSON.';
 
-    // Key gestionada en Cloudflare Worker
-    const prompt = 'Lee este documento RUT de la DIAN Colombia. Responde UNICAMENTE con JSON valido sin texto adicional ni markdown. Extrae estos campos: '
-      + '"razon": para Persona Juridica usa campo 35 (Razon Social). Para Persona Natural construye el nombre completo concatenando campo 36(primer apellido) campo 37(segundo apellido) campo 38(primer nombre) campo 39(otros nombres). '
-      + '"nit": campo 5 solo digitos sin puntos ni DV, '
-      + '"dv": campo 6 digito de verificacion, '
-      + '"sigla": campo 36 si es PJ o vacio, '
-      + '"tipo": "PJ" si es Persona Juridica o "PN" si es Persona Natural, '
-      + '"dir": campo 41 direccion principal, '
-      + '"dpto": campo 39 departamento, '
-      + '"ciudad": campo 40 municipio, '
-      + '"cp": campo 43 codigo postal, '
-      + '"tel": campo 44 telefono, '
-      + '"email": campo 42 correo electronico, '
-      + '"ciiu": campo 46 codigo actividad principal, '
-      + '"ciiu2": campo 48, '
-      + '"ciiu3": primera actividad campo 50, '
-      + '"ciiu4": segunda actividad campo 50, '
-      + '"seccional": campo 12, '
-      + '"regimen": valor del regimen tributario, '
-      + '"periodo_iva": "bimestral" o "cuatrimestral" segun corresponda o vacio, '
-      + '"resps": array de codigos de responsabilidades del campo 53 como strings de 2 digitos ej ["05","14","42"], '
-      + '"rl_ap1": primer apellido representante legal campo 84, '
-      + '"rl_ap2": segundo apellido representante legal, '
-      + '"rl_n1": primer nombre representante legal, '
-      + '"rl_n2": otros nombres representante legal, '
-      + '"rl_cc": cedula representante legal, '
-      + '"rl_cargo": cargo representante legal. '
-      + 'Usa cadena vacia "" para campos no encontrados. Solo el objeto JSON.';
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      var b64 = e.target.result.split(',')[1];
+      var text = '';
+      var lastErr = '';
 
-    const resp = await fetch(
-      'https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',
-      {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          contents: [{parts: [
-            {inline_data: {mime_type: 'application/pdf', data: b64}},
-            {text: prompt}
-          ]}],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 8192
+      for(var attempt=0; attempt<3; attempt++){
+        try{
+          var prom = attempt < 2 ? prompt1 : prompt2;
+          var tokens = attempt < 2 ? 2048 : 1024;
+          var resp = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              contents:[{parts:[
+                {inline_data:{mime_type:'application/pdf', data:b64}},
+                {text: prom}
+              ]}],
+              generationConfig:{temperature:0, maxOutputTokens: tokens}
+            })
+          });
+          if(!resp.ok){ lastErr='HTTP '+resp.status; continue; }
+          var data = await resp.json();
+          console.log('[RUT] intento '+(attempt+1)+' raw:', JSON.stringify(data).slice(0,250));
+          text = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+          if(!text && data && data.candidates && data.candidates[0]){
+            lastErr = 'finishReason=' + (data.candidates[0].finishReason||'?');
           }
-        })
-      }
-    );
-
-    if(!resp.ok){
-      const errText = await resp.text();
-      throw new Error('Error ' + resp.status + ': ' + errText.slice(0,200));
-    }
-
-    const data = await resp.json();
-    console.log('[RUT] Gemini response:', JSON.stringify(data).slice(0,300));
-
-    // Verificar causa del fallo antes de lanzar error
-    const candidate = data.candidates?.[0];
-    const finishReason = candidate?.finishReason || '';
-    const text = candidate?.content?.parts?.[0]?.text || '';
-    
-    if(!text){
-      // Diagnosticar la causa
-      if(finishReason === 'SAFETY'){
-        throw new Error('El PDF fue bloqueado por filtros de seguridad. Intenta con otro archivo.');
-      } else if(finishReason === 'RECITATION'){
-        throw new Error('Contenido protegido. Intenta de nuevo o ingresa los datos manualmente.');
-      } else if(data.promptFeedback?.blockReason){
-        throw new Error('PDF bloqueado: ' + data.promptFeedback.blockReason + '. Ingresa los datos manualmente.');
-      } else if(!data.candidates || data.candidates.length === 0){
-        throw new Error('El proxy no pudo procesar el PDF. Verifica que sea un RUT válido de la DIAN.');
-      } else {
-        // Puede ser PDF escaneado — intentar de nuevo con prompt simplificado
-        console.warn('[RUT] Respuesta vacía, finishReason:', finishReason, '— reintentando con prompt corto');
-        const promptCorto = 'Este es un RUT de Colombia. Extrae en JSON: razon(nombre/razon social), nit(solo numeros), dv, tipo(PJ o PN), ciudad, dpto, dir, tel, email, ciiu, regimen, resps(array codigos campo 53). Solo JSON.';
-        const resp2 = await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            contents:[{parts:[
-              {inline_data:{mime_type:'application/pdf', data:b64}},
-              {text: promptCorto}
-            ]}],
-            generationConfig:{temperature:0, maxOutputTokens:2048}
-          })
-        });
-        const data2 = await resp2.json();
-        const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if(!text2) throw new Error('El PDF no pudo ser leído. Puede ser un PDF escaneado o protegido. Completa los datos manualmente.');
-        // Usar text2 para continuar
-        const parsedRetry = (() => {
-          try{ return JSON.parse(text2); }catch(e){}
-          const s=text2.indexOf('{'), e=text2.lastIndexOf('}');
-          if(s>=0&&e>s){ try{ return JSON.parse(text2.slice(s,e+1)); }catch(e2){} }
-          return null;
-        })();
-        if(parsedRetry){ fillForm(parsedRetry); ss('RUT leído (modo simplificado) — revisa y corrige si es necesario','ok'); return; }
-        throw new Error('No se pudo extraer información del PDF. Completa los datos manualmente.');
-      }
-    }
-
-    console.log('[RUT] Text:', text.slice(0,200));
-
-    // Robust JSON extraction
-    let parsed = null;
-    // Try 1: direct parse
-    try{ parsed = JSON.parse(text); }catch(e){}
-    // Try 2: extract between first { and last }
-    if(!parsed){
-      const start = text.indexOf('{');
-      const end2 = text.lastIndexOf('}');
-      if(start>=0 && end2>start){
-        try{ parsed = JSON.parse(text.slice(start, end2+1)); }catch(e){}
-      }
-    }
-    // Try 3: remove markdown backticks
-    if(!parsed){
-      const clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
-      try{ parsed = JSON.parse(clean); }catch(e){}
-      if(!parsed){
-        const s2 = clean.indexOf('{');
-        const e2 = clean.lastIndexOf('}');
-        if(s2>=0 && e2>s2){
-          try{ parsed = JSON.parse(clean.slice(s2,e2+1)); }catch(e){}
+          if(text) break;
+        } catch(fe){
+          lastErr = fe.message;
+          await new Promise(function(r){setTimeout(r, 800*(attempt+1));});
         }
       }
+
+      if(!text){
+        ss('No se pudo leer el RUT automáticamente (' + lastErr + '). Completa los datos manualmente.','err');
+        return;
+      }
+
+      // Parsear JSON robusto
+      var parsed = null;
+      var clean = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+      var s = clean.indexOf('{'), e2 = clean.lastIndexOf('}');
+      var candidates2 = [clean];
+      if(s >= 0 && e2 > s) candidates2.push(clean.slice(s, e2+1));
+      for(var ci=0; ci<candidates2.length; ci++){
+        try{ parsed = JSON.parse(candidates2[ci]); break; }catch(pe){}
+      }
+
+      if(!parsed){
+        ss('RUT recibido pero no interpretado. Completa manualmente.','err');
+        console.warn('[RUT] texto:', text.slice(0,300));
+        return;
+      }
+
+      fillForm(parsed);
+      ss('RUT leído correctamente — revisa y corrige si es necesario ✓','ok');
+
+    } catch(err){
+      console.error('[RUT] Error:', err);
+      ss('Error: ' + err.message.slice(0,120) + '. Completa los datos manualmente.','err');
+    } finally{
+      document.getElementById('rutZone').style.display='';
+      document.getElementById('rutProcessing').style.display='none';
+      document.getElementById('rutInput').value='';
     }
-
-    if(!parsed) throw new Error('No se pudo parsear: ' + text.slice(0,100));
-
-    fillForm(parsed);
-    ss('RUT leido correctamente — revisa y corrige si es necesario','ok');
-
-  }catch(err){
-    console.error('[RUT]', err);
-    ss('⚠️ ' + err.message.slice(0,150),'err');
-  }finally{
+  };
+  reader.onerror = function(){
+    ss('Error al leer el archivo PDF.','err');
     document.getElementById('rutZone').style.display='';
     document.getElementById('rutProcessing').style.display='none';
-    document.getElementById('rutInput').value='';
-  }
+  };
+  reader.readAsDataURL(file);
 }
+
 // Drag & drop on RUT zone
 const rz=document.getElementById('rutZone');
 rz.addEventListener('dragover',e=>{e.preventDefault();rz.classList.add('drag');});
