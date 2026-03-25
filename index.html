@@ -215,8 +215,209 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   if(!window['oblRegenerarCalendario'])window['oblRegenerarCalendario']=function(){var a=arguments,t=this;var r=function(){if(window['_oblRegenerarCalendario'])window['_oblRegenerarCalendario'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['oblRegenerarTodos'])window['oblRegenerarTodos']=function(){var a=arguments,t=this;var r=function(){if(window['_oblRegenerarTodos'])window['_oblRegenerarTodos'].apply(t,a);else setTimeout(r,50);};r();};
 </script>
+  <!-- Service Worker para modo offline -->
+  <script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js')
+        .then(function(reg){
+          console.log('[JNF] SW registrado:', reg.scope);
+          // Escuchar mensaje de sync
+          navigator.serviceWorker.addEventListener('message', function(e){
+            if(e.data && e.data.type==='SYNC_NOW') jnfOffline.syncPendingData();
+          });
+        })
+        .catch(function(e){ console.warn('[JNF] SW error:', e); });
+    });
+  }
+  </script>
 </head>
 <body>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// JNF OFFLINE SYSTEM — IndexedDB + Session Cache + Sync Queue
+// ═══════════════════════════════════════════════════════════════
+var jnfOffline = (function(){
+  var DB_NAME    = 'jnf-offline-db';
+  var DB_VERSION = 2;
+  var db = null;
+
+  function openDB(){
+    return new Promise(function(resolve, reject){
+      if(db){ resolve(db); return; }
+      var req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function(e){
+        var d = e.target.result;
+        if(!d.objectStoreNames.contains('session'))
+          d.createObjectStore('session', {keyPath:'key'});
+        if(!d.objectStoreNames.contains('clientes'))
+          d.createObjectStore('clientes', {keyPath:'id'});
+        if(!d.objectStoreNames.contains('syncQueue'))
+          d.createObjectStore('syncQueue', {keyPath:'id', autoIncrement:true});
+      };
+      req.onsuccess = function(e){ db=e.target.result; resolve(db); };
+      req.onerror   = function(e){ reject(e); };
+    });
+  }
+
+  function idbSet(store, obj){
+    return openDB().then(function(d){
+      return new Promise(function(res,rej){
+        var tx=d.transaction(store,'readwrite');
+        tx.objectStore(store).put(obj);
+        tx.oncomplete=function(){res();};
+        tx.onerror=function(e){rej(e);};
+      });
+    });
+  }
+
+  function idbGet(store, key){
+    return openDB().then(function(d){
+      return new Promise(function(res,rej){
+        var tx=d.transaction(store,'readonly');
+        var req=tx.objectStore(store).get(key);
+        req.onsuccess=function(){res(req.result);};
+        req.onerror=function(e){rej(e);};
+      });
+    });
+  }
+
+  function idbGetAll(store){
+    return openDB().then(function(d){
+      return new Promise(function(res,rej){
+        var tx=d.transaction(store,'readonly');
+        var req=tx.objectStore(store).getAll();
+        req.onsuccess=function(){res(req.result||[]);};
+        req.onerror=function(e){rej(e);};
+      });
+    });
+  }
+
+  function idbDelete(store, key){
+    return openDB().then(function(d){
+      return new Promise(function(res,rej){
+        var tx=d.transaction(store,'readwrite');
+        tx.objectStore(store).delete(key);
+        tx.oncomplete=function(){res();};
+        tx.onerror=function(e){rej(e);};
+      });
+    });
+  }
+
+  function idbClear(store){
+    return openDB().then(function(d){
+      return new Promise(function(res,rej){
+        var tx=d.transaction(store,'readwrite');
+        tx.objectStore(store).clear();
+        tx.oncomplete=function(){res();};
+        tx.onerror=function(e){rej(e);};
+      });
+    });
+  }
+
+  return {
+    // Guardar sesión del usuario para acceso offline
+    saveSession: function(user, perfil){
+      return idbSet('session', {
+        key: 'currentSession',
+        uid: user.uid,
+        email: user.email,
+        perfil: perfil,
+        savedAt: Date.now()
+      });
+    },
+
+    // Recuperar sesión offline
+    getSession: function(){
+      return idbGet('session', 'currentSession');
+    },
+
+    // Borrar sesión al cerrar sesión
+    clearSession: function(){
+      return idbDelete('session', 'currentSession');
+    },
+
+    // Guardar clientes localmente
+    saveClientesLocal: function(clientes){
+      return openDB().then(function(){
+        return idbClear('clientes').then(function(){
+          return Promise.all(clientes.map(function(c){
+            return idbSet('clientes', c);
+          }));
+        });
+      });
+    },
+
+    // Recuperar clientes locales
+    getClientesLocal: function(){
+      return idbGetAll('clientes');
+    },
+
+    // Agregar operación a cola de sincronización
+    addToSyncQueue: function(operacion){
+      return idbSet('syncQueue', {
+        operacion: operacion,
+        timestamp: Date.now(),
+        id: Date.now() + Math.random()
+      });
+    },
+
+    // Obtener cola pendiente
+    getSyncQueue: function(){
+      return idbGetAll('syncQueue');
+    },
+
+    // Sincronizar datos pendientes cuando vuelve internet
+    syncPendingData: function(){
+      if(!navigator.onLine || !window.db) return;
+      idbGetAll('syncQueue').then(function(pendientes){
+        if(!pendientes.length) return;
+        console.log('[JNF Offline] Sincronizando', pendientes.length, 'operaciones pendientes...');
+        var banner = document.getElementById('offline-sync-banner');
+        if(banner){banner.style.display='block'; banner.textContent='🔄 Sincronizando '+pendientes.length+' cambios...';}
+        var procesadas = 0;
+        pendientes.forEach(function(item){
+          var op = item.operacion;
+          var promise;
+          if(op.type === 'saveClient'){
+            promise = window.db.collection('clientes').doc(op.data.id).set(op.data);
+          } else if(op.type === 'deleteClient'){
+            promise = window.db.collection('clientes').doc(op.id).delete();
+          } else {
+            promise = Promise.resolve();
+          }
+          promise.then(function(){
+            idbDelete('syncQueue', item.id);
+            procesadas++;
+            if(procesadas === pendientes.length){
+              if(banner){banner.style.display='none';}
+              // Recargar clientes desde Firestore
+              if(window.loadClientesFromFirestore) loadClientesFromFirestore();
+              console.log('[JNF Offline] Sincronización completa');
+              if(typeof ss==='function') ss('Sincronización completada — '+procesadas+' cambios aplicados','ok');
+            }
+          }).catch(function(e){
+            console.error('[JNF Offline] Error sincronizando:', e);
+          });
+        });
+      });
+    }
+  };
+})();
+
+// Detectar cuando vuelve internet y sincronizar
+window.addEventListener('online', function(){
+  setTimeout(function(){ jnfOffline.syncPendingData(); }, 2000);
+});
+</script>
+
+<!-- Banner sincronización (solo para feedback de sync, no de estado offline — el átomo lo representa) -->
+<div id="offline-sync-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;
+  background:#1a2580;color:#fff;text-align:center;padding:8px;font-size:12px;font-weight:700;
+  font-family:Montserrat,sans-serif;"></div>
+<div id="offline-mode-banner" style="display:none;"></div>
+
+
 
 
 <div id="screen-login" style="min-height:100vh;display:none;align-items:center;justify-content:center;background:linear-gradient(155deg,#0e1660 0%,#1a2580 45%,#2535a8 100%);padding:20px;">
@@ -2351,6 +2552,27 @@ window._splashEnter = window.splashEnter = function splashEnter(){
 }
 
 function initFirebase(){
+  // Verificar si hay sesión offline guardada
+  if(!navigator.onLine && window.jnfOffline){
+    jnfOffline.getSession().then(function(session){
+      if(session && session.perfil){
+        console.log('[JNF Offline] Entrando en modo offline con sesión guardada');
+        currentUser  = {uid: session.uid, email: session.email};
+        currentPerfil = session.perfil;
+        document.getElementById('screen-login').style.display='none';
+        // El átomo indica modo offline visualmente
+        showApp();
+        loadClientesFromFirestore(); // cargará desde IndexedDB
+        return;
+      } else {
+        showLoginError('Sin conexión a internet. Conéctate para iniciar sesión por primera vez.');
+        return;
+      }
+    }).catch(function(){
+      showLoginError('Sin conexión. Conéctate para iniciar sesión.');
+    });
+    return;
+  }
   // Si Firebase aún no cargó, reintentar hasta 10 veces (5 segundos)
   if(typeof firebase === 'undefined'){
     var intentos = (initFirebase._intentos || 0) + 1;
@@ -2408,6 +2630,22 @@ window._doLogin = window.doLogin = function doLogin(){
   if(!email||!pass){showLoginError('Completa email y contraseña');return;}
   var btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Ingresando...';
+  // Modo offline — verificar sesión guardada
+  if(!navigator.onLine && window.jnfOffline){
+    jnfOffline.getSession().then(function(session){
+      btn.disabled=false; btn.textContent='Ingresar';
+      if(session && session.email===email){
+        currentUser   = {uid: session.uid, email: session.email};
+        currentPerfil = session.perfil;
+        // El átomo indica modo offline visualmente
+        showApp();
+        loadClientesFromFirestore();
+      } else {
+        showLoginError('Sin conexión. Solo puedes entrar con el usuario que usaste anteriormente en línea.');
+      }
+    });
+    return;
+  }
   if(!auth){
     // Intentar inicializar Firebase si no está listo
     if(typeof firebase !== 'undefined' && firebase.apps.length){
@@ -2458,6 +2696,13 @@ window.confirmarLogout = function(){
 }
 
 window._doLogout = window.doLogout = function doLogout(){
+  // Limpiar banner offline al cerrar sesión
+  var b2=document.getElementById('offline-sync-banner');
+  if(b2) b2.style.display='none';
+  // Opcionalmente limpiar sesión de IndexedDB al cerrar
+  // (comentado para que pueda entrar offline la próxima vez)
+  // if(window.jnfOffline) jnfOffline.clearSession();
+  
   var modal = document.getElementById('modal-logout');
   var nameEl = document.getElementById('logout-username');
   var roleEl = document.getElementById('logout-role');
@@ -2532,9 +2777,25 @@ function showApp(){
 
 // ── FIRESTORE: CLIENTES ──────────────────────────────────
 function loadClientesFromFirestore(){
+  if(!navigator.onLine && window.jnfOffline){
+    // Sin internet: cargar desde IndexedDB
+    jnfOffline.getClientesLocal().then(function(localClients){
+      if(localClients && localClients.length > 0){
+        clients = localClients;
+        renderClients();
+        // El átomo indica modo offline visualmente
+        console.log('[JNF Offline] Cargados '+localClients.length+' clientes desde caché local');
+      } else {
+        if(typeof ss==='function') ss('Sin conexión y sin datos en caché local','err');
+      }
+    });
+    return;
+  }
   db.collection('clientes').get().then(function(snap){
     clients = [];
     snap.forEach(function(doc){ clients.push(Object.assign({id:doc.id}, doc.data())); });
+    // Cachear en IndexedDB para uso offline
+    if(window.jnfOffline) jnfOffline.saveClientesLocal(clients);
     if(currentPerfil && currentPerfil.rol === 'contador'){
       var uid = currentUser ? currentUser.uid : '';
       // Refresh perfil from Firestore to get latest clientesAsignados
