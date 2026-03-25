@@ -584,6 +584,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
     </button>
     <span style="font-size:10px;color:var(--t3);">›</span>
     <span id="cal-client-name" style="font-size:10px;font-weight:700;color:var(--t2);"></span>
+    <span id="cal-tipo-badge" style="display:none;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:6px;"></span>
     <span style="font-size:10px;color:var(--t3);">›</span>
     <span style="font-size:10px;font-weight:700;color:var(--bd);">📅 Calendario Tributario DIAN</span>
     <span id="cal-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
@@ -1112,7 +1113,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
       <div class="form-grid cols3">
         <div class="fi span2"><label>Razón social / Nombre completo *</label><input id="f_razon" type="text" placeholder="Nombre o razón social"/></div>
         <div class="fi"><label>Tipo contribuyente</label>
-          <select id="f_tipo">
+          <select id="f_tipo" onchange="buildRespGrid(this.value)">
             <option value="PJ">Persona Jurídica</option>
             <option value="PN">Persona Natural</option>
           </select>
@@ -1257,53 +1258,53 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 // RESPONSABILIDADES DIAN
 // ═══════════════════════════════════════════════════════
 const RESPS = [
-  {cod:'01',lbl:'01 - Aporte especial administración de justicia'},
-  {cod:'02',lbl:'02 - Gravamen a los Movimientos Financieros (GMF)'},
-  {cod:'03',lbl:'03 - Impuesto al Patrimonio'},
-  {cod:'04',lbl:'04 - Renta y Complementarios Régimen Tributario Especial'},
-  {cod:'05',lbl:'05 - Renta y Complementarios Régimen Ordinario'},
-  {cod:'06',lbl:'06 - Ingresos y Patrimonio'},
-  {cod:'07',lbl:'07 - Retención en la Fuente a título de renta'},
-  {cod:'08',lbl:'08 - Retención Timbre Nacional'},
-  {cod:'09',lbl:'09 - Retención en la Fuente en el IVA'},
-  {cod:'10',lbl:'10 - Obligado aduanero'},
-  {cod:'13',lbl:'13 - Gran contribuyente'},
-  {cod:'14',lbl:'14 - Informante de Exógena'},
-  {cod:'15',lbl:'15 - Autorretenedor'},
-  {cod:'16',lbl:'16 - Obligación de facturar bienes/servicios excluidos'},
-  {cod:'17',lbl:'17 - Profesionales compra y venta de divisas'},
-  {cod:'18',lbl:'18 - Precios de Transferencia'},
-  {cod:'19',lbl:'19 - Productor y/o exportador de bienes exentos'},
-  {cod:'20',lbl:'20 - Obtención NIT'},
-  {cod:'21',lbl:'21 - Declarar ingreso/salida del país de divisas'},
-  {cod:'22',lbl:'22 - Obligado a cumplir deberes formales a nombre de terceros'},
-  {cod:'23',lbl:'23 - Agente de retención en el IVA'},
-  {cod:'26',lbl:'26 - Declaración Informativa Individual Precios de Transferencia'},
-  {cod:'32',lbl:'32 - Impuesto Nacional a la Gasolina y al ACPM'},
-  {cod:'33',lbl:'33 - Impuesto Nacional al Consumo'},
-  {cod:'36',lbl:'36 - Establecimiento Permanente'},
-  {cod:'39',lbl:'39 - Proveedor de Servicios Tecnológicos (PST)'},
-  {cod:'41',lbl:'41 - Declaración anual de activos en el exterior'},
-  {cod:'42',lbl:'42 - Obligado a llevar contabilidad'},
-  {cod:'45',lbl:'45 - Autorretenedor de rendimientos financieros'},
-  {cod:'46',lbl:'46 - IVA Prestadores de Servicios desde el Exterior'},
-  {cod:'47',lbl:'47 - Régimen Simple de Tributación (SIMPLE)'},
-  {cod:'48',lbl:'48 - Impuesto sobre las ventas (IVA)'},
-  {cod:'49',lbl:'49 - No responsable de IVA'},
-  {cod:'50',lbl:'50 - No responsable de Consumo restaurantes y bares'},
-  {cod:'52',lbl:'52 - Facturador Electrónico'},
-  {cod:'53',lbl:'53 - Persona Jurídica No Responsable de IVA'},
-  {cod:'54',lbl:'54 - Intercambio Automático de Información CRS'},
-  {cod:'55',lbl:'55 - Informante de Beneficiarios Finales'},
-  {cod:'56',lbl:'56 - Impuesto Nacional al Carbono'},
-  {cod:'58',lbl:'58 - Intercambio Automático de Información FATCA'},
-  {cod:'59',lbl:'59 - Autorretención especial renta'},
-  {cod:'60',lbl:'60 - Autorretención rendimientos financieros Superfinanciera'},
-  {cod:'61',lbl:'61 - Autorretención comisiones Superfinanciera'},
-  {cod:'62',lbl:'62 - Impuesto productos plásticos un solo uso'},
-  {cod:'63',lbl:'63 - Impuesto bebidas ultraprocesadas azucaradas'},
-  {cod:'64',lbl:'64 - Impuesto productos comestibles ultraprocesados'},
-  {cod:'65',lbl:'65 - Renta Presencia económica significativa en Colombia (PES)'},
+  {cod:'01',lbl:'01 - Aporte especial administración de justicia',       tipo:'pj'},
+  {cod:'02',lbl:'02 - Gravamen a los Movimientos Financieros (GMF)',     tipo:'ambos'},
+  {cod:'03',lbl:'03 - Impuesto al Patrimonio',                           tipo:'ambos'},
+  {cod:'04',lbl:'04 - Renta Régimen Tributario Especial',                tipo:'pj'},
+  {cod:'05',lbl:'05 - Renta y Complementarios Régimen Ordinario',        tipo:'ambos'},
+  {cod:'06',lbl:'06 - Ingresos y Patrimonio',                            tipo:'pj'},
+  {cod:'07',lbl:'07 - Retención en la Fuente a título de renta',         tipo:'ambos'},
+  {cod:'08',lbl:'08 - Retención Timbre Nacional',                        tipo:'ambos'},
+  {cod:'09',lbl:'09 - Retención en la Fuente en el IVA',                 tipo:'ambos'},
+  {cod:'10',lbl:'10 - Obligado aduanero',                                tipo:'ambos'},
+  {cod:'13',lbl:'13 - Gran contribuyente',                               tipo:'ambos'},
+  {cod:'14',lbl:'14 - Informante de Exógena',                            tipo:'ambos'},
+  {cod:'15',lbl:'15 - Autorretenedor',                                   tipo:'ambos'},
+  {cod:'16',lbl:'16 - Obligación de facturar bienes/servicios excluidos',tipo:'ambos'},
+  {cod:'17',lbl:'17 - Profesionales compra y venta de divisas',          tipo:'ambos'},
+  {cod:'18',lbl:'18 - Precios de Transferencia',                         tipo:'ambos'},
+  {cod:'19',lbl:'19 - Productor y/o exportador de bienes exentos',       tipo:'ambos'},
+  {cod:'20',lbl:'20 - Obtención NIT',                                    tipo:'pn'},
+  {cod:'21',lbl:'21 - Declarar ingreso/salida del país de divisas',      tipo:'ambos'},
+  {cod:'22',lbl:'22 - Obligado a cumplir deberes formales a nombre de terceros', tipo:'pn'},
+  {cod:'23',lbl:'23 - Agente de retención en el IVA',                    tipo:'pj'},
+  {cod:'26',lbl:'26 - Declaración Informativa Precios de Transferencia', tipo:'ambos'},
+  {cod:'32',lbl:'32 - Impuesto Nacional a la Gasolina y al ACPM',        tipo:'ambos'},
+  {cod:'33',lbl:'33 - Impuesto Nacional al Consumo',                     tipo:'ambos'},
+  {cod:'36',lbl:'36 - Establecimiento Permanente',                       tipo:'pj'},
+  {cod:'39',lbl:'39 - Proveedor de Servicios Tecnológicos (PST)',        tipo:'pj'},
+  {cod:'41',lbl:'41 - Declaración anual de activos en el exterior',      tipo:'ambos'},
+  {cod:'42',lbl:'42 - Obligado a llevar contabilidad',                   tipo:'ambos'},
+  {cod:'45',lbl:'45 - Autorretenedor de rendimientos financieros',       tipo:'ambos'},
+  {cod:'46',lbl:'46 - IVA Prestadores de Servicios desde el Exterior',   tipo:'ambos'},
+  {cod:'47',lbl:'47 - Régimen Simple de Tributación (SIMPLE)',           tipo:'ambos'},
+  {cod:'48',lbl:'48 - Impuesto sobre las ventas (IVA)',                  tipo:'ambos'},
+  {cod:'49',lbl:'49 - No responsable de IVA',                            tipo:'pn'},
+  {cod:'50',lbl:'50 - No responsable de Consumo restaurantes y bares',   tipo:'pn'},
+  {cod:'52',lbl:'52 - Facturador Electrónico',                           tipo:'ambos'},
+  {cod:'53',lbl:'53 - Persona Jurídica No Responsable de IVA',           tipo:'pj'},
+  {cod:'54',lbl:'54 - Intercambio Automático de Información CRS',        tipo:'pj'},
+  {cod:'55',lbl:'55 - Informante de Beneficiarios Finales',              tipo:'pj'},
+  {cod:'56',lbl:'56 - Impuesto Nacional al Carbono',                     tipo:'ambos'},
+  {cod:'58',lbl:'58 - Intercambio Automático de Información FATCA',      tipo:'pj'},
+  {cod:'59',lbl:'59 - Autorretención especial renta',                    tipo:'pj'},
+  {cod:'60',lbl:'60 - Autorretención rendimientos financieros Superfinanciera', tipo:'pj'},
+  {cod:'61',lbl:'61 - Autorretención comisiones Superfinanciera',        tipo:'pj'},
+  {cod:'62',lbl:'62 - Impuesto productos plásticos un solo uso',         tipo:'ambos'},
+  {cod:'63',lbl:'63 - Impuesto bebidas ultraprocesadas azucaradas',      tipo:'ambos'},
+  {cod:'64',lbl:'64 - Impuesto productos comestibles ultraprocesados',   tipo:'ambos'},
+  {cod:'65',lbl:'65 - Renta Presencia económica significativa (PES)',    tipo:'pj'},
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -1321,13 +1322,48 @@ let editingId = null;
 // ═══════════════════════════════════════════════════════
 function ss(msg,t='info'){const e=document.getElementById('stbar');e.textContent=msg;e.className='st '+t;e.style.display='block';setTimeout(()=>e.style.display='none',4000);}
 
-function buildRespGrid(){
-  const g=document.getElementById('respGrid');
-  g.innerHTML=RESPS.map(r=>`
-    <label class="resp-cb">
-      <input type="checkbox" id="resp_${r.cod}" value="${r.cod}"/>
+function buildRespGrid(tipo){
+  // tipo: 'PJ', 'PN', o undefined (mostrar todos)
+  const tipoSel = tipo || (document.getElementById('f_tipo') ? document.getElementById('f_tipo').value : '');
+  const g = document.getElementById('respGrid');
+  if(!g) return;
+  // Guardar los checks actuales antes de reconstruir
+  const checked = {};
+  RESPS.forEach(r => {
+    const cb = document.getElementById('resp_'+r.cod);
+    if(cb) checked[r.cod] = cb.checked;
+  });
+  // Filtrar según tipo
+  const filtradas = RESPS.filter(r => {
+    if(!tipoSel) return true;
+    if(r.tipo === 'ambos') return true;
+    if(tipoSel === 'PJ' && r.tipo === 'pj') return true;
+    if(tipoSel === 'PN' && r.tipo === 'pn') return true;
+    return false;
+  });
+  g.innerHTML = filtradas.map(r => `
+    <label class="resp-cb" title="${r.lbl}">
+      <input type="checkbox" id="resp_${r.cod}" value="${r.cod}" ${checked[r.cod] ? 'checked' : ''}/>
       <span class="resp-cb-text">${r.lbl}</span>
     </label>`).join('');
+  // Mostrar badge informativo
+  var badge = document.getElementById('resp-tipo-badge');
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id = 'resp-tipo-badge';
+    badge.style.cssText = 'font-size:10px;font-weight:700;margin-bottom:6px;padding:3px 10px;border-radius:10px;display:inline-block;';
+    if(g.parentNode) g.parentNode.insertBefore(badge, g);
+  }
+  if(tipoSel === 'PJ'){
+    badge.textContent = '📋 Mostrando responsabilidades para Persona Jurídica';
+    badge.style.background = '#e8eaf6'; badge.style.color = '#1a2580';
+  } else if(tipoSel === 'PN'){
+    badge.textContent = '👤 Mostrando responsabilidades para Persona Natural';
+    badge.style.background = '#d1fae5'; badge.style.color = '#065f46';
+  } else {
+    badge.textContent = '📋 Selecciona el tipo de contribuyente para filtrar responsabilidades';
+    badge.style.background = '#f3f4f6'; badge.style.color = '#6b7280';
+  }
 }
 buildRespGrid();
 
@@ -1382,7 +1418,7 @@ function clearForm(){
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f_tipo').value='PJ';
   document.getElementById('f_regimen').value='05';
-  RESPS.forEach(r=>{const cb=document.getElementById('resp_'+r.cod);if(cb)cb.checked=false;});
+  buildRespGrid('PJ');  // Resetear grid con tipo PJ por defecto
 }
 function fillForm(d){
   const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
@@ -1392,7 +1428,7 @@ function fillForm(d){
   set('f_seccional',d.seccional);set('f_notas',d.notas);
   set('f_rl_ap1',d.rl_ap1);set('f_rl_ap2',d.rl_ap2);set('f_rl_n1',d.rl_n1);
   set('f_rl_n2',d.rl_n2);set('f_rl_cc',d.rl_cc);set('f_rl_cargo',d.rl_cargo);
-  if(d.tipo)document.getElementById('f_tipo').value=d.tipo;
+  if(d.tipo){ document.getElementById('f_tipo').value=d.tipo; buildRespGrid(d.tipo); }
   if(d.regimen)document.getElementById('f_regimen').value=d.regimen;
   if(d.periodo_iva){ var piv=document.getElementById('f_periodo_iva'); if(piv) piv.value=d.periodo_iva; }
   (d.resps||[]).forEach(function(cod){
@@ -3526,7 +3562,7 @@ window.oblDesmarcar = window._oblDesmarcar = window.oblDesmarcar = function oblD
 
 
 
-window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps, periodoIva, regimen){
+window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function generarCalendarioDIAN2026(nit, resps, periodoIva, regimen, tipoContrib){
   // resps: array de códigos RUT del cliente ej: ['05','07','14','42','48','55']
   // periodoIva: 'bimestral' | 'cuatrimestral' | 'no_aplica'
   // regimen: '05' | '04' | 'RST' | 'O'
@@ -3599,12 +3635,18 @@ window._generarCalendarioDIAN2026 = window.generarCalendarioDIAN2026 = function 
   // si no_aplica: no agrega ningún item de IVA
 
   // ── 05 RENTA ──────────────────────────────────────────────────
+  var esPN = tipoContrib === 'PN';
   if(regimen === '04'){
     // Grandes contribuyentes: declaración Abril
     addItem('05','Renta — grandes contribuyentes declaración','04-27');
+  } else if(esPN){
+    // Personas Naturales: vencimiento agosto-octubre 2026 según último dígito NIT
+    // Fuente: Decreto tributario DIAN calendario 2026
+    addItem('05','Renta persona natural — declaración y pago',
+      ['08-12','08-13','08-14','08-18','08-19','08-20','08-21','08-24','08-25','08-26'][idx]);
   } else {
-    // Personas jurídicas régimen ordinario: Mayo
-    addItem('05','Renta personas jurídicas — declaración y pago',
+    // Personas Jurídicas régimen ordinario: Mayo
+    addItem('05','Renta persona jurídica — declaración y pago',
       ['05-12','05-13','05-14','05-15','05-19','05-20','05-21','05-22','05-25','05-26'][idx]);
   }
 
@@ -3664,7 +3706,7 @@ window._oblRegenerarCalendario = window.oblRegenerarCalendario = async function 
   if(!confirm('¿Regenerar el calendario de '+( c.razon||c.nit)+' con las fechas oficiales DIAN 2026?')) return;
 
   var ruts = c.responsabilidades || c.resps || [];
-  var items = window.generarCalendarioDIAN2026(c.nit, ruts);
+  var items = window.generarCalendarioDIAN2026(c.nit, ruts, null, null, c.tipo || 'PJ');
 
   var key = 'calendario_' + c.id + '_' + year;
   try{
@@ -3689,7 +3731,7 @@ window._oblRegenerarTodos = window.oblRegenerarTodos = async function oblRegener
     var c = clients[i];
     var ruts = c.responsabilidades || c.resps || [];
     if(ruts.length === 0) continue;
-    var items = window.generarCalendarioDIAN2026(c.nit, ruts, c.periodo_iva || 'bimestral', c.regimen || '05');
+    var items = window.generarCalendarioDIAN2026(c.nit, ruts, c.periodo_iva || 'bimestral', c.regimen || '05', c.tipo || 'PJ');
     if(items.length === 0) continue;
     var key = 'calendario_' + c.id + '_2026';
     try{
@@ -3721,7 +3763,7 @@ window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async functio
     if(ruts.length === 0){ sinResps++; continue; }
     var ruts2 = c.responsabilidades || c.resps || [];
     var items = window.generarCalendarioDIAN2026
-      ? window.generarCalendarioDIAN2026(c.nit, ruts2, c.periodo_iva || 'bimestral', c.regimen || '05')
+      ? window.generarCalendarioDIAN2026(c.nit, ruts2, c.periodo_iva || 'bimestral', c.regimen || '05', c.tipo || 'PJ')
       : [];
     if(items.length === 0) continue;
     var key = 'calendario_' + c.id + '_2026';
@@ -7079,22 +7121,39 @@ var _calItems = [];        // [{cod, desc, fecha, id}]
 var _calPresentaciones = {}; // {itemId: {fecha, usuario}}
 var _calYear = null;
 var _calClientId = null;
+var _calClientTipo = 'PJ'; // PN o PJ
 
 // Mapeo cod RUT → nombre legible
 var CAL_OBLIGACIONES = {
-  '05':'Renta régimen ordinario','06':'Ingresos y patrimonio',
-  '07':'Retención en la fuente renta','09':'Retención timbre',
-  '11':'Ventas régimen común','12':'Ventas simplificado',
-  '14':'Informante de exógena','16':'Obligado aduanero',
-  '42':'Obligado llevar contabilidad','47':'Régimen tributario especial',
-  '48':'IVA','49':'No responsable de IVA',
-  '52':'Impuesto al consumo','55':'Informante benef. finales'
+  '05':'Renta régimen ordinario',
+  '06':'Ingresos y patrimonio',
+  '07':'Retención en la fuente renta',
+  '08':'Retención Timbre Nacional',
+  '09':'Retención en la fuente IVA',
+  '10':'Obligado aduanero',
+  '13':'Gran contribuyente',
+  '14':'Informante de exógena',
+  '15':'Autorretenedor',
+  '16':'Obligación de facturar excluidos',
+  '42':'Obligado llevar contabilidad',
+  '47':'Régimen Simple de Tributación (SIMPLE)',
+  '48':'IVA',
+  '49':'No responsable de IVA',
+  '52':'Facturador Electrónico',
+  '55':'Informante benef. finales'
 };
+
+// Nombre dinámico de renta según tipo de contribuyente
+function getRentaNombre(tipo){
+  if(tipo === 'PN') return 'Renta persona natural — régimen ordinario';
+  return 'Renta persona jurídica — régimen ordinario';
+}
 
 window._openCalendario = window.openCalendario = function openCalendario(){
   var c = clients.find(function(x){return x.id===activeClientId;});
   if(!c) return;
   _calClientId = activeClientId;
+  _calClientTipo = c.tipo || 'PJ'; // PN = Persona Natural, PJ = Persona Jurídica
   _calYear = activeYear || new Date().getFullYear();
 
   // Actualizar breadcrumb
@@ -7113,6 +7172,15 @@ window._openCalendario = window.openCalendario = function openCalendario(){
     rutBadge.title = 'Obligaciones: ' + ruts.join(', ');
   } else {
     rutBadge.style.display = 'none';
+  }
+  // Mostrar badge tipo contribuyente
+  var tipoBadge = document.getElementById('cal-tipo-badge');
+  if(tipoBadge){
+    var esPJ2 = (c.tipo !== 'PN');
+    tipoBadge.textContent = esPJ2 ? 'Persona Jurídica' : 'Persona Natural';
+    tipoBadge.style.background = esPJ2 ? '#e8eaf6' : '#d1fae5';
+    tipoBadge.style.color = esPJ2 ? '#1a2580' : '#065f46';
+    tipoBadge.style.display = 'inline-block';
   }
 
   showScreen('calendario');
@@ -7510,15 +7578,23 @@ window.calMasivoReadPDF = async function calMasivoReadPDF(file){
     // ── Estrategia según tamaño ──────────────────────────────────────────
     // Límite seguro por chunk: 2.5MB de base64 (~1.9MB PDF real)
     var CHUNK_LIMIT = 2500000;
+    // Ajustar prompt según tipo de contribuyente (PN o PJ)
+    var esPJ = _calClientTipo !== 'PN';
+    var rentaDesc = esPJ ? 'Renta personas juridicas' : 'Renta personas naturales';
+    var rentaFechaEj = esPJ ? (year + '-04-14') : (year + '-08-12');
+    var tipoTexto = esPJ
+      ? 'El cliente es PERSONA JURIDICA. Para renta (cod 05) usa las fechas de vencimiento para personas juridicas.'
+      : 'El cliente es PERSONA NATURAL. Para renta (cod 05) usa las fechas de vencimiento para personas naturales (son DIFERENTES a las de personas juridicas, generalmente agosto-octubre).';
+
     var prompt = 'Del calendario tributario DIAN ' + year + ' extrae UNICAMENTE las fechas de vencimiento para PRESENTAR declaraciones y reportes. '
+      + tipoTexto + ' '
       + 'EXCLUYE absolutamente: cuotas de pago, pagos anticipados, PES, abonos, cuotas de renta, pagos fraccionados. '
       + 'INCLUYE SOLO: vencimiento para presentar la declaracion, vencimiento para informar, vencimiento para reportar. '
       + 'Usa la fecha mas tardia cuando haya multiples fechas por ultimos digitos del NIT. '
       + 'Un codigo debe aparecer MAXIMO UNA VEZ por periodo (ej: IVA bimestral ene-feb = 1 entrada, no 2). '
       + 'Responde SOLO con JSON array minificado sin espacios ni markdown: '
-      + '[{"c":"05","d":"Renta personas juridicas","f":"' + year + '-04-14"},{"c":"07","d":"Retencion enero","f":"' + year + '-02-10"}] '
-      + 'Codigos c: 05=renta, 07=retencion renta, 09=ret timbre, 11=ventas comun, '
-      + '12=ventas simplificado, 14=exogena, 42=contabilidad, 48=IVA, '
+      + '[{"c":"05","d":"' + rentaDesc + '","f":"' + rentaFechaEj + '"},{"c":"07","d":"Retencion enero","f":"' + year + '-02-10"}] '
+      + 'Codigos c: 05=renta, 07=retencion renta, 09=ret timbre, 14=exogena, 42=contabilidad, 48=IVA, '
       + '49=no resp IVA, 52=consumo, 55=benef finales. Solo el array JSON.';
 
     var itemsMap = {}; // deduplicar por cod+fecha
