@@ -5830,7 +5830,8 @@ function f300_procesar(){
   const v_i5   =sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
   const v_i19  =sumByMes(f300_sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
   const v_exen =sumByMes(f300_sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
-  const v_excl =sumByMes(f300_sheetMap.ventas,['EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
+  const v_excl =sumByMes(f300_sheetMap.ventas,['EXCLUIDO/BASE IPO','EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
+  const v_ipo  =sumByMes(f300_sheetMap.ventas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesColsV,meses);
 
   // ── DEV VENTAS ────────────────────────────────────────────
   const dv_b5  =sumByMes(f300_sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
@@ -5838,7 +5839,8 @@ function f300_procesar(){
   const dv_i5  =sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
   const dv_i19 =sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
   const dv_exen=sumByMes(f300_sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
-  const dv_excl=sumByMes(f300_sheetMap.dvVentas,['EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
+  const dv_excl=sumByMes(f300_sheetMap.dvVentas,['EXCLUIDO/BASE IPO','EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
+  const dv_ipo =sumByMes(f300_sheetMap.dvVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesColsV,meses);
 
   // ── COSTOS ────────────────────────────────────────────────
   const c_b5   =sumByMes(f300_sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
@@ -5846,6 +5848,7 @@ function f300_procesar(){
   const c_i5   =sumByMes(f300_sheetMap.costos,['IVA 5%','IVA5','IVA 5.','IVA5%'],mesColsC,meses);
   const c_i19  =sumByMes(f300_sheetMap.costos,['IVA 19%','IVA19','IVA19%','IVA19%.'],mesColsC,meses);
   const c_exen =sumByMes(f300_sheetMap.costos,['EXENTO','EXENTA','EXENTOS'],mesColsC,meses);
+  const c_excl =sumByMes(f300_sheetMap.costos,['EXCLUIDO','EXCLUIDOS','EXCLUIDA'],mesColsC,meses);
 
   // ── DEV COSTOS ────────────────────────────────────────────
   const dc_b5  =sumByMes(f300_sheetMap.dvCostos,['BASE 5','BASE5'],mesColsC,meses);
@@ -5853,6 +5856,7 @@ function f300_procesar(){
   const dc_i5  =sumByMes(f300_sheetMap.dvCostos,['IVA 5%','IVA5'],mesColsC,meses);
   const dc_i19 =sumByMes(f300_sheetMap.dvCostos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
   const dc_exen=sumByMes(f300_sheetMap.dvCostos,['EXENTO','EXENTA'],mesColsC,meses);
+  const dc_excl=sumByMes(f300_sheetMap.dvCostos,['EXCLUIDO','EXCLUIDOS'],mesColsC,meses);
 
   // ── SERV PUBLICOS (pivot) — van a excluidos casilla 54 ────
   const sp_total=sumPivot(f300_sheetMap.servPub,meses);
@@ -5896,18 +5900,18 @@ function f300_procesar(){
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
   const c35=f300_rdMil(v_exen);
-  const c39=f300_rdMil((v_excl||0)-(dv_excl||0));
+  const c39=f300_rdMil((v_excl||0)+(v_ipo||0)-(dv_excl||0)-(dv_ipo||0));  // Excluidas + IPO - Dev excluidas
   const c41=f300_rdMil(c27+c28+c35+c39);
-  const c42=f300_rdMil(dv_b5+dv_b19+dv_exen);
+  const c42=f300_rdMil((dv_b19||0)+(dv_b5||0)+(dv_excl||0)+(dv_ipo||0)+(dv_exen||0));  // BASE19+BASE5+EXCLUIDO/BASE IPO+IPO8%+EXENTO
   const c43=Math.max(0,c41-c42);
 
-  const c50=f300_rdMil(c_b5-dc_b5);
-  const c51=f300_rdMil(c_b19-dc_b19);
+  const c50=f300_rdMil(c_b5);   // Base 5% compras brutas (devoluciones van en c56)
+  const c51=f300_rdMil(c_b19);  // Base 19% compras brutas (devoluciones van en c56)
   const c52=0;
   const c53=0;
-  const c54=f300_rdMil((c_exen-dc_exen)+sp_total+ds_total+nom_total);
+  const c54=f300_rdMil((c_exen||0)+(c_excl||0)-(dc_exen||0)-(dc_excl||0)+sp_total+ds_total+nom_total);  // Exentos+Excluidos costos netos + SerPub + DocSop + Nomina
   const c55=f300_rdMil(c50+c51+c52+c53+c54);
-  const c56=f300_rdMil(dc_b5+dc_b19+dc_exen);
+  const c56=f300_rdMil(dc_b5+dc_b19+dc_exen+dc_excl);  // Devoluciones en compras totales
   const c57=f300_rdMil(c55-c56);
 
   const c58=f300_rdMil(v_i5-dv_i5);
@@ -5933,7 +5937,7 @@ function f300_procesar(){
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
     c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,nom_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
+    sp_total,ds_total,nom_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
 
   // Render
   document.getElementById('f300-c1').textContent=anio;
