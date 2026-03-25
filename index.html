@@ -2345,10 +2345,18 @@ window._splashEnter = window.splashEnter = function splashEnter(){
 }
 
 function initFirebase(){
+  // Si Firebase aún no cargó, reintentar hasta 10 veces (5 segundos)
   if(typeof firebase === 'undefined'){
+    var intentos = (initFirebase._intentos || 0) + 1;
+    initFirebase._intentos = intentos;
+    if(intentos < 20){
+      setTimeout(initFirebase, 250);
+      return;
+    }
     showFirebaseError();
     return;
   }
+  initFirebase._intentos = 0;
   try{
     var app = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB_CONFIG);
     db   = firebase.firestore(app);
@@ -2400,8 +2408,11 @@ window._doLogin = window.doLogin = function doLogin(){
       auth = firebase.auth();
       db   = firebase.firestore();
     } else {
-      showLoginError('Error de conexión. Recarga la página.');
-      btn.disabled=false; btn.textContent='Ingresar'; return;
+      // Firebase no cargó aún — reintentar en 1 segundo
+      btn.disabled=false; btn.textContent='Ingresar';
+      showLoginError('Conectando... intenta de nuevo en un momento.');
+      setTimeout(function(){ initFirebase(); }, 1000);
+      return;
     }
   }
   auth.signInWithEmailAndPassword(email, pass).catch(function(e){
