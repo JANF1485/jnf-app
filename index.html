@@ -4095,19 +4095,15 @@ window.f300_verVersion = function(key){
 };
 
 window.f300_eliminarVersion = function(key){
-  pedirConfirmPwd('¿Eliminar esta versión del F300? Esta acción no se puede deshacer.', function(){
-    console.log('[F300] Eliminando versión:', key);
-    db.collection('resultados_historico').doc(key).delete().then(function(){
-      console.log('[F300] Eliminado OK');
-      ss('Versión F300 eliminada','ok');
-      audRegistrar('Eliminar','F300',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Versión eliminada desde Archivo de Reportes');
-      var c = clients.find(function(x){return x.id===activeClientId;});
-      var yr = activeYear||new Date().getFullYear();
-      if(c) cargarArchivo(c.id, yr);
-    }).catch(function(e){
-      console.error('[F300] Error eliminando:', e);
-      ss('Error al eliminar: '+e.message,'err');
-    });
+  if(!confirm('¿Eliminar esta versión del F300? Esta acción no se puede deshacer.')) return;
+  db.collection('resultados_historico').doc(key).delete().then(function(){
+    ss('Versión F300 eliminada','ok');
+    audRegistrar('Eliminar','F300',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Versión eliminada desde Archivo de Reportes');
+    var c = clients.find(function(x){return x.id===activeClientId;});
+    var yr = activeYear||new Date().getFullYear();
+    if(c) cargarArchivo(c.id, yr);
+  }).catch(function(e){
+    ss('Error al eliminar: '+e.message,'err');
   });
 };
 
@@ -4140,13 +4136,14 @@ window.guardadoEliminarF350 = function(key, mes){
 };
 
 window.inc_eliminarVersion = function(key){
-  pedirConfirmPwd('¿Eliminar esta versión del F310 INC? Esta acción no se puede deshacer.', function(){
-    db.collection('resultados_historico').doc(key).delete().then(function(){
-      ss('Versión F310 eliminada','ok');
-      audRegistrar('Eliminar','F310',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Versión eliminada desde Archivo de Reportes');
-      if(window._openGuardado) window._openGuardado();
-    });
-  });
+  if(!confirm('¿Eliminar esta versión del F310 INC? Esta acción no se puede deshacer.')) return;
+  db.collection('resultados_historico').doc(key).delete().then(function(){
+    ss('Versión F310 eliminada','ok');
+    audRegistrar('Eliminar','F310',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Versión eliminada desde Archivo de Reportes');
+    var c = clients.find(function(x){return x.id===activeClientId;});
+    var yr = activeYear||new Date().getFullYear();
+    if(c) cargarArchivo(c.id, yr);
+  }).catch(function(e){ ss('Error al eliminar: '+e.message,'err'); });
 };
 
 
@@ -4463,14 +4460,13 @@ function f350_cargarHistorial(){
 
 function f350_abrirPer(m){document.getElementById('f350-periodo').value=m;_f350Per=m;f350_cargarPeriodo();window.scrollTo({top:0,behavior:'smooth'});}
 function f350_eliminar(key,m){
-  pedirConfirmPwd('¿Eliminar la declaración de '+f350_mes(m)+'? Esta acción no se puede deshacer.', function(){
-    db.collection('resultados').doc(key).delete().then(function(){
-      f350_st('Declaración de '+f350_mes(m)+' eliminada.','ok');
-      f350_cargarHistorial();
-      if(_f350Per===m) f350_limpiarCampos();
-      audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+f350_mes(m)+' eliminado');
-    }).catch(function(e){ f350_st('Error: '+e.message,'err'); });
-  });
+  if(!confirm('¿Eliminar la declaración de '+f350_mes(m)+'? Esta acción no se puede deshacer.')) return;
+  db.collection('resultados').doc(key).delete().then(function(){
+    f350_st('Declaración de '+f350_mes(m)+' eliminada.','ok');
+    f350_cargarHistorial();
+    if(_f350Per===m) f350_limpiarCampos();
+    audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+f350_mes(m)+' eliminado');
+  }).catch(function(e){ f350_st('Error: '+e.message,'err'); });
 }
 function f350_generarPDF(){
   var tot=f350_calcularTotales();
@@ -6620,7 +6616,7 @@ function doChangePasswordDirect(){
 
 function eliminarReporte(tipo, key, divEl){
   if(!db) return;
-  pedirConfirmPwd('¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.', function(){
+  if(!confirm('¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.')) return;
     var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
     console.log('[ELIM] Eliminando doc:', docId, 'tipo:', tipo);
     db.collection('resultados').doc(docId).delete().then(function(){
