@@ -762,6 +762,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
         </select>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="btn" style="background:var(--blue);color:#fff;gap:5px;font-size:11px;cursor:pointer;" title="Lee COSTOS del Excel y pre-llena las bases según T.P. y APLIC.RETEFUENTE">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Leer Excel
+          <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f350_leerExcel(this.files[0]);this.value=''"/>
+        </label>
+        <span id="f350-excel-status" style="font-size:10px;font-weight:700;display:none;padding:4px 10px;border-radius:8px;"></span>
         <button onclick="f350_guardar()" class="btn" style="background:var(--gr);color:#fff;gap:5px;font-size:11px;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
         </button>
@@ -4626,6 +4632,97 @@ window.confirmarConPwd = function(){
 
 
 
+// ── F350: Leer bases desde Excel ─────────────────────────────────────────
+function f350_leerExcel(file){
+  if(!file) return;
+  var stEl=document.getElementById('f350-excel-status');
+  function setStatus(bg,color,msg){if(stEl){stEl.style.display='inline-block';stEl.style.background=bg;stEl.style.color=color;stEl.textContent=msg;}}
+  setStatus('#dbeafe','#1e40af','⏳ Leyendo Excel...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      function findSh(names){
+        for(var n of names){for(var sn of Object.keys(wb.Sheets)){if(sn.trim().toUpperCase()===n.toUpperCase())return sn;}}
+        return null;
+      }
+      var shCostos  =findSh(['COSTOS','COMPRAS']);
+      var shDvCostos=findSh(['DV COSTOS','DEV COSTOS','DV COSTOS.','DEVOLUCIONES COSTOS']);
+      var mesPeriodo=document.getElementById('f350-periodo').value;
+      var mesNombres={'01':'ENERO','02':'FEBRERO','03':'MARZO','04':'ABRIL','05':'MAYO','06':'JUNIO',
+                      '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE'};
+      var mesNom=mesNombres[mesPeriodo]||'';
+      if(!shCostos){setStatus('#fee2e2','#b91c1c','✗ No se encontró la pestaña COSTOS');return;}
+      var rowsCostos=XLSX.utils.sheet_to_json(wb.Sheets[shCostos],{defval:''});
+      var dvMap={};
+      if(shDvCostos){
+        XLSX.utils.sheet_to_json(wb.Sheets[shDvCostos],{defval:''}).forEach(function(r){
+          var folio=String(r['Folio']||r['FOLIO']||'').trim();
+          if(!folio) return;
+          var mesR=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
+          if(mesNom&&mesR.indexOf(mesNom)<0) return;
+          if(!dvMap[folio])dvMap[folio]={b19:0,b5:0,exen:0,excl:0};
+          dvMap[folio].b19 +=parseFloat(String(r['BASE 19']||r['BASE19']||0).replace(/[^0-9.-]/g,''))||0;
+          dvMap[folio].b5  +=parseFloat(String(r['BASE 5'] ||r['BASE5'] ||0).replace(/[^0-9.-]/g,''))||0;
+          dvMap[folio].exen+=parseFloat(String(r['EXENTO']  ||0).replace(/[^0-9.-]/g,''))||0;
+          dvMap[folio].excl+=parseFloat(String(r['EXCLUIDO']||0).replace(/[^0-9.-]/g,''))||0;
+        });
+      }
+      var pjBases={},pnBases={};
+      rowsCostos.forEach(function(r){
+        var mesR=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
+        if(mesNom&&mesR.indexOf(mesNom)<0) return;
+        var aplic=String(r['APLIC. RETEFUENTE']||r['APLIC.RETEFUENTE']||r['APLIC RETEFUENTE']||'').trim().toUpperCase();
+        if(aplic!=='S') return;
+        var tp=String(r['T.P.']||r['TP']||r['T.P']||'').trim().toUpperCase();
+        var esPJ=(tp==='PJ'),esPN=(tp==='PN');
+        if(!esPJ&&!esPN) return;
+        var tarifa=parseFloat(String(r['TARIFA RETEFUENTE']||r['TARIFA']||0).replace(/[^0-9.-]/g,''))||0;
+        if(tarifa<=0) return;
+        var folio=String(r['Folio']||r['FOLIO']||'').trim();
+        var dv=dvMap[folio]||{b19:0,b5:0,exen:0,excl:0};
+        var b19 =Math.max(0,(parseFloat(String(r['BASE 19']||r['BASE19']||0).replace(/[^0-9.-]/g,''))||0)-dv.b19);
+        var b5  =Math.max(0,(parseFloat(String(r['BASE 5'] ||r['BASE5'] ||0).replace(/[^0-9.-]/g,''))||0)-dv.b5);
+        var exen=Math.max(0,(parseFloat(String(r['EXENTO']  ||0).replace(/[^0-9.-]/g,''))||0)-dv.exen);
+        var excl=Math.max(0,(parseFloat(String(r['EXCLUIDO']||0).replace(/[^0-9.-]/g,''))||0)-dv.excl);
+        var base=b19+b5+exen+excl;
+        if(base<=0) return;
+        var key=tarifa.toString();
+        if(esPJ){if(!pjBases[key])pjBases[key]={base:0,tarifa:tarifa};pjBases[key].base+=base;}
+        else    {if(!pnBases[key])pnBases[key]={base:0,tarifa:tarifa};pnBases[key].base+=base;}
+      });
+      function llenarTabla(basesMap,tablaArr,prefijo){
+        Object.values(basesMap).forEach(function(item){
+          var match=tablaArr.find(function(c){return c.t===item.tarifa;});
+          if(match){
+            var inp=document.getElementById('f350-base-'+match.id);
+            if(inp){
+              var actual=f350_pN(inp.value)||0;
+              var nuevo=Math.round(actual+item.base);
+              inp.value=nuevo>0?nuevo.toLocaleString('es-CO'):'';
+              f350_rcF(match.id,prefijo);
+            }
+          }
+        });
+      }
+      F350_PJ.forEach(function(c){var el=document.getElementById('f350-base-'+c.id);if(el)el.value='';});
+      F350_PN.forEach(function(c){var el=document.getElementById('f350-base-'+c.id);if(el)el.value='';});
+      llenarTabla(pjBases,F350_PJ,'pj');
+      llenarTabla(pnBases,F350_PN,'pn');
+      f350_calcularTotales();
+      var tPJ=Object.values(pjBases).reduce(function(s,x){return s+x.base;},0);
+      var tPN=Object.values(pnBases).reduce(function(s,x){return s+x.base;},0);
+      var msg='✓ Excel leído — Base PJ: $'+Math.round(tPJ).toLocaleString('es-CO')+' | Base PN: $'+Math.round(tPN).toLocaleString('es-CO');
+      setStatus('#d1fae5','#065f46',msg);
+      f350_st(msg,'ok');
+    }catch(ex){
+      setStatus('#fee2e2','#b91c1c','✗ Error: '+ex.message);
+      f350_st('Error leyendo Excel: '+ex.message,'err');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
 function f350_st(msg,tipo){
   var el=document.getElementById('f350-status');if(!el)return;
   el.textContent=msg;
@@ -5279,6 +5376,8 @@ function f300_handleFile(file){
         dvCostos:   f300_findSheet(['DEV COSTOS','DV COSTOS.','DV COSTOS','DEVOLUCIONES COSTOS']),
         servPub:    f300_findSheet(['SERV PUBLICOS','SERV. PUBLICOS','SERVICIOS PUBLICOS','SERV PUB']),
         docSoporte: f300_findSheet(['DOC. SOPORTE','DOC SOPORTE','DOCUMENTO SOPORTE','DOC.SOPORTE']),
+        nomina:     f300_findSheet(['NOMINA','NÓMINA','NOMINA ELECTRONICA']),
+        saldoFavor: f300_findSheet(['SALDO A FAVOR','SALDO FAVOR','SALDO ANTERIOR']),
       };
       // Show detected sheets
       const tags=[
@@ -5288,6 +5387,8 @@ function f300_handleFile(file){
         {key:'dvCostos',label:'DEV COSTOS',req:false},
         {key:'servPub',label:'SERV PÚBLICOS',req:false},
         {key:'docSoporte',label:'DOC. SOPORTE',req:false},
+        {key:'nomina',label:'NÓMINA',req:false},
+        {key:'saldoFavor',label:'SALDO A FAVOR',req:false},
       ];
       document.getElementById('f300-sheetsDetected').innerHTML=tags.map(t=>{
         const found=!!f300_sheetMap[t.key];
@@ -5498,6 +5599,38 @@ function f300_procesar(){
   // ── DOC SOPORTE (pivot) — van a excluidos casilla 54 ─────
   const ds_total=sumPivot(f300_sheetMap.docSoporte,meses);
 
+  // ── NÓMINA — suma columna TOTAL, va a excluidos/exentos casilla 54 ─
+  const nom_total=(function(){
+    const sn=f300_sheetMap.nomina;
+    if(!sn) return 0;
+    const rows=XLSX.utils.sheet_to_json(f300_wb.Sheets[sn],{defval:''});
+    let sum=0;
+    rows.forEach(function(r){
+      // Filtrar por mes del período
+      const mesVal=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
+      const mesMatch=meses.length===0||meses.some(function(m){return mesVal.indexOf(m.toUpperCase())>=0;});
+      if(mesMatch||meses.length===0){
+        const totalVal=r['Total']||r['TOTAL']||r['total']||0;
+        sum+=parseFloat(String(totalVal).replace(/[^0-9.-]/g,''))||0;
+      }
+    });
+    return sum;
+  })();
+
+  // ── SALDO A FAVOR período anterior — casilla 84 ───────────
+  const saldo_favor_anterior=(function(){
+    const sn=f300_sheetMap.saldoFavor;
+    if(!sn) return 0;
+    const rows=XLSX.utils.sheet_to_json(f300_wb.Sheets[sn],{header:1,defval:''});
+    for(let i=0;i<rows.length;i++){
+      for(let j=0;j<rows[i].length;j++){
+        const v=rows[i][j];
+        if(typeof v==='number' && v>0) return v;
+      }
+    }
+    return 0;
+  })();
+
   // ── CASILLEROS F300 ───────────────────────────────────────
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
@@ -5511,10 +5644,10 @@ function f300_procesar(){
   const c51=f300_rdMil(c_b19-dc_b19);
   const c52=0;
   const c53=0;
-  const c54=f300_rdMil((c_exen-dc_exen)+sp_total+ds_total);
+  const c54=f300_rdMil((c_exen-dc_exen)+sp_total+ds_total+nom_total);
   const c55=f300_rdMil(c50+c51+c52+c53+c54);
   const c56=f300_rdMil(dc_b5+dc_b19+dc_exen);
-  const c57=Math.max(0,c55);
+  const c57=f300_rdMil(c55-c56);
 
   const c58=f300_rdMil(v_i5-dv_i5);
   const c59=f300_rdMil(v_i19-dv_i19);
@@ -5530,7 +5663,7 @@ function f300_procesar(){
 
   const c82=Math.max(0,f300_rdMil(c67-c81));
   const c83=Math.max(0,f300_rdMil(c81-c67));
-  const c84=0;
+  const c84=saldo_favor_anterior;  // Saldo a favor declaración anterior (pestaña SALDO A FAVOR)
   const c85=0;
   const c87=0;
   const c88=Math.max(0,c82-c84-c85+c87);
@@ -5539,7 +5672,7 @@ function f300_procesar(){
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
     c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
+    sp_total,ds_total,nom_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19};
 
   // Render
   document.getElementById('f300-c1').textContent=anio;
@@ -5752,7 +5885,7 @@ function inc_updatePeriodos(){
   s.innerHTML=inc_PERIODOS[t].map(p=>`<option value="${p.cod}">${p.label}</option>`).join('');
 }
 
-let inc_wb=null,inc_sheetVentas=null,inc_sheetDevVentas=null;
+let inc_wb=null,inc_sheetVentas=null,inc_sheetDevVentas=null,inc_sheetIpo=null;
 
 function inc_findSheet(names){
   if(!inc_wb) return null;
@@ -5773,10 +5906,12 @@ function inc_handleFile(file){
       inc_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
       inc_sheetVentas=inc_findSheet(['VENTAS','INGRESOS']);
       inc_sheetDevVentas=inc_findSheet(['DEV VENTAS','DEV EN VENTAS','DV VENTAS','DEVOLUCIONES VENTAS']);
+      inc_sheetIpo=inc_findSheet(['IPOCONSUMO','IPO CONSUMO','IPO']);
 
       const tags=[
-        {name:inc_sheetVentas,label:'VENTAS',req:true},
+        {name:inc_sheetVentas,label:'VENTAS',req:false},
         {name:inc_sheetDevVentas,label:'DEV VENTAS',req:false},
+        {name:inc_sheetIpo,label:'IPOCONSUMO',req:true},
       ];
       document.getElementById('inc-sheetsDetected').innerHTML=tags.map(t=>{
         const cls=t.name?'found':t.req?'missing':'optional';
@@ -5894,12 +6029,13 @@ function inc_procesar(){
   const meses=pObj.meses;
   const mesOpts=['MES','FECHA','MES.','FECHA EMISION'];
 
-  // VENTAS — BASE 8% e IPO 8%
-  const vB8=sumByMesMultiCol(inc_sheetVentas,['BASE 8%','BASE8%','BASE 8','BASE8'],mesOpts,meses);
-  const vI8=sumByMesMultiCol(inc_sheetVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
+  // IPOCONSUMO — pestaña propia: columna IPOCONSUMO=base, IPO 8%=impuesto
+  const ipoSheet = inc_sheetIpo || inc_sheetVentas;
+  const vB8=sumByMesMultiCol(ipoSheet,['IPOCONSUMO','BASE IPO','BASE 8%','BASE8%','BASE 8','EXCLUIDO/BASE IPO'],mesOpts,meses);
+  const vI8=sumByMesMultiCol(ipoSheet,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
 
   // DEV VENTAS — BASE IPO e IPO 8%
-  const dvB8=sumByMesMultiCol(inc_sheetDevVentas,['BASE IPO','BASE 8%','BASE8%','BASE IPO 8'],mesOpts,meses);
+  const dvB8=sumByMesMultiCol(inc_sheetDevVentas,['BASE IPO','BASE 8%','BASE8%','BASE IPO 8','EXCLUIDO/BASE IPO'],mesOpts,meses);
   const dvI8=sumByMesMultiCol(inc_sheetDevVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesOpts,meses);
 
   // Casilleros F310
