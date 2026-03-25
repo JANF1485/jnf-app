@@ -4577,7 +4577,6 @@ window.confirmarConPwd = function(){
   if(btnEl){ btnEl.disabled=true; btnEl.textContent='Verificando…'; }
   if(errEl) errEl.style.display='none';
 
-  // Intentar reautenticación con Firebase
   var doExecute = function(){
     cerrarConfirmPwd();
     if(typeof _confirmPwdCallback === 'function') _confirmPwdCallback();
@@ -4588,33 +4587,35 @@ window.confirmarConPwd = function(){
     if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
   };
 
-  try {
-    // Intentar con reauthenticateWithCredential
-    var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
-    currentUser.reauthenticateWithCredential(cred)
-      .then(doExecute)
-      .catch(function(e){
-        var msgs = {
-          'auth/wrong-password':      'Contraseña incorrecta.',
-          'auth/invalid-credential':  'Contraseña incorrecta.',
-          'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
+  // Verificar contraseña con signInWithEmailAndPassword (más compatible)
+  firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
+    .then(function(){ doExecute(); })
+    .catch(function(e1){
+      // Si falla, intentar con reauthenticateWithCredential
+      try {
+        var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+        currentUser.reauthenticateWithCredential(cred)
+          .then(doExecute)
+          .catch(function(e2){
+            var msgs = {
+              'auth/wrong-password':     'Contraseña incorrecta. Intenta de nuevo.',
+              'auth/invalid-credential': 'Contraseña incorrecta. Intenta de nuevo.',
+              'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
+              'auth/user-mismatch':      'Contraseña incorrecta. Intenta de nuevo.',
+            };
+            doError(msgs[e2.code] || msgs[e1.code] || 'Contraseña incorrecta. Intenta de nuevo.');
+          });
+      } catch(ex){
+        var msgs2 = {
+          'auth/wrong-password':     'Contraseña incorrecta. Intenta de nuevo.',
+          'auth/invalid-credential': 'Contraseña incorrecta. Intenta de nuevo.',
+          'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
         };
-        doError(msgs[e.code] || 'Contraseña incorrecta.');
-      });
-  } catch(ex){
-    // Si EmailAuthProvider falla, usar signInWithEmailAndPassword
-    firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
-      .then(doExecute)
-      .catch(function(e){
-        var msgs = {
-          'auth/wrong-password':      'Contraseña incorrecta.',
-          'auth/invalid-credential':  'Contraseña incorrecta.',
-          'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
-        };
-        doError(msgs[e.code] || 'Contraseña incorrecta.');
-      });
-  }
+        doError(msgs2[e1.code] || 'Contraseña incorrecta. Intenta de nuevo.');
+      }
+    });
 };
+
 
 
 
