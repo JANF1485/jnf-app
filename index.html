@@ -5827,17 +5827,17 @@ function f300_procesar(){
   // ── VENTAS ────────────────────────────────────────────────
   const v_b5   =sumByMes(f300_sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
   const v_b19  =sumByMes(f300_sheetMap.ventas,['BASE 19','BASE19','BASE 19%','BASE 19.'],mesColsV,meses);
-  const v_i5   =sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
+  const v_i5   =sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA  5%','IVA5','IVA 5'],mesColsV,meses);
   const v_i19  =sumByMes(f300_sheetMap.ventas,['IVA 19%','IVA19','IVA 19','IVA19%'],mesColsV,meses);
   const v_exen =sumByMes(f300_sheetMap.ventas,['EXENTO','EXENTA','EXENTOS'],mesColsV,meses);
   const v_excl =sumByMes(f300_sheetMap.ventas,['EXCLUIDO/BASE IPO','EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
   const v_ipo  =sumByMes(f300_sheetMap.ventas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesColsV,meses);
 
   // ── DEV VENTAS ────────────────────────────────────────────
-  const dv_b5  =sumByMes(f300_sheetMap.dvVentas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
-  const dv_b19 =sumByMes(f300_sheetMap.dvVentas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
-  const dv_i5  =sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
-  const dv_i19 =sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19','IVA19%'],mesColsV,meses);
+  const dv_b5  =sumByMes(f300_sheetMap.dvVentas,['BASE 5%','BASE 5','BASE5'],mesColsV,meses);
+  const dv_b19 =sumByMes(f300_sheetMap.dvVentas,['BASE 19%','BASE 19','BASE19'],mesColsV,meses);
+  const dv_i5  =sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA  5%','IVA5'],mesColsV,meses);
+  const dv_i19 =sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19%','IVA19'],mesColsV,meses);
   const dv_exen=sumByMes(f300_sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
   const dv_excl=sumByMes(f300_sheetMap.dvVentas,['EXCLUIDO/BASE IPO','EXCLUIDO','EXCLUIDOS','EXCLUIDA','NO GRAVADO','NO GRAVADOS','EXCLUIDO IVA'],mesColsV,meses);
   const dv_ipo =sumByMes(f300_sheetMap.dvVentas,['IPO 8%','IPO8%','IPO 8','IPO8'],mesColsV,meses);
@@ -5858,10 +5858,15 @@ function f300_procesar(){
   const dc_exen=sumByMes(f300_sheetMap.dvCostos,['EXENTO','EXENTA'],mesColsC,meses);
   const dc_excl=sumByMes(f300_sheetMap.dvCostos,['EXCLUIDO','EXCLUIDOS'],mesColsC,meses);
 
-  // ── SERV PUBLICOS (pivot) — van a excluidos casilla 54 ────
-  const sp_total=sumPivot(f300_sheetMap.servPub,meses);
+  // ── SERV PUBLICOS (transaccional) — EXENTO + EXCLUIDO filtrado por mes ──
+  // Suma las columnas EXENTO y EXCLUIDO de las filas del período
+  const sp_exen =sumByMes(f300_sheetMap.servPub,['EXENTO','EXENTA'],mesColsC,meses);
+  const sp_excl =sumByMes(f300_sheetMap.servPub,['EXCLUIDO','EXCLUIDOS','EXCLUIDA'],mesColsC,meses);
+  const sp_b19  =sumByMes(f300_sheetMap.servPub,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
+  const sp_b5   =sumByMes(f300_sheetMap.servPub,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
+  const sp_total=sp_exen+sp_excl+sp_b19+sp_b5;  // Total excluidos+exentos+bases de SERV PUBLICOS
 
-  // ── DOC SOPORTE (pivot) — van a excluidos casilla 54 ─────
+  // ── DOC SOPORTE (pivot con columnas de meses) ─────────────
   const ds_total=sumPivot(f300_sheetMap.docSoporte,meses);
 
   // ── NÓMINA — suma columna TOTAL, va a excluidos/exentos casilla 54 ─
@@ -5900,9 +5905,9 @@ function f300_procesar(){
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
   const c35=f300_rdMil(v_exen);
-  const c39=f300_rdMil((v_excl||0)+(v_ipo||0)-(dv_excl||0)-(dv_ipo||0));  // Excluidas + IPO - Dev excluidas
+  const c39=f300_rdMil((v_excl||0)-(dv_excl||0));  // Operaciones excluidas netas (EXCLUIDO/BASE IPO - dev)
   const c41=f300_rdMil(c27+c28+c35+c39);
-  const c42=f300_rdMil((dv_b19||0)+(dv_b5||0)+(dv_excl||0)+(dv_ipo||0)+(dv_exen||0));  // BASE19+BASE5+EXCLUIDO/BASE IPO+IPO8%+EXENTO
+  const c42=f300_rdMil((dv_b19||0)+(dv_b5||0)+(dv_excl||0)+(dv_exen||0));  // Dev ventas: BASE19+BASE5+EXCLUIDO+EXENTO (sin IPO 8%)
   const c43=Math.max(0,c41-c42);
 
   const c50=f300_rdMil(c_b5);   // Base 5% compras brutas (devoluciones van en c56)
