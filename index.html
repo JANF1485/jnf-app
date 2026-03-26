@@ -5680,8 +5680,25 @@ function f300_rdMil(n){return Math.round(n/1000)*1000;}
 
 // Find header row (first row where cols count > 3)
 function f300_findHeaderRow(ws){
+  // Buscar la fila que contiene encabezados contables reales
+  // Los encabezados reales tienen palabras clave como MES, FECHA, BASE, IVA, NIT, etc.
+  const HEADER_KEYWORDS=['MES','FECHA','BASE','IVA','NIT','TIPO','FOLIO','CUFE',
+    'VENTAS','COSTOS','TOTAL','EXENTO','EXCLUIDO','T.P.','APLIC','PREFIJO',
+    'ENERO','FEBRERO','MARZO','RECEPTOR','EMISOR','NOMBRE','RAZON'];
   const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
-  for(let r=range.s.r;r<=Math.min(range.s.r+5,range.e.r);r++){
+  for(let r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
+    let hits=0;
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell&&cell.v){
+        const v=String(cell.v).trim().toUpperCase();
+        if(HEADER_KEYWORDS.some(k=>v.includes(k))) hits++;
+      }
+    }
+    if(hits>=3) return r;
+  }
+  // Fallback: primera fila con 4+ celdas
+  for(let r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
     let cnt=0;
     for(let c=range.s.c;c<=range.e.c;c++){
       const cell=ws[XLSX.utils.encode_cell({r,c})];
@@ -5740,7 +5757,7 @@ function sumByMes(sheetName, colNames, mesColNames, meses){
   const hrow=f300_findHeaderRow(ws);
   const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
 
-  // Find value column
+  // Columna de valor
   let ci=-1;
   for(const cn of (Array.isArray(colNames)?colNames:[colNames])){
     ci=colIdxFrom(ws,cn,hrow);
@@ -5748,22 +5765,30 @@ function sumByMes(sheetName, colNames, mesColNames, meses){
   }
   if(ci<0) return 0;
 
-  // Find month/date column - prioritize 'Fecha Emisión' for VENTAS
+  // Columna de mes/fecha
   let mi=-1;
   for(const mn of (Array.isArray(mesColNames)?mesColNames:[mesColNames])){
     mi=colIdxFrom(ws,mn,hrow);
     if(mi>=0) break;
   }
 
+  // Índice columna A para detectar fila TOTAL
+  const colA=0;
+
   let total=0;
   for(let r=hrow+1;r<=range.e.r;r++){
+    // Saltar fila TOTAL
+    const cA=ws[XLSX.utils.encode_cell({r,c:colA})];
+    if(cA&&String(cA.v||'').trim().toUpperCase()==='TOTAL') continue;
+
+    // Filtrar por mes si hay columna de mes
     if(mi>=0&&meses&&meses.length>0){
       const mc=ws[XLSX.utils.encode_cell({r,c:mi})];
       if(!mc) continue;
-      // Extract month name from date or use direct value
-      const mv = f300_getMesFromCell(mc);
+      const mv=f300_getMesFromCell(mc);
       if(!meses.includes(mv)) continue;
     }
+
     const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
     if(cell&&typeof cell.v==='number') total+=cell.v;
   }
@@ -5776,10 +5801,10 @@ function sumPivot(sheetName, meses){
   const ws=f300_wb.Sheets[sheetName];
   const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
 
-  // Find header row with month names
+  // Find header row with month names (buscar hasta fila 10)
   let hrow=-1;
   let mesColMap={};
-  for(let r=range.s.r;r<=Math.min(range.s.r+5,range.e.r);r++){
+  for(let r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
     for(let c=range.s.c;c<=range.e.c;c++){
       const cell=ws[XLSX.utils.encode_cell({r,c})];
       if(cell&&f300_MES_COLS.includes(String(cell.v||'').trim().toUpperCase())){
@@ -5875,15 +5900,26 @@ function f300_procesar(){
     if(!sn) return 0;
     const rows=XLSX.utils.sheet_to_json(f300_wb.Sheets[sn],{defval:''});
     let sum=0;
-    rows.forEach(function(r){
-      // Filtrar por mes del período
-      const mesVal=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
-      const mesMatch=meses.length===0||meses.some(function(m){return mesVal.indexOf(m.toUpperCase())>=0;});
-      if(mesMatch||meses.length===0){
-        const totalVal=r['Total']||r['TOTAL']||r['total']||0;
-        sum+=parseFloat(String(totalVal).replace(/[^0-9.-]/g,''))||0;
+    const ws_nom=f300_wb.Sheets[sn];
+    const hrow_nom=f300_findHeaderRow(ws_nom);
+    const range_nom=XLSX.utils.decode_range(ws_nom['!ref']||'A1:A1');
+    // Buscar columnas de mes y total en NÓMINA
+    const mi_nom=colIdxFrom(ws_nom,'Fecha Emisión',hrow_nom)>=0?colIdxFrom(ws_nom,'Fecha Emisión',hrow_nom):colIdxFrom(ws_nom,'MES',hrow_nom);
+    const ci_nom=colIdxFrom(ws_nom,'Total',hrow_nom)>=0?colIdxFrom(ws_nom,'Total',hrow_nom):colIdxFrom(ws_nom,'TOTAL',hrow_nom);
+    if(ci_nom>=0){
+      for(let r=hrow_nom+1;r<=range_nom.e.r;r++){
+        const cA=ws_nom[XLSX.utils.encode_cell({r,c:0})];
+        if(cA&&String(cA.v||'').trim().toUpperCase()==='TOTAL') continue;
+        if(mi_nom>=0&&meses&&meses.length>0){
+          const mc=ws_nom[XLSX.utils.encode_cell({r,c:mi_nom})];
+          if(!mc) continue;
+          const mv=f300_getMesFromCell(mc);
+          if(!meses.includes(mv)) continue;
+        }
+        const cell=ws_nom[XLSX.utils.encode_cell({r,c:ci_nom})];
+        if(cell&&typeof cell.v==='number') sum+=cell.v;
       }
-    });
+    }
     return sum;
   })();
 
