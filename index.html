@@ -5941,7 +5941,7 @@ function f300_procesar(){
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
   const c35=f300_rdMil(v_exen);
-  const c39=f300_rdMil((v_excl||0)-(dv_excl||0));  // Operaciones excluidas netas (EXCLUIDO/BASE IPO - dev)
+  const c39=f300_rdMil(v_excl||0);  // Casilla 39: solo ventas excluidas (sin restar devoluciones)
   const c41=f300_rdMil(c27+c28+c35+c39);
   const c42=f300_rdMil((dv_b19||0)+(dv_b5||0)+(dv_excl||0)+(dv_exen||0));  // Dev ventas: BASE19+BASE5+EXCLUIDO+EXENTO (sin IPO 8%)
   const c43=Math.max(0,c41-c42);
@@ -5972,11 +5972,11 @@ function f300_procesar(){
   const c84=saldo_favor_anterior;  // Saldo a favor declaración anterior (pestaña SALDO A FAVOR)
   const c85=0;
   const c87=0;
-  const c88=Math.max(0,c82-c84-c85+c87);
-  const c89=Math.max(0,c83+c84+c85-c87);
+  const c88=Math.max(0,f300_rdMil(c82-c84-c85+c87));  // Saldo a pagar neto
+  const c89=Math.max(0,f300_rdMil(c83+c84+c85-c87));  // Saldo a favor total
 
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
-    c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
+    c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,c84,
     c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
     sp_total,ds_total,nom_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
 
@@ -6000,7 +6000,7 @@ function f300_procesar(){
   sv('c58',c58);sv('c59',c59);sv('c67',c67);
   sv('c71',c71);sv('c72',c72);sv('c74',c74);sv('c75',c75);
   sv('c79',c79);sv('c81',c81);
-  sv('c82',c82);sv('c83',c83);sv('c85',c85);sv('c87',c87);
+  sv('c82',c82);sv('c83',c83);sv('c84',c84);sv('c85',c85);sv('c87',c87);
   sv('c88',c88);sv('c89',c89);
 
   // Summary cards
@@ -6715,7 +6715,7 @@ function f300_renderCasilleros(d){
     {label:'Compras bienes gravados 19%',cas:51,key:'c51'},
     {label:'Servicios gravados 5%',cas:52,key:'c52'},
     {label:'Servicios gravados 19%',cas:53,key:'c53'},
-    {label:'Excluidos/exentos (COSTOS+SERV PÚB+DOC SOP)',cas:54,key:'c54'},
+    {label:'Excluidos/exentos (COSTOS+SERV PÚB+DOC SOP+NÓMINA)',cas:54,key:'c54'},
     {label:'Total compras brutas',cas:55,key:'c55',total:true},
     {label:'Devoluciones en compras',cas:56,key:'c56',hi:true},
     {label:'Total compras netas (55-56)',cas:57,key:'c57',total:true},
@@ -6734,6 +6734,7 @@ function f300_renderCasilleros(d){
     null,
     {label:'Saldo a pagar por el período',cas:82,key:'c82',hi:true},
     {label:'Saldo a favor del período',cas:83,key:'c83',hi:true},
+    {label:'Saldo a favor período anterior (Excel)',cas:84,key:'c84',hi:true},
     {label:'Retenciones IVA practicadas',cas:85,key:'c85'},
     {label:'Sanciones',cas:87,key:'c87'},
     {label:'Total saldo a pagar',cas:88,key:'c88',total:true},
