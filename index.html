@@ -5937,6 +5937,9 @@ function f300_procesar(){
     return 0;
   })();
 
+  // dc_total: columna TOTAL de DV COSTOS (total de la devolución)
+  const dc_total=sumByMes(f300_sheetMap.dvCostos,['TOTAL','Total','TOTAL FACTURA'],mesColsC,meses);
+
   // ── CASILLEROS F300 ───────────────────────────────────────
   const c27=f300_rdMil(v_b5);
   const c28=f300_rdMil(v_b19);
@@ -5950,22 +5953,22 @@ function f300_procesar(){
   const c51=f300_rdMil(c_b19);  // Base 19% compras brutas (devoluciones van en c56)
   const c52=0;
   const c53=0;
-  const c54=f300_rdMil((c_exen||0)+(c_excl||0)-(dc_exen||0)-(dc_excl||0)+sp_total+ds_total+nom_total);  // Exentos+Excluidos costos netos + SerPub + DocSop + Nomina
+  const c54=f300_rdMil((c_exen||0)+(c_excl||0)+sp_total+ds_total+nom_total);  // C54: Excluidos+exentos COSTOS + SERV PUB + DOC SOP + NOMINA (brutos)
   const c55=f300_rdMil(c50+c51+c52+c53+c54);
-  const c56=f300_rdMil(dc_b5+dc_b19+dc_exen+dc_excl);  // Devoluciones en compras totales
+  const c56=f300_rdMil(dc_total);  // C56: Total devoluciones en compras (columna TOTAL de DV COSTOS)
   const c57=f300_rdMil(c55-c56);
 
-  const c58=f300_rdMil(v_i5-dv_i5);
-  const c59=f300_rdMil(v_i19-dv_i19);
+  const c58=f300_rdMil(v_i5);       // IVA generado 5% BRUTO (sin restar devoluciones — van en c79)
+  const c59=f300_rdMil(v_i19);      // IVA generado 19% BRUTO (sin restar devoluciones — van en c79)
   const c67=f300_rdMil(c58+c59);
 
-  const c71=f300_rdMil(c_i5-dc_i5);
-  const c72=f300_rdMil(c_i19-dc_i19);
+  const c71=f300_rdMil(c_i5);    // C71: IVA descontable compras 5% (bruto, sin restar dev — van en c56)
+  const c72=f300_rdMil(c_i19);   // C72: IVA descontable compras 19% (bruto)
   const c74=0;
   const c75=0;
-  const c77=f300_rdMil(c71+c72+c74+c75);
-  const c79=f300_rdMil(dv_i5+dv_i19);
-  const c81=f300_rdMil(c77+c79);
+  const c77=f300_rdMil(c71+c72+c74+c75);  // C77: Total IVA descontable bruto
+  const c79=f300_rdMil(dv_i5+dv_i19);  // C79: IVA resultante devoluciones en ventas
+  const c81=f300_rdMil(c77+c79);  // C81: Total descontables (77+78+79-80, simplificado 77+79)
 
   const c82=Math.max(0,f300_rdMil(c67-c81));
   const c83=Math.max(0,f300_rdMil(c81-c67));
@@ -5978,7 +5981,7 @@ function f300_procesar(){
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,c84,
     c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,nom_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
+    sp_total,ds_total,nom_total,dc_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
 
   // Render
   document.getElementById('f300-c1').textContent=anio;
@@ -6734,7 +6737,7 @@ function f300_renderCasilleros(d){
     null,
     {label:'Saldo a pagar por el período',cas:82,key:'c82',hi:true},
     {label:'Saldo a favor del período',cas:83,key:'c83',hi:true},
-    {label:'Saldo a favor período anterior (Excel)',cas:84,key:'c84',hi:true},
+    {label:'Saldo a favor período fiscal anterior',cas:84,key:'c84',hi:true},
     {label:'Retenciones IVA practicadas',cas:85,key:'c85'},
     {label:'Sanciones',cas:87,key:'c87'},
     {label:'Total saldo a pagar',cas:88,key:'c88',total:true},
