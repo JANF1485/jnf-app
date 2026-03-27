@@ -5958,9 +5958,11 @@ function f300_procesar(){
   const c56=f300_rdMil(dc_total);  // C56: Total devoluciones en compras (columna TOTAL de DV COSTOS)
   const c57=f300_rdMil(c55-c56);
 
-  const c58=f300_rdMil(v_i5);       // IVA generado 5% BRUTO (sin restar devoluciones — van en c79)
-  const c59=f300_rdMil(v_i19);      // IVA generado 19% BRUTO (sin restar devoluciones — van en c79)
-  const c67=f300_rdMil(c58+c59);
+  const c58=f300_rdMil(v_i5);       // IVA generado 5% BRUTO ventas
+  const c59=f300_rdMil(v_i19);      // IVA generado 19% BRUTO ventas
+  // C66: IVA recuperado en devoluciones en compras (IVA19% + IVA5% de DV COSTOS)
+  const c66=f300_rdMil((dc_i19||0)+(dc_i5||0));
+  const c67=f300_rdMil(c58+c59+c66);  // C67: total generado = 58+59+66
 
   const c71=f300_rdMil(c_i5);    // C71: IVA descontable compras 5% (bruto, sin restar dev — van en c56)
   const c72=f300_rdMil(c_i19);   // C72: IVA descontable compras 19% (bruto)
@@ -5975,12 +5977,14 @@ function f300_procesar(){
   const c84=saldo_favor_anterior;  // Saldo a favor declaración anterior (pestaña SALDO A FAVOR)
   const c85=0;
   const c87=0;
-  const c88=Math.max(0,f300_rdMil(c82-c84-c85+c87));  // Saldo a pagar neto
-  const c89=Math.max(0,f300_rdMil(c83+c84+c85-c87));  // Saldo a favor total
+  // C88: saldo a pagar = 82 - 84 - 85 + 87 (solo si c82 > 0)
+  const c88=c82>0 ? Math.max(0,f300_rdMil(c82-c84-c85+c87)) : 0;
+  // C89: saldo a favor = 83 + 84 + 85 - 87 (solo aplica si c83 > 0, es decir hay saldo a favor del período)
+  const c89=c83>0 ? Math.max(0,f300_rdMil(c83+c84+c85-c87)) : 0;
 
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,c84,
-    c58,c59,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
+    c58,c59,c66,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
     sp_total,ds_total,nom_total,dc_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
 
   // Render
@@ -6000,7 +6004,7 @@ function f300_procesar(){
   sv('c41',c41);sv('c42',c42);sv('c43',c43);
   sv('c50',c50);sv('c51',c51);sv('c52',c52);sv('c53',c53);
   sv('c54',c54);sv('c55',c55);sv('c56',c56);sv('c57',c57);
-  sv('c58',c58);sv('c59',c59);sv('c67',c67);
+  sv('c58',c58);sv('c59',c59);sv('c66',c66);sv('c67',c67);
   sv('c71',c71);sv('c72',c72);sv('c74',c74);sv('c75',c75);
   sv('c79',c79);sv('c81',c81);
   sv('c82',c82);sv('c83',c83);sv('c84',c84);sv('c85',c85);sv('c87',c87);
@@ -6725,7 +6729,8 @@ function f300_renderCasilleros(d){
     null,
     {label:'IVA generado 5%',cas:58,key:'c58'},
     {label:'IVA generado 19%',cas:59,key:'c59'},
-    {label:'Total impuesto generado',cas:67,key:'c67',total:true},
+    {label:'IVA recuperado en dev. compras',cas:66,key:'c66'},
+    {label:'Total impuesto generado (58+59+66)',cas:67,key:'c67',total:true},
     null,
     {label:'IVA descontable compras 5%',cas:71,key:'c71'},
     {label:'IVA descontable compras 19%',cas:72,key:'c72'},
