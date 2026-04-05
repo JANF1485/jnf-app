@@ -6003,6 +6003,33 @@ const f300_PERIODOS = {
 // Month name to column index mapping for pivot sheets
 const f300_MES_COLS = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
+function f300_setModo(modo){
+  var p1=document.getElementById('f300-panel-modo1');
+  var p2=document.getElementById('f300-panel-modo2');
+  var c1=document.getElementById('f300-modo1-card');
+  var c2=document.getElementById('f300-modo2-card');
+  var chk1=document.getElementById('f300-chk1');
+  var chk2=document.getElementById('f300-chk2');
+  if(modo===1){
+    if(p1)p1.style.display='block';
+    if(p2)p2.style.display='none';
+    if(c1){c1.style.borderColor='#1a2580';c1.style.background='#f0f3ff';}
+    if(c2){c2.style.borderColor='#dde1f0';c2.style.background='#fff';}
+    if(chk1){chk1.style.background='#1a2580';chk1.style.borderColor='#1a2580';chk1.innerHTML='<div style="width:8px;height:6px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>';}
+    if(chk2){chk2.style.background='#f8faff';chk2.style.borderColor='#dde1f0';chk2.innerHTML='';}
+    var t1=c1?c1.querySelector('div:last-child'):''; // titulo
+    if(c1) c1.querySelector('[style*="font-size:13px"]').style.color='#1a2580';
+    if(c2) c2.querySelector('[style*="font-size:13px"]').style.color='#6b7280';
+  } else {
+    if(p1)p1.style.display='none';
+    if(p2){p2.style.display='block'; if(typeof f300mp_setPer==='function') f300mp_setPer('bimestral');}
+    if(c2){c2.style.borderColor='#c9a227';c2.style.background='#fffbf0';}
+    if(c1){c1.style.borderColor='#dde1f0';c1.style.background='#fff';}
+    if(chk2){chk2.style.background='#c9a227';chk2.style.borderColor='#c9a227';chk2.innerHTML='<div style="width:8px;height:6px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>';}
+    if(chk1){chk1.style.background='#f8faff';chk1.style.borderColor='#dde1f0';chk1.innerHTML='';}
+  }
+}
+
 function f300_updatePeriodos(){
   const t=document.getElementById('f300-periodicidad').value;
   const s=document.getElementById('f300-periodo');
@@ -7570,7 +7597,39 @@ function poblarFiltroContador(){
     
 <div id="f300-stbar" class="st" style="margin-bottom:14px;"></div>
 
-<!-- Configuración período -->
+<!-- SELECTOR DE MODO -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+
+  <!-- MODO 1: Liquidación por período -->
+  <div id="f300-modo1-card" onclick="f300_setModo(1)"
+    style="background:#fff;border:2px solid #1a2580;border-radius:12px;padding:20px;cursor:pointer;transition:all .15s;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#eef1ff;display:flex;align-items:center;justify-content:center;font-size:20px;">⚡</div>
+      <div id="f300-chk1" style="width:18px;height:18px;border-radius:50%;background:#1a2580;border:2px solid #1a2580;display:flex;align-items:center;justify-content:center;">
+        <div style="width:8px;height:6px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:4px;">Liquidación por período</div>
+    <div style="font-size:10px;color:#6b7280;line-height:1.5;">Carga el Excel de un período específico y liquida la declaración de IVA de ese bimestre o cuatrimestre.</div>
+    <span style="display:inline-block;margin-top:8px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef1ff;color:#1a2580;">Un período a la vez</span>
+  </div>
+
+  <!-- MODO 2: Generar todos los períodos -->
+  <div id="f300-modo2-card" onclick="f300_setModo(2)"
+    style="background:#fff;border:2px solid #dde1f0;border-radius:12px;padding:20px;cursor:pointer;transition:all .15s;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#fff8e0;display:flex;align-items:center;justify-content:center;font-size:20px;">📅</div>
+      <div id="f300-chk2" style="width:18px;height:18px;border-radius:50%;border:2px solid #dde1f0;background:#f8faff;"></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:#6b7280;margin-bottom:4px;">Generar todos los períodos</div>
+    <div style="font-size:10px;color:#6b7280;line-height:1.5;">Carga el Excel del año completo y genera automáticamente los PDFs con arrastre de saldos entre períodos.</div>
+    <span style="display:inline-block;margin-top:8px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff3cc;color:#8a6800;">Hasta 6 PDFs a la vez</span>
+  </div>
+
+</div>
+
+<!-- MODO 1: Formulario individual (visible por defecto) -->
+<div id="f300-panel-modo1" style="display:block;">
 <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
   <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -7595,7 +7654,7 @@ function poblarFiltroContador(){
   </div>
 </div>
 
-<!-- Subir Excel -->
+<!-- Subir Excel Modo 1 -->
 <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
   <div style="font-size:13px;font-weight:700;color:#1a2580;margin-bottom:14px;">📂 Archivo Excel de facturación</div>
   <div id="f300-dropZone" onclick="document.getElementById('f300-fileInput').click()"
@@ -7616,6 +7675,56 @@ function poblarFiltroContador(){
     </button>
   </div>
 </div>
+</div><!-- /f300-panel-modo1 -->
+
+<!-- MODO 2: Panel generar todos los períodos (oculto por defecto) -->
+<div id="f300-panel-modo2" style="display:none;">
+<div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:700;color:#8a6800;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:16px;">📅</span> Generar declaraciones por período
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Año gravable</label>
+      <input id="f300mp-anio" type="number" value="2026" min="2020" max="2035"
+        style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;outline:none;"/>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Excel con todas las pestañas del año</label>
+      <label style="display:flex;align-items:center;gap:8px;border:2px dashed #c7d2e8;border-radius:8px;padding:8px 12px;cursor:pointer;background:#f8faff;">
+        <span style="font-size:16px;">📂</span>
+        <div id="f300mp-fileName" style="font-size:11px;color:#6b7280;">Haz clic para cargar el Excel anual</div>
+        <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f300mp_cargarExcel(this.files[0]);this.value=''"/>
+      </label>
+    </div>
+  </div>
+  <div id="f300mp-sheets" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;"></div>
+  <div style="margin-bottom:14px;">
+    <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:6px;">Periodicidad</label>
+    <div style="display:flex;gap:8px;">
+      <button id="f300mp-btn-bim" onclick="f300mp_setPer('bimestral')"
+        style="flex:1;padding:9px;border-radius:8px;border:2px solid #1a2580;background:#1a2580;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Bimestral (6 períodos)</button>
+      <button id="f300mp-btn-cua" onclick="f300mp_setPer('cuatrimestral')"
+        style="flex:1;padding:9px;border-radius:8px;border:2px solid #dde1f0;background:#fff;color:#6b7280;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Cuatrimestral (3 períodos)</button>
+    </div>
+  </div>
+  <div style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <label style="font-size:11px;font-weight:700;color:#4b5563;">Períodos a generar</label>
+      <div style="display:flex;gap:6px;">
+        <button onclick="f300mp_selTodos(true)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #1a2580;background:#1a2580;color:#fff;cursor:pointer;font-family:Montserrat,sans-serif;">Todos</button>
+        <button onclick="f300mp_selTodos(false)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #dde1f0;background:#fff;color:#6b7280;cursor:pointer;font-family:Montserrat,sans-serif;">Ninguno</button>
+      </div>
+    </div>
+    <div id="f300mp-periodos" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
+  </div>
+  <div id="f300mp-progress" style="display:none;margin-bottom:12px;font-size:11px;color:#1a2580;font-weight:700;text-align:center;padding:10px;background:#eef1ff;border-radius:8px;"></div>
+  <button onclick="f300mp_generar()"
+    style="width:100%;padding:12px;background:#c9a227;color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+    ⬇ Generar PDFs seleccionados
+  </button>
+</div>
+</div><!-- /f300-panel-modo2 -->
 
 <!-- Resultado -->
 <div id="f300-resultado" style="display:none;">
@@ -7647,7 +7756,7 @@ function poblarFiltroContador(){
     <div id="f300-detalleSection" style="margin-top:12px;background:#f8faff;border-radius:8px;padding:12px;"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
       <button onclick="f300_descargarPDF()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">⬇ Descargar PDF Formulario 300</button>
-      <button onclick="f300_abrirMultiPeriodo()" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📅 Generar declaraciones por período</button>
+
       <button onclick="openModulos()" style="background:#fff;color:#1a2580;border:2px solid #1a2580;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">← Volver a Módulos</button>
     </div>
   </div>
