@@ -4614,8 +4614,8 @@ function f300mp_calcularPeriodo(anio, tipo, pCod, meses, saldoArrastre){
     saldoFavor: findSh(['SALDO A FAVOR']),
   };
 
-  var mesColsV=['Fecha Emisión','FECHA EMISION','MES'];
-  var mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
+  var mesColsV=['Fecha Emisión','FECHA EMISION','FECHA EMISIÓN','Fecha Emision','MES','MES.'];
+  var mesColsC=['MES','Fecha Emisión','FECHA EMISIÓN','FECHA EMISION','Fecha Emision','FECHA','MES.'];
 
   var v_b5=sumByMes(f300_sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
   var v_b19=sumByMes(f300_sheetMap.ventas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
@@ -6159,21 +6159,39 @@ const MESES_NUM = ['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
 function f300_getMesFromCell(cell){
   if(!cell) return '';
   var v = cell.v;
-  // If it's a Date object
+  // Fecha como objeto Date
   if(v instanceof Date){
     return MESES_NUM[v.getMonth()+1]||'';
   }
+  // Número serial de Excel (ej: 46127 → fecha real)
+  // Los seriales de fecha son números entre 1 y 2958465
+  if(typeof v==='number' && v>1000 && v<2958465){
+    // Convertir serial Excel a Date: (serial-25569)*86400*1000 ms desde epoch
+    var d=new Date(Math.round((v-25569)*86400*1000));
+    if(!isNaN(d.getTime())) return MESES_NUM[d.getUTCMonth()+1]||'';
+  }
   var s = String(v||'').trim();
-  // Format DD-MM-YYYY or DD/MM/YYYY
-  var m1 = s.match(/^\d{2}[-\/](\d{2})[-\/]\d{4}/);
+  // Número pequeño como mes (1-12)
+  var num=parseInt(s,10);
+  if(!isNaN(num)&&num>=1&&num<=12&&s===String(num)) return MESES_NUM[num]||'';
+  // Format DD-MM-YYYY o DD/MM/YYYY
+  var m1 = s.match(/^\d{1,2}[-\/](\d{1,2})[-\/]\d{4}/);
   if(m1){ return MESES_NUM[parseInt(m1[1],10)]||''; }
   // Format YYYY-MM-DD
   var m2 = s.match(/^\d{4}-(\d{2})-\d{2}/);
   if(m2){ return MESES_NUM[parseInt(m2[1],10)]||''; }
-  // Format with time: DD-MM-YYYY HH:MM
-  var m3 = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+  // Format con hora: DD-MM-YYYY HH:MM
+  var m3 = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
   if(m3){ return MESES_NUM[parseInt(m3[2],10)]||''; }
-  // Already a month name
+  // Nombre de mes directo (quitar tildes para comparar)
+  var clean=s.toUpperCase()
+    .replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E')
+    .replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O')
+    .replace(/[ÚÙÛÜ]/g,'U');
+  var MESES_CLEAN=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+    'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var idx2=MESES_CLEAN.indexOf(clean);
+  if(idx2>0) return MESES_NUM[idx2]||'';
   return s.toUpperCase();
 }
 
@@ -6272,8 +6290,8 @@ function f300_procesar(){
   const pObj=f300_PERIODOS[tipo].find(p=>p.cod===pCod);
   const meses=pObj.meses;
 
-  const mesColsV=['Fecha Emisión','FECHA EMISION','FECHA','MES','MES.'];
-  const mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
+  const mesColsV=['Fecha Emisión','FECHA EMISION','FECHA EMISIÓN','FECHA','MES','MES.','Fecha Emision'];
+  const mesColsC=['MES','Fecha Emisión','FECHA EMISIÓN','FECHA EMISION','Fecha Emision','FECHA','MES.'];
 
   // ── VENTAS ────────────────────────────────────────────────
   const v_b5   =sumByMes(f300_sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
