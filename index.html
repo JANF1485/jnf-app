@@ -969,6 +969,10 @@ window.addEventListener('online', function(){
           <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f350_leerExcel(this.files[0]);this.value=''"/>
         </label>
         <span id="f350-excel-status" style="font-size:10px;font-weight:700;display:none;padding:4px 10px;border-radius:8px;"></span>
+        <button onclick="f350_generarBorrador()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;gap:5px;display:inline-flex;align-items:center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          ⬇ Borrador Formulario 350
+        </button>
         <button onclick="f350_guardar()" class="btn" style="background:var(--gr);color:#fff;gap:5px;font-size:11px;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
         </button>
@@ -5042,11 +5046,11 @@ function f350_cargarPeriodo(){
     .where('anio','==',year)
     .where('periodo','==',_f350Per)
     .where('tipo','==','f350')
-    .orderBy('fechaGuardado','desc')
-    .limit(1)
     .get().then(function(snap){
       if(snap.empty){f350_limpiarCampos();return;}
-      var d=JSON.parse(snap.docs[0].data().data||'{}');
+      // Ordenar manualmente por fecha y tomar el más reciente
+      var docs=snap.docs.sort(function(a,b){return (b.data().fechaGuardado||'')>(a.data().fechaGuardado||'')?1:-1;});
+      var d=JSON.parse(docs[0].data().data||'{}');
       f350_llenar(d);f350_calcularTotales();
       var fechaStr=snap.docs[0].data().fechaGuardado;
       f350_st('✓ Período cargado · '+(fechaStr?new Date(fechaStr).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):''),'ok');
@@ -5146,7 +5150,6 @@ function f350_cargarHistorial(){
     .where('clienteId','==',activeClientId)
     .where('anio','==',year)
     .where('tipo','==','f350')
-    .orderBy('fechaGuardado','desc')
     .get().then(function(snap){
       // Agrupar por período — guardar el más reciente de cada mes
       var porMes={};
@@ -5201,6 +5204,12 @@ function f350_eliminar(key,m){
     audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+f350_mes(m)+' eliminado');
   }).catch(function(e){ f350_st('Error: '+e.message,'err'); });
 }
+function f350_generarBorrador(){
+  // Calcular totales antes de generar PDF
+  f350_calcularTotales();
+  f350_generarPDF();
+}
+
 function f350_generarPDF(){
   var tot=f350_calcularTotales();
   var cl=clients.find(function(x){return x.id===activeClientId;})||{};
