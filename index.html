@@ -1895,6 +1895,12 @@ window._showScreen = window.showScreen = function showScreen(name){
     var el=document.getElementById('screen-'+s);
     if(el) el.style.display = s===name ? '' : 'none';
   });
+  // Inicializar el selector de período del F300 al abrirlo
+  if(name==='f300' && typeof f300_updatePeriodos==='function'){
+    var sel=document.getElementById('f300-periodicidad');
+    if(sel && !sel.value) sel.value='cuatrimestral';
+    f300_updatePeriodos();
+  }
   window.scrollTo(0,0);
 }
 
@@ -7578,7 +7584,7 @@ function poblarFiltroContador(){
     <div>
       <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px;">Periodicidad</label>
       <select id="f300-periodicidad" onchange="f300_updatePeriodos()" style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">
-        <option value="cuatrimestral">Cuatrimestral</option>
+        <option value="cuatrimestral" selected>Cuatrimestral</option>
         <option value="bimestral">Bimestral</option>
       </select>
     </div>
