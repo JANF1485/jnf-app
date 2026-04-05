@@ -4588,6 +4588,44 @@ function f300mp_cargarExcel(file){
   reader.readAsBinaryString(file);
 }
 
+// Guarda un período generado por multi-período en el historial (igual que modo 1)
+function f300mp_guardarHistorial(d){
+  try{
+    if(!window.db || !window.activeClientId) return;
+    var anio = d.anio;
+    var pCod = d.pCod;
+    var _ts = Date.now();
+    var _k = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+    var dataToSave = Object.assign({}, d, {
+      clienteId: activeClientId,
+      tipo: 'f300',
+      pCod: pCod,
+      anio: anio,
+      fechaLiquidacion: new Date().toISOString(),
+      generadoPorMultiPeriodo: true
+    });
+    db.collection('resultados_historico').doc(_k).set({
+      key: _k,
+      clienteId: activeClientId,
+      tipo: 'f300',
+      anio: anio,
+      pCod: pCod,
+      fechaLiquidacion: new Date().toISOString(),
+      data: JSON.stringify(dataToSave)
+    }).then(function(){
+      console.log('[F300 Multi] Guardado historial período '+pCod+' año '+anio);
+      audRegistrar('Guardar','F300 Multi-Período',activeClientId,
+        (clients.find(function(x){return x.id===activeClientId;})||{}).razon||'',
+        'Período '+d.pLabel+' · Año '+anio+' (Multi-período)');
+    }).catch(function(e){ console.warn('[F300 Multi historial]',e); });
+    // También guardar doc principal para compatibilidad
+    var _kMain = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(window.fbSaveResult) fbSaveResult(_kMain, dataToSave);
+  } catch(e){
+    console.warn('[F300 Multi guardar]', e);
+  }
+}
+
 function f300mp_calcularPeriodo(anio, tipo, pCod, meses, saldoArrastre){
   // Reutiliza la lógica de f300_procesar pero con el workbook del modal
   var wb_bak = f300_wb;
@@ -4759,6 +4797,9 @@ async function f300mp_generar(){
     // Períodos siguientes: saldoArrastre = c89 del período anterior
     var d = f300mp_calcularPeriodo(anio, f300mp_per, cod, pObj.meses, saldoArrastre);
     f300mp_generarPDF(d);
+
+    // Guardar en historial (igual que modo 1)
+    f300mp_guardarHistorial(d);
 
     // El c89 de este período se arrastra como c84 del siguiente
     saldoArrastre = d.c89 || 0;
