@@ -939,233 +939,178 @@ window.addEventListener('online', function(){
 <!-- ═══ PANTALLA F350: RETENCIÓN EN LA FUENTE ════════════════════ -->
 <div id="screen-f350" class="main" style="display:none;">
   <div class="gold-bar"></div>
+
+  <!-- Breadcrumb -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
     <button class="btn btn-ol btn-sm" onclick="showScreen('contabilidad');setTimeout(function(){loadSavedResults(activeClientId,activeYear);},100);" style="gap:5px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       Volver a módulos
     </button>
     <span style="font-size:10px;color:var(--t3);">›</span>
-    <span id="f350-client-name" style="font-size:10px;font-weight:700;color:var(--t2);"></span>
+    <span id="f350-client-name" style="font-size:10px;font-weight:700;color:var(--bd);"></span>
     <span style="font-size:10px;color:var(--t3);">›</span>
     <span style="font-size:10px;font-weight:700;color:var(--bd);">🧾 Retención en la Fuente — Formulario 350</span>
     <span id="f350-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
   </div>
+
+  <!-- Status bar -->
   <div id="f350-status" style="display:none;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;"></div>
-  <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:18px 22px;margin-bottom:20px;">
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:200px;">
-        <label style="font-size:11px;font-weight:700;color:var(--t2);white-space:nowrap;">Período (mes):</label>
-        <select id="f350-periodo" onchange="f350_changePeriodo()" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--bm);border-radius:8px;padding:8px 12px;background:var(--sf);color:var(--bd);outline:none;min-width:180px;">
-          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
-          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
-          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
-          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-        </select>
+
+  <!-- SELECTOR DE MODO -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+    <div id="f350-modo1-card" onclick="f350_setModo(1)"
+      style="background:var(--sf);border:2px solid var(--bd);border-radius:12px;padding:18px;cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="width:38px;height:38px;border-radius:9px;background:#eef1ff;display:flex;align-items:center;justify-content:center;font-size:18px;">⚡</div>
+        <div id="f350-chk1" style="width:17px;height:17px;border-radius:50%;background:var(--bd);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;">
+          <div style="width:7px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <label class="btn" style="background:var(--blue);color:#fff;gap:5px;font-size:11px;cursor:pointer;" title="Lee COSTOS del Excel y pre-llena las bases según T.P. y APLIC.RETEFUENTE">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-          Leer Excel
-          <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f350_leerExcel(this.files[0]);this.value=''"/>
-        </label>
-        <span id="f350-excel-status" style="font-size:10px;font-weight:700;display:none;padding:4px 10px;border-radius:8px;"></span>
-        <button onclick="f350_generarBorrador()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;gap:5px;display:inline-flex;align-items:center;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          ⬇ Borrador Formulario 350
-        </button>
-        <button onclick="f350_guardar()" class="btn" style="background:var(--gr);color:#fff;gap:5px;font-size:11px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
-        </button>
-        <button onclick="f350_limpiar()" class="btn btn-ol" style="font-size:11px;gap:5px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.79"/></svg>Limpiar
-        </button>
-        <button onclick="f350_generarPDF()" class="btn" style="background:var(--bd);color:#fff;gap:5px;font-size:11px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar
-        </button>
+      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:3px;">Liquidación por período</div>
+      <div style="font-size:10px;color:var(--t2);line-height:1.5;">Carga el Excel del período, lee bases por T.P. y tarifa, y liquida el formulario 350 automáticamente.</div>
+      <span style="display:inline-block;margin-top:7px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef1ff;color:#1a2580;">Un período a la vez</span>
+    </div>
+    <div id="f350-modo2-card" onclick="f350_setModo(2)"
+      style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:18px;cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="width:38px;height:38px;border-radius:9px;background:#fff8e0;display:flex;align-items:center;justify-content:center;font-size:18px;">📅</div>
+        <div id="f350-chk2" style="width:17px;height:17px;border-radius:50%;background:var(--sf);border:2px solid var(--br);"></div>
       </div>
+      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:3px;">Generar todos los períodos</div>
+      <div style="font-size:10px;color:var(--t2);line-height:1.5;">Carga el Excel anual y genera hasta 12 PDFs mensuales automáticamente.</div>
+      <span style="display:inline-block;margin-top:7px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff3cc;color:#8a6800;">Hasta 12 PDFs</span>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr;gap:20px;">
-    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#1a2580,#2535a8);padding:12px 18px;display:flex;align-items:center;gap:10px;">
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">PJ</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Retenciones a Personas Jurídicas — Título de Renta</div>
-        <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.6);">Casillas 29–54</div>
-      </div>
-      <div style="padding:16px 18px;overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <thead><tr style="background:#f8faff;">
-            <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base ($)</th>
-            <th style="text-align:center;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:70px;">Tarifa %</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--bd);border-bottom:2px solid var(--br);min-width:140px;">Retención ($)</th>
-          </tr></thead>
-          <tbody id="f350-tbody-pj"></tbody>
-          <tfoot><tr style="background:#eef1ff;">
-            <td colspan="3" style="padding:10px;font-weight:800;color:var(--bd);">Subtotal retenciones PJ</td>
-            <td style="padding:10px;text-align:right;font-weight:800;color:var(--bd);font-size:12px;" id="f350-sub-pj">$ 0</td>
-          </tr></tfoot>
-        </table>
-      </div>
-    </div>
-    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#065f46,#0d7e5e);padding:12px 18px;display:flex;align-items:center;gap:10px;">
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">PN</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Retenciones a Personas Naturales — Título de Renta</div>
-        <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.6);">Casillas 77–108</div>
-      </div>
-      <div style="padding:16px 18px;overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <thead><tr style="background:#f0fdf4;">
-            <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:150px;">Base ($)</th>
-            <th style="text-align:center;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:70px;">Tarifa %</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--gr);border-bottom:2px solid var(--br);min-width:140px;">Retención ($)</th>
-          </tr></thead>
-          <tbody id="f350-tbody-pn"></tbody>
-          <tfoot><tr style="background:#dcfce7;">
-            <td colspan="3" style="padding:10px;font-weight:800;color:var(--gr);">Subtotal retenciones PN</td>
-            <td style="padding:10px;text-align:right;font-weight:800;color:var(--gr);font-size:12px;" id="f350-sub-pn">$ 0</td>
-          </tr></tfoot>
-        </table>
-      </div>
-    </div>
-    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#92400e,#b45309);padding:12px 18px;display:flex;align-items:center;gap:10px;">
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">AR</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Autorretenciones — PJ (Art. 114-1 E.T.)</div>
-        <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.6);">Casillas 59–76</div>
-      </div>
-      <div style="padding:16px 18px;overflow-x:auto;">
-        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:14px;align-items:end;">
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Casilla 27 — Actividad económica principal (CIIU)</label>
-            <select id="f350-ciiu-ar" onchange="f350_calcularTarifaAR()" style="width:100%;font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:7px 10px;background:var(--sf);color:var(--tx);outline:none;">
-              <option value="">— Seleccionar actividad económica —</option>
-              <option value="0111-0322|0.00">Agropecuarias (0111–0322) · 0.00%</option>
-              <option value="0500-0990|0.00">Extracción carbón e hidrocarburos (0500–0990) · 0.00%</option>
-              <option value="1011-3320|0.80">Industria manufacturera (1011–3320) · 0.80%</option>
-              <option value="3511-3600|0.80">Electricidad, gas y agua (3511–3600) · 0.80%</option>
-              <option value="4111-4390|2.00">Construcción (4111–4390) · 2.00%</option>
-              <option value="4511-4799|0.80">Comercio al por mayor y menor (4511–4799) · 0.80%</option>
-              <option value="4911-5320|1.50">Transporte y almacenamiento (4911–5320) · 1.50%</option>
-              <option value="5511-5630|3.50">Alojamiento y servicios de comida (5511–5630) · 3.50%</option>
-              <option value="5811-6399|3.50">Información y comunicaciones (5811–6399) · 3.50%</option>
-              <option value="6411-6630|1.50">Financieras y de seguros (6411–6630) · 1.50%</option>
-              <option value="6810-6832|3.50">Actividades inmobiliarias (6810–6832) · 3.50%</option>
-              <option value="6910-7500|3.50">Profesionales y científicas (6910–7500) · 3.50%</option>
-              <option value="7710-8299|3.50">Servicios administrativos (7710–8299) · 3.50%</option>
-              <option value="8411-8430|0.00">Administración pública (8411–8430) · 0.00%</option>
-              <option value="8511-8560|3.50">Educación (8511–8560) · 3.50%</option>
-              <option value="8610-8890|3.50">Atención a la salud (8610–8890) · 3.50%</option>
-              <option value="9001-9900|3.50">Arte y entretenimiento (9001–9900) · 3.50%</option>
-            </select>
-          </div>
-          <div style="background:var(--ob);border-radius:8px;padding:10px 14px;text-align:center;min-width:80px;">
-            <div style="font-size:9px;font-weight:700;color:var(--or);text-transform:uppercase;">Tarifa C.28</div>
-            <div style="font-size:18px;font-weight:900;color:var(--or);" id="f350-tarifa-ar-display">0%</div>
-          </div>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <thead><tr style="background:#fef3c7;">
-            <th style="text-align:left;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:210px;">Concepto</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);min-width:160px;">Base ($)</th>
-            <th style="text-align:right;padding:8px 10px;font-weight:700;color:var(--or);border-bottom:2px solid var(--br);min-width:140px;">Autorretención ($)</th>
-          </tr></thead>
-          <tbody id="f350-tbody-ar"></tbody>
-          <tfoot><tr style="background:#fef3c7;">
-            <td colspan="2" style="padding:10px;font-weight:800;color:var(--or);">Subtotal autorretenciones</td>
-            <td style="padding:10px;text-align:right;font-weight:800;color:var(--or);font-size:12px;" id="f350-sub-ar">$ 0</td>
-          </tr></tfoot>
-        </table>
-      </div>
-    </div>
-    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#5b21b6,#7c3aed);padding:12px 18px;display:flex;align-items:center;gap:10px;">
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;">IVA</div>
-        <div style="font-size:12px;font-weight:800;color:#fff;">Retenciones de IVA — Título de IVA (Casillas 131–134)</div>
-      </div>
-      <div style="padding:16px 18px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">131 · A responsables del impuesto sobre las ventas ($)</label>
-            <input type="text" id="f350-c131" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">132 · Practicadas por servicios a no residentes ($)</label>
-            <input type="text" id="f350-c132" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--bd);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--re);display:block;margin-bottom:4px;">133 · (−) Retenciones IVA en exceso / anuladas ($)</label>
-            <input type="text" id="f350-c133" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;" onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
-          </div>
-          <div style="background:var(--pb);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;">
-            <div style="font-size:10px;font-weight:700;color:var(--pu);text-transform:uppercase;margin-bottom:4px;">134 · Total Retenciones IVA</div>
-            <div style="font-size:18px;font-weight:900;color:var(--pu);" id="f350-c134-display">$ 0</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">
-      <div style="background:#374151;padding:12px 18px;">
-        <div style="font-size:12px;font-weight:800;color:#fff;">⚙️ Timbre · Deducciones renta · Sanciones</div>
-      </div>
-      <div style="padding:16px 18px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">135 · Retenciones impuesto timbre ($)</label>
-            <input type="text" id="f350-c135" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--br);border-radius:7px;padding:9px 12px;outline:none;color:var(--tx);text-align:right;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--re);display:block;margin-bottom:4px;">129 · (−) Retenciones renta en exceso / anuladas ($)</label>
-            <input type="text" id="f350-c129" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--rb);border-radius:7px;padding:9px 12px;outline:none;color:var(--re);text-align:right;" onfocus="this.style.borderColor='var(--re)'" onblur="this.style.borderColor='var(--rb)'"/>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--or);display:block;margin-bottom:4px;">137 · Sanciones ($)</label>
-            <input type="text" id="f350-c137" placeholder="0" oninput="f350_formatInput(this);f350_calcularTotales()" style="width:100%;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;border:1.5px solid #fcd34d;border-radius:7px;padding:9px 12px;outline:none;color:var(--or);text-align:right;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='#fcd34d'"/>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div style="background:linear-gradient(135deg,#1a2580 0%,#2535a8 60%,#1a2580 100%);border-radius:var(--r);padding:24px 28px;">
-      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px;">Liquidación — Formulario 350</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;">
-        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:5px;">130 · Total Renta</div>
-          <div style="font-size:15px;font-weight:900;color:#fff;" id="f350-c130-display">$ 0</div>
-        </div>
-        <div style="background:rgba(201,162,39,.2);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;font-weight:700;color:rgba(201,162,39,.8);text-transform:uppercase;margin-bottom:5px;">134 · Total IVA</div>
-          <div style="font-size:15px;font-weight:900;color:var(--gold);" id="f350-c134-display2">$ 0</div>
-        </div>
-        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:5px;">135 · Timbre</div>
-          <div style="font-size:15px;font-weight:900;color:#fff;" id="f350-c135-display">$ 0</div>
-        </div>
-        <div style="background:rgba(239,68,68,.2);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;font-weight:700;color:#fca5a5;text-transform:uppercase;margin-bottom:5px;">137 · Sanciones</div>
-          <div style="font-size:15px;font-weight:900;color:#fca5a5;" id="f350-c137-display">$ 0</div>
-        </div>
-        <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;border:1.5px solid rgba(201,162,39,.5);">
-          <div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:5px;">136 · Total Retenciones</div>
-          <div style="font-size:18px;font-weight:900;color:#fff;" id="f350-c136-display">$ 0</div>
-        </div>
-      </div>
-      <div style="background:var(--gold);border-radius:12px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+
+  <!-- MODO 1 -->
+  <div id="f350-panel-modo1" style="display:block;">
+    <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:18px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:14px;">⚡ Modo 1 — Liquidación por período</div>
+
+      <!-- Año y Período -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
         <div>
-          <div style="font-size:10px;font-weight:800;color:var(--bd);text-transform:uppercase;letter-spacing:.5px;">📌 Casilla 138 · 980 · Pago Total</div>
-          <div style="font-size:10px;color:var(--bd);opacity:.7;margin-top:2px;">Total retenciones + sanciones</div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Año gravable</label>
+          <input type="number" id="f350-anio" value="2026" min="2020" max="2035"
+            style="width:100%;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--bd);outline:none;background:var(--sf);"/>
         </div>
-        <div style="font-size:28px;font-weight:900;color:var(--bd);" id="f350-c138-display">$ 0</div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Período (mes)</label>
+          <select id="f350-periodo" onchange="_f350Per=this.value;f350_cargarPeriodo();"
+            style="width:100%;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;background:var(--sf);color:var(--t1);">
+            <option value="01">Enero</option><option value="02">Febrero</option>
+            <option value="03">Marzo</option><option value="04" selected>Abril</option>
+            <option value="05">Mayo</option><option value="06">Junio</option>
+            <option value="07">Julio</option><option value="08">Agosto</option>
+            <option value="09">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dropzone — actúa como lector de Excel -->
+      <div id="f350-dropZone"
+        onclick="document.getElementById('f350-fileInput').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--bd)'"
+        ondragleave="this.style.borderColor='var(--br)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--br)';f350_leerExcel(event.dataTransfer.files[0])"
+        style="border:2px dashed var(--br);border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:#f8faff;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;color:var(--bd);">Arrastra tu Excel aquí o haz clic</div>
+        <div style="font-size:10px;color:var(--t2);margin-top:4px;">Pestañas: COSTOS · DV COSTOS</div>
+        <div id="f350-fileNameDisplay" style="margin-top:7px;font-size:11px;color:var(--bd);font-weight:600;"></div>
+      </div>
+      <input type="file" id="f350-fileInput" accept=".xlsx,.xls" style="display:none"
+        onchange="f350_leerExcel(this.files[0]);document.getElementById('f350-fileNameDisplay').textContent=this.files[0]?'📄 '+this.files[0].name:'';this.value=''"/>
+      <div id="f350-excel-status" style="font-size:10px;font-weight:700;display:none;padding:5px 10px;border-radius:8px;margin-bottom:10px;"></div>
+
+      <!-- Botones: solo 3 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+        <button onclick="f350_liquidar()"
+          style="padding:10px 20px;background:var(--bd);color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          ⚡ Liquidar F350
+        </button>
+        <button onclick="f350_generarBorrador()"
+          style="padding:10px 18px;background:#c9a227;color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          ⬇ Borrador F350
+        </button>
+        <button onclick="f350_limpiarCampos();f350_st('Limpiado.','info');"
+          style="padding:10px 14px;background:var(--sf);color:var(--t2);border:1.5px solid var(--br);border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          ↺ Limpiar
+        </button>
       </div>
     </div>
-    <div>
-      <div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">💾 Declaraciones guardadas — Año <span id="f350-hist-year"></span></div>
-      <div id="f350-historial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
-        <div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando historial...</div>
+
+    <!-- Tarjetas resumen (visibles tras liquidar) -->
+    <div id="f350-summary-cards" style="display:none;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+      <div style="background:#eef1ff;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:9px;color:var(--t2);margin-bottom:4px;">Total Renta (c130)</div>
+        <div id="f350-sc-renta" style="font-size:15px;font-weight:700;color:var(--bd);">$0</div>
       </div>
+      <div style="background:#eef1ff;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:9px;color:var(--t2);margin-bottom:4px;">Total IVA (c134)</div>
+        <div id="f350-sc-iva" style="font-size:15px;font-weight:700;color:var(--bd);">$0</div>
+      </div>
+      <div style="background:#fff3cc;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:9px;color:#8a6800;margin-bottom:4px;">Pago total (c138)</div>
+        <div id="f350-sc-pago" style="font-size:15px;font-weight:700;color:#8a6800;">$0</div>
+      </div>
+    </div>
+
+    <!-- Casilleros resultado (igual al F300) -->
+    <div id="f350-casilleros-result" style="display:none;background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">📋 Formulario 350 — Vista previa del borrador</div>
+      <div id="f350-casilleros-html"></div>
     </div>
   </div>
+
+  <!-- MODO 2 -->
+  <div id="f350-panel-modo2" style="display:none;">
+    <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:18px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#8a6800;margin-bottom:16px;">📅 Generar declaraciones por período</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Año gravable</label>
+          <input id="f350mp-anio" type="number" value="2026" min="2020" max="2035"
+            style="width:100%;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--bd);outline:none;background:var(--sf);"/>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Excel con todo el año</label>
+          <label style="display:flex;align-items:center;gap:8px;border:2px dashed var(--br);border-radius:8px;padding:8px 12px;cursor:pointer;background:#f8faff;">
+            <span style="font-size:16px;">📂</span>
+            <div id="f350mp-fileName" style="font-size:10px;color:var(--t2);">Haz clic para cargar...</div>
+            <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f350mp_cargarExcel(this.files[0]);this.value=''"/>
+          </label>
+        </div>
+      </div>
+      <div id="f350mp-sheets" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;"></div>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <label style="font-size:10px;font-weight:700;color:var(--t2);">Meses a generar</label>
+          <div style="display:flex;gap:6px;">
+            <button onclick="f350mp_selTodos(true)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bd);color:#fff;cursor:pointer;font-family:Montserrat,sans-serif;">Todos</button>
+            <button onclick="f350mp_selTodos(false)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--t2);cursor:pointer;font-family:Montserrat,sans-serif;">Ninguno</button>
+          </div>
+        </div>
+        <div id="f350mp-meses" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
+      </div>
+      <div id="f350mp-progress" style="display:none;margin-bottom:12px;font-size:11px;color:var(--bd);font-weight:700;text-align:center;padding:10px;background:#eef1ff;border-radius:8px;"></div>
+      <button onclick="f350mp_generar()"
+        style="width:100%;padding:12px;background:#c9a227;color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+        ⬇ Generar PDFs mensuales
+      </button>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
+    <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">
+      🗂 Declaraciones guardadas — Año <span id="f350-hist-year"></span>
+    </div>
+    <div id="f350-historial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+      <div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando historial...</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══ PANTALLA AUDITORÍA ══════════════════════════════════════════ -->
@@ -4352,8 +4297,9 @@ function cargarArchivo(clientId, year){
           var btnDel = e.target.closest('.grd-f350-del');
           if(btnVer){
             var per = btnVer.getAttribute('data-per');
-            if(window.f350_abrirPer) window.f350_abrirPer(per);
-            else if(window.openF350){ window.openF350(); setTimeout(function(){ if(window.f350_abrirPer) window.f350_abrirPer(per); }, 300); }
+            // Guardar período destino globalmente para que openF350 lo use
+            window._f350AbrirPer = per;
+            if(window.openF350) window.openF350();
           }
           if(btnDel){
             var key = btnDel.getAttribute('data-key');
@@ -4416,6 +4362,8 @@ window.guardadoEliminarF350 = function(key, mes){
   var mesLabel = MESES[mes]||mes;
   pedirConfirmPwd('¿Eliminar la declaración F350 de '+mesLabel+'? Esta acción no se puede deshacer.', function(){
     db.collection('resultados').doc(key).delete().then(function(){
+      // También intentar eliminar de resultados_historico si existe con ese key
+      db.collection('resultados_historico').doc(key).delete().catch(function(){});
       ss('Declaración F350 de '+mesLabel+' eliminada','ok');
       audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
       if(window._openGuardado) window._openGuardado();
@@ -4503,11 +4451,19 @@ window._openF350=window.openF350=function openF350(){
     }
   }
   f350_renderTablas();
-  var ahora=new Date();
-  var mp=ahora.getMonth()===0?'12':String(ahora.getMonth()).padStart(2,'0');
+  // Si viene desde "Ver" en Archivo de Reportes, usar ese período
+  var mp;
+  if(window._f350AbrirPer){
+    mp=window._f350AbrirPer;
+    window._f350AbrirPer=null;
+  } else {
+    var ahora=new Date();
+    mp=ahora.getMonth()===0?'12':String(ahora.getMonth()).padStart(2,'0');
+  }
   document.getElementById('f350-periodo').value=mp;
   _f350Per=mp;
   showScreen('f350');
+  f350_setModo(1);
   f350_cargarPeriodo();
   f350_cargarHistorial();
 };
@@ -4946,6 +4902,384 @@ function f300mp_generarPDF(d){
 }
 
 
+
+// ═══════════════════════════════════════════════════
+// F350 REDISEÑO — Funciones del nuevo módulo
+// ═══════════════════════════════════════════════════
+
+function f350_setModo(modo){
+  var p1=document.getElementById('f350-panel-modo1');
+  var p2=document.getElementById('f350-panel-modo2');
+  var c1=document.getElementById('f350-modo1-card');
+  var c2=document.getElementById('f350-modo2-card');
+  var chk1=document.getElementById('f350-chk1');
+  var chk2=document.getElementById('f350-chk2');
+  var CHK_ON='<div style="width:7px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>';
+  if(modo===1){
+    if(p1)p1.style.display='block';
+    if(p2)p2.style.display='none';
+    if(c1){c1.style.borderColor='#1a2580';c1.style.background='#f0f3ff';}
+    if(c2){c2.style.borderColor='var(--br)';c2.style.background='var(--sf)';}
+    if(chk1){chk1.style.background='#1a2580';chk1.style.borderColor='#1a2580';chk1.innerHTML=CHK_ON;}
+    if(chk2){chk2.style.background='var(--sf)';chk2.style.borderColor='var(--br)';chk2.innerHTML='';}
+  } else {
+    if(p1)p1.style.display='none';
+    if(p2){p2.style.display='block';f350mp_renderMeses();}
+    if(c2){c2.style.borderColor='#c9a227';c2.style.background='#fffbf0';}
+    if(c1){c1.style.borderColor='var(--br)';c1.style.background='var(--sf)';}
+    if(chk2){chk2.style.background='#c9a227';chk2.style.borderColor='#c9a227';chk2.innerHTML=CHK_ON;}
+    if(chk1){chk1.style.background='var(--sf)';chk1.style.borderColor='var(--br)';chk1.innerHTML='';}
+  }
+}
+
+// Liquidar F350 — calcula, muestra casilleros y guarda automáticamente
+function f350_liquidar(){
+  var tot=f350_calcularTotales();
+  var d=f350_recolectar(tot);
+  // Mostrar tarjetas resumen
+  var sc=document.getElementById('f350-summary-cards');
+  if(sc){
+    sc.style.display='grid';
+    document.getElementById('f350-sc-renta').textContent='$'+Math.round(d.c130||0).toLocaleString('es-CO');
+    document.getElementById('f350-sc-iva').textContent='$'+Math.round(d.c134||0).toLocaleString('es-CO');
+    document.getElementById('f350-sc-pago').textContent='$'+Math.round(d.c138||0).toLocaleString('es-CO');
+  }
+  // Mostrar casilleros
+  var cr=document.getElementById('f350-casilleros-result');
+  if(cr) cr.style.display='block';
+  f350_renderCasilleros350(d);
+  // Guardar automáticamente
+  if(!db||!activeClientId){f350_st('Liquidado (sin conexión — no guardado)','info');return;}
+  var anioF=document.getElementById('f350-anio').value||String(activeYear||new Date().getFullYear());
+  var _ts=Date.now();
+  var _k=('jnf_f350_'+activeClientId+'_'+anioF+'_'+_f350Per+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+  var dataH=Object.assign({},d,{
+    clienteId:activeClientId,tipo:'f350',pCod:_f350Per,anio:anioF,
+    pLabel:f350_mes(_f350Per),fechaLiquidacion:new Date().toISOString()
+  });
+  db.collection('resultados_historico').doc(_k).set({
+    key:_k,clienteId:activeClientId,tipo:'f350',anio:anioF,pCod:_f350Per,
+    fechaLiquidacion:new Date().toISOString(),data:JSON.stringify(dataH)
+  }).catch(function(e){console.warn('[F350 hist]',e);});
+  db.collection('resultados').add({
+    clienteId:activeClientId,anio:anioF,periodo:_f350Per,tipo:'f350',
+    data:JSON.stringify(d),fechaGuardado:new Date().toISOString()
+  }).then(function(){
+    f350_st('✅ Liquidado y guardado — '+f350_mes(_f350Per)+' '+anioF,'ok');
+    audRegistrar('Liquidar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+f350_mes(_f350Per)+' '+anioF);
+    f350_cargarHistorial();
+  }).catch(function(e){f350_st('Liquidado pero error al guardar: '+e.message,'err');});
+}
+
+// Renderiza la vista previa de casilleros del F350
+function f350_renderCasilleros350(d){
+  var el=document.getElementById('f350-casilleros-html');
+  if(!el) return;
+  var AZUL='#1a2580',GOLD='#c9a227';
+  function secHdr(lbl){
+    return '<div style="background:'+AZUL+';color:#fff;font-size:10px;font-weight:700;padding:5px 10px;border-radius:4px;margin:10px 0 4px;letter-spacing:.4px;">'+lbl+'</div>';
+  }
+  function row(lbl,cas,val,isTotal){
+    var bg=isTotal?'#eef1ff':'#f8faff';
+    var bc=isTotal?AZUL:'#e5e7f0';
+    var vc=val>0?'#065f46':val<0?'#991b1b':'#9ca3af';
+    var fw=isTotal?'700':'400';
+    return '<div style="display:flex;align-items:center;padding:4px 8px;background:'+bg+';border:1px solid '+bc+';border-radius:4px;margin-bottom:2px;">'      +'<span style="flex:1;font-size:10px;color:#374151;font-weight:'+fw+';">'+lbl+'</span>'      +'<span style="font-size:9px;color:'+AZUL+';min-width:24px;text-align:center;font-weight:700;background:#e8ecf8;border-radius:3px;padding:1px 4px;margin:0 6px;">'+cas+'</span>'      +'<span style="font-size:11px;font-weight:700;color:'+vc+';min-width:110px;text-align:right;">$'+Math.round(val).toLocaleString('es-CO')+'</span>'      +'</div>';
+  }
+  var html='';
+  html+=secHdr('PERSONAS JURÍDICAS — Casillas 29–54');
+  F350_PJ.forEach(function(c){
+    var v=d['r_'+c.id]||0;
+    html+=row(c.label+' ('+c.t+'%)',c.cb+'/'+c.cr,v,false);
+  });
+  html+=row('Total Retenciones Renta PJ','54',d.c_pj_total||0,true);
+
+  html+=secHdr('PERSONAS NATURALES — Casillas 77–107');
+  F350_PN.forEach(function(c){
+    var v=d['r_'+c.id]||0;
+    html+=row(c.label+(c.t?(' ('+c.t+'%)'):''),c.cb+'/'+c.cr,v,false);
+  });
+  html+=row('Total Retenciones Renta PN','107',d.c_pn_total||0,true);
+
+  html+=secHdr('AUTO-RETENCIONES — Casillas 60–76');
+  F350_AR.forEach(function(c){
+    var v=d['r_'+c.id]||0;
+    html+=row(c.label,c.cb+'/'+c.cr,v,false);
+  });
+  html+=row('Total Auto-retenciones','76',d.c_ar_total||0,true);
+
+  html+=secHdr('RETENCIONES IVA — Casillas 131–134');
+  html+=row('A responsables del IVA','131',d.c131||0,false);
+  html+=row('Practicadas por servicios a no residentes','132',d.c132||0,false);
+  html+=row('(-) Retenciones IVA en exceso/anuladas','133',d.c133||0,false);
+  html+=row('Total retenciones IVA','134',d.c134||0,true);
+
+  html+=secHdr('TIMBRE · DEDUCCIONES · SANCIONES');
+  html+=row('Retenciones impuesto timbre','135',d.c135||0,false);
+  html+=row('(-) Retenciones renta en exceso/anuladas','129',d.c129||0,false);
+  html+=row('Sanciones','137',d.c137||0,false);
+
+  // Barra pago total
+  html+='<div style="background:#c9a227;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:12px;">'    +'<div style="font-size:11px;font-weight:700;color:#1a2580;">Casilla 138 · 980 · PAGO TOTAL</div>'    +'<div style="font-size:16px;font-weight:700;color:#1a2580;">$'+Math.round(d.c138||0).toLocaleString('es-CO')+'</div>'    +'</div>';
+
+  el.innerHTML=html;
+}
+
+// ─── MODO 2 MULTI-PERÍODO MENSUAL ────────────────────────
+var f350mp_wb=null;
+var f350mp_MESES=[
+  {cod:'01',label:'Enero'},{cod:'02',label:'Febrero'},{cod:'03',label:'Marzo'},
+  {cod:'04',label:'Abril'},{cod:'05',label:'Mayo'},{cod:'06',label:'Junio'},
+  {cod:'07',label:'Julio'},{cod:'08',label:'Agosto'},{cod:'09',label:'Septiembre'},
+  {cod:'10',label:'Octubre'},{cod:'11',label:'Noviembre'},{cod:'12',label:'Diciembre'}
+];
+
+function f350mp_renderMeses(){
+  var cont=document.getElementById('f350mp-meses');
+  if(!cont) return;
+  cont.innerHTML=f350mp_MESES.map(function(m){
+    return '<label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid #1a2580;border-radius:6px;cursor:pointer;background:var(--sf);">'      +'<input type="checkbox" checked data-cod="'+m.cod+'" style="width:13px;height:13px;accent-color:#1a2580;"/>'      +'<span style="font-size:10px;font-weight:700;color:#1a2580;">'+m.label+'</span>'      +'</label>';
+  }).join('');
+}
+
+function f350mp_selTodos(val){
+  var checks=document.querySelectorAll('#f350mp-meses input[type=checkbox]');
+  checks.forEach(function(c){c.checked=val;});
+}
+
+function f350mp_cargarExcel(file){
+  if(!file) return;
+  document.getElementById('f350mp-fileName').textContent='📄 '+file.name;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      f350mp_wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      var needed=['COSTOS','DV COSTOS'];
+      var tags=needed.map(function(n){
+        var found=Object.keys(f350mp_wb.Sheets).some(function(s){return s.trim().toUpperCase()===n.toUpperCase();});
+        return '<span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;background:'+(found?'#d1fae5':'#fee2e2')+';color:'+(found?'#065f46':'#991b1b')+';font-family:Montserrat,sans-serif;">'+(found?'✓':'✗')+' '+n+'</span>';
+      }).join('');
+      document.getElementById('f350mp-sheets').innerHTML=tags;
+    } catch(ex){
+      document.getElementById('f350mp-fileName').textContent='✗ Error: '+ex.message;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function f350mp_calcularMes(mes, wb_usar){
+  // Misma lógica que f350_leerExcel pero para un mes específico
+  var mesNom=f350_mes(mes).toUpperCase();
+  var bak=null;
+  // Intercambiar wb temporalmente
+  if(wb_usar){
+    // Crear un file simulado — usar wb_usar directamente
+  }
+  var pjBases={},pnBases={};
+  function findSh(wb,names){
+    for(var n of names){for(var sn of Object.keys(wb.Sheets)){if(sn.trim().toUpperCase()===n.toUpperCase())return sn;}}
+    return null;
+  }
+  function getMesV(v){
+    if(v===null||v===undefined||v==='') return '';
+    if(typeof v==='number'&&v>1000&&v<2958465){
+      var dd=new Date(Math.round((v-25569)*86400*1000));
+      if(!isNaN(dd.getTime())){var MN=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];return MN[dd.getUTCMonth()+1]||'';}
+    }
+    var s=String(v).trim();
+    var m1=s.match(/^\d{1,2}[-\/](\d{1,2})[-\/]\d{4}/);
+    if(m1){var MN2=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];return MN2[parseInt(m1[1],10)]||'';}
+    var clean=s.toUpperCase().replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U');
+    var MNC=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    var ix=MNC.indexOf(clean);return ix>0?MNC[ix]:s.toUpperCase();
+  }
+  function leerHoja(shName){
+    var ws=wb_usar.Sheets[shName];
+    var range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    var hrow=range.s.r;
+    var KW=['MES','FECHA','BASE','IVA','NIT','TIPO','FOLIO','T.P','APLIC','TARIFA'];
+    for(var r2=range.s.r;r2<=Math.min(range.s.r+9,range.e.r);r2++){
+      var hits=0;
+      for(var c2=range.s.c;c2<=range.e.c;c2++){var cv2=ws[XLSX.utils.encode_cell({r:r2,c:c2})];if(cv2&&KW.some(function(k){return String(cv2.v||'').toUpperCase().indexOf(k)>=0;}))hits++;}
+      if(hits>=3){hrow=r2;break;}
+    }
+    var hdrs=[];
+    for(var c3=range.s.c;c3<=range.e.c;c3++){var cv3=ws[XLSX.utils.encode_cell({r:hrow,c:c3})];hdrs.push(cv3?String(cv3.v||''):'');}
+    var rows=[];
+    for(var r3=hrow+1;r3<=range.e.r;r3++){
+      var obj={};var has=false;
+      for(var c4=range.s.c;c4<=range.e.c;c4++){var cv4=ws[XLSX.utils.encode_cell({r:r3,c:c4})];var val2=cv4?cv4.v:'';obj[hdrs[c4-range.s.c]]=val2;if(val2!==''&&val2!==null&&val2!==undefined)has=true;}
+      if(has)rows.push(obj);
+    }
+    return rows;
+  }
+  function getN(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
+
+  var shC=findSh(wb_usar,['COSTOS','COMPRAS']);
+  var shD=findSh(wb_usar,['DV COSTOS','DEV COSTOS']);
+  if(!shC) return null;
+  var dvMap={};
+  if(shD){
+    leerHoja(shD).forEach(function(r){
+      var folio=String(r['Folio']||r['FOLIO']||'').trim();
+      if(!folio) return;
+      var mr=getMesV(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'');
+      if(mr!==mesNom) return;
+      if(!dvMap[folio])dvMap[folio]={b19:0,b5:0,exen:0,excl:0};
+      dvMap[folio].b19+=getN(r['BASE 19']||r['BASE19']||0);
+      dvMap[folio].b5+=getN(r['BASE 5']||r['BASE5']||0);
+      dvMap[folio].exen+=getN(r['EXENTO']||0);
+      dvMap[folio].excl+=getN(r['EXCLUIDO']||0);
+    });
+  }
+  leerHoja(shC).forEach(function(r){
+    if(String(r['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') return;
+    var mr=getMesV(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||r['Fecha Emision']||'');
+    if(mr!==mesNom) return;
+    var aplic=String(r['APLIC. RETEFUENTE']||r['APLIC.RETEFUENTE']||'').trim().toUpperCase();
+    if(aplic!=='S') return;
+    var tp=String(r['T.P.']||r['TP']||'').trim().toUpperCase();
+    var esPJ=(tp==='PJ'),esPN=(tp==='PN');
+    if(!esPJ&&!esPN) return;
+    var tarifa=getN(r['TARIFA RETEFUENTE']||r['TARIFA']||0);
+    if(tarifa<=0) return;
+    var folio=String(r['Folio']||r['FOLIO']||'').trim();
+    var dv=dvMap[folio]||{b19:0,b5:0,exen:0,excl:0};
+    var base=Math.max(0,getN(r['BASE 19']||r['BASE19']||0)-dv.b19)
+            +Math.max(0,getN(r['BASE 5']||r['BASE5']||0)-dv.b5)
+            +Math.max(0,getN(r['EXENTO']||0)-dv.exen)
+            +Math.max(0,getN(r['EXCLUIDO']||0)-dv.excl);
+    if(base<=0) return;
+    var key=tarifa.toString();
+    if(esPJ){if(!pjBases[key])pjBases[key]={base:0,tarifa:tarifa};pjBases[key].base+=base;}
+    else    {if(!pnBases[key])pnBases[key]={base:0,tarifa:tarifa};pnBases[key].base+=base;}
+  });
+
+  // Calcular retenciones
+  var v={};
+  F350_PJ.forEach(function(c){
+    var match=Object.values(pjBases).find(function(x){return x.tarifa===c.t;});
+    var base=match?Math.round(match.base):0;
+    v['b_'+c.id]=base;
+    v['r_'+c.id]=Math.round(base*(c.t/100));
+  });
+  F350_PN.forEach(function(c){
+    var match=Object.values(pnBases).find(function(x){return x.tarifa===c.t;});
+    var base=match?Math.round(match.base):0;
+    v['b_'+c.id]=base;
+    v['r_'+c.id]=Math.round(base*((c.t||0)/100));
+  });
+  F350_AR.forEach(function(c){v['b_'+c.id]=0;v['r_'+c.id]=0;});
+  var pjT=F350_PJ.reduce(function(s,c){return s+(v['r_'+c.id]||0);},0);
+  var pnT=F350_PN.reduce(function(s,c){return s+(v['r_'+c.id]||0);},0);
+  var arT=F350_AR.reduce(function(s,c){return s+(v['r_'+c.id]||0);},0);
+  v.c_pj_total=pjT; v.c_pn_total=pnT; v.c_ar_total=arT;
+  v.c130=pjT+pnT; v.c134=0; v.c135=0; v.c129=0; v.c137=0;
+  v.c138=v.c130+v.c134+v.c135+v.c137-v.c129;
+  v.c130d=v.c130; v.c134d=v.c134; v.c138d=v.c138;
+  v.periodo=mes; v.pLabel=f350_mes(mes);
+  return v;
+}
+
+async function f350mp_generar(){
+  if(!f350mp_wb){alert('Primero carga un archivo Excel.');return;}
+  var anio=document.getElementById('f350mp-anio').value;
+  var checks=document.querySelectorAll('#f350mp-meses input[type=checkbox]:checked');
+  if(!checks.length){alert('Selecciona al menos un mes.');return;}
+  var prog=document.getElementById('f350mp-progress');
+  prog.style.display='block';
+  var total=checks.length,i=0;
+  for(var ch of checks){
+    var cod=ch.dataset.cod;
+    var mObj=f350mp_MESES.find(function(m){return m.cod===cod;});
+    prog.textContent='⏳ Generando '+mObj.label+' ('+(++i)+'/'+total+')...';
+    await new Promise(function(r){setTimeout(r,50);});
+    var d=f350mp_calcularMes(cod,f350mp_wb);
+    if(!d){prog.textContent='✗ Error en '+mObj.label;continue;}
+    d.anio=anio;d.pCod=cod;d.pLabel=mObj.label;
+    // Guardar en historial
+    if(db&&activeClientId){
+      var _ts=Date.now();
+      var _k=('jnf_f350_'+activeClientId+'_'+anio+'_'+cod+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+      var dH=Object.assign({},d,{clienteId:activeClientId,tipo:'f350',fechaLiquidacion:new Date().toISOString()});
+      db.collection('resultados_historico').doc(_k).set({
+        key:_k,clienteId:activeClientId,tipo:'f350',anio:anio,pCod:cod,
+        fechaLiquidacion:new Date().toISOString(),data:JSON.stringify(dH)
+      }).catch(function(e){console.warn('[F350mp hist]',e);});
+      db.collection('resultados').add({
+        clienteId:activeClientId,anio:anio,periodo:cod,tipo:'f350',
+        data:JSON.stringify(d),fechaGuardado:new Date().toISOString()
+      }).catch(function(e){console.warn('[F350mp res]',e);});
+    }
+    f350mp_generarPDF(d,anio,mObj.label);
+    await new Promise(function(r){setTimeout(r,200);});
+  }
+  prog.textContent='✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'');
+  f350_cargarHistorial();
+  setTimeout(function(){prog.style.display='none';},4000);
+}
+
+function f350mp_generarPDF(d,anio,label){
+  var blue=[26,37,128],gold=[201,162,39];
+  var {jsPDF}=window.jspdf;
+  var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  var W=216,H=279;
+  doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,0,W,22,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('RETENCIÓN EN LA FUENTE — FORMULARIO 350',W/2,9,{align:'center'});
+  doc.setFontSize(8);doc.text(label+' · Año '+anio,W/2,15,{align:'center'});
+  doc.setFontSize(24);doc.setTextColor(gold[0],gold[1],gold[2]);doc.text('350',W-12,16,{align:'right'});
+  doc.setFillColor(gold[0],gold[1],gold[2]);doc.rect(0,22,W,2,'F');
+  var y=28;var lH=7;
+  function sec(t,yy){
+    if(yy+8>H-14){doc.addPage();yy=14;}
+    doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(10,yy,W-20,6,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
+    doc.text(t.toUpperCase(),14,yy+4.3);return yy+6;
+  }
+  function row(lbl,cas,val,tot,yy){
+    if(yy+lH>H-14){doc.addPage();yy=14;}
+    var bg=tot?[238,241,255]:(yy%14<7?[248,250,255]:[255,255,255]);
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setDrawColor(220,225,240);doc.rect(10,yy,W-20,lH-1,'S');
+    doc.setFont('helvetica',tot?'bold':'normal');doc.setFontSize(7.5);
+    doc.setTextColor(tot?blue[0]:55,tot?blue[1]:65,tot?blue[2]:81);
+    doc.text(lbl,14,yy+4.3);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(blue[0],blue[1],blue[2]);
+    doc.text(String(cas),W-52,yy+4.3,{align:'center'});
+    var vc=val>0?[6,95,70]:[160,160,160];
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(vc[0],vc[1],vc[2]);
+    doc.text('$'+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.3,{align:'right'});
+    return yy+lH;
+  }
+  y=sec('PERSONAS JURÍDICAS — Renta (Casillas 29–54)',y);
+  F350_PJ.forEach(function(c){y=row(c.label+(c.t?' ('+c.t+'%)':''),c.cb+'/'+c.cr,d['r_'+c.id]||0,false,y);});
+  y=row('Total retenciones renta PJ','54',d.c_pj_total||0,true,y);y+=2;
+  y=sec('PERSONAS NATURALES — Renta (Casillas 77–107)',y);
+  F350_PN.forEach(function(c){y=row(c.label+(c.t?' ('+c.t+'%)':''),c.cb+'/'+c.cr,d['r_'+c.id]||0,false,y);});
+  y=row('Total retenciones renta PN','107',d.c_pn_total||0,true,y);y+=2;
+  y=sec('RETENCIONES IVA (Casillas 131–134)',y);
+  y=row('A responsables del IVA','131',d.c131||0,false,y);
+  y=row('Total retenciones IVA','134',d.c134||0,true,y);y+=2;
+  y=sec('RESULTADO',y);
+  y=row('Total retenciones renta (c130)','130',d.c130||0,true,y);
+  y=row('Total retenciones IVA (c134)','134',d.c134||0,false,y);
+  y=row('Sanciones (c137)','137',d.c137||0,false,y);
+  y=row('PAGO TOTAL — Casilla 138 / 980','138',d.c138||0,true,y);
+  var pages=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,H-12,W,12,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
+    doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9',W/2,H-7,{align:'center'});
+    doc.text('Borrador — No reemplaza el formulario oficial DIAN',W/2,H-3.5,{align:'center'});
+    doc.setTextColor(gold[0],gold[1],gold[2]);
+    doc.text('Pág. '+p+'/'+pages,W-12,H-7,{align:'right'});
+  }
+  doc.save('F350_'+anio+'_'+d.pCod+'_'+label+'.pdf');
+}
+
+
 function f350_renderTablas(){
   var tpj=document.getElementById('f350-tbody-pj');
   if(tpj)tpj.innerHTML=F350_PJ.map(function(c){return f350_filaR(c,'pj');}).join('');
@@ -5205,9 +5539,9 @@ function f350_eliminar(key,m){
   }).catch(function(e){ f350_st('Error: '+e.message,'err'); });
 }
 function f350_generarBorrador(){
-  // Calcular totales antes de generar PDF
-  f350_calcularTotales();
-  f350_generarPDF();
+  var tot=f350_calcularTotales();
+  var d=f350_recolectar(tot);
+  f350mp_generarPDF(d, document.getElementById('f350-anio').value||String(activeYear||new Date().getFullYear()), f350_mes(_f350Per));
 }
 
 function f350_generarPDF(){
