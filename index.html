@@ -4502,6 +4502,399 @@ window._openF350=window.openF350=function openF350(){
   f350_cargarHistorial();
 };
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// F300 MULTI-PERÍODO — Generador masivo de declaraciones de IVA
+// ═══════════════════════════════════════════════════════════════════════
+var f300mp_wb = null;
+var f300mp_per = 'bimestral';
+
+var f300mp_PERIODOS = {
+  bimestral: [
+    {cod:'01',label:'1° Bimestre',meses:['ENERO','FEBRERO']},
+    {cod:'02',label:'2° Bimestre',meses:['MARZO','ABRIL']},
+    {cod:'03',label:'3° Bimestre',meses:['MAYO','JUNIO']},
+    {cod:'04',label:'4° Bimestre',meses:['JULIO','AGOSTO']},
+    {cod:'05',label:'5° Bimestre',meses:['SEPTIEMBRE','OCTUBRE']},
+    {cod:'06',label:'6° Bimestre',meses:['NOVIEMBRE','DICIEMBRE']},
+  ],
+  cuatrimestral: [
+    {cod:'01',label:'1° Cuatrimestre',meses:['ENERO','FEBRERO','MARZO','ABRIL']},
+    {cod:'02',label:'2° Cuatrimestre',meses:['MAYO','JUNIO','JULIO','AGOSTO']},
+    {cod:'03',label:'3° Cuatrimestre',meses:['SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']},
+  ],
+};
+
+function f300_abrirMultiPeriodo(){
+  var m = document.getElementById('f300-multiModal');
+  m.style.display = 'flex';
+  f300mp_setPer('bimestral');
+}
+
+function f300mp_setPer(tipo){
+  f300mp_per = tipo;
+  var bim = document.getElementById('f300mp-btn-bim');
+  var cua = document.getElementById('f300mp-btn-cua');
+  if(tipo==='bimestral'){
+    bim.style.background='#1a2580'; bim.style.color='#fff'; bim.style.borderColor='#1a2580';
+    cua.style.background='#fff';    cua.style.color='#6b7280'; cua.style.borderColor='#c7d2e8';
+  } else {
+    cua.style.background='#1a2580'; cua.style.color='#fff'; cua.style.borderColor='#1a2580';
+    bim.style.background='#fff';    bim.style.color='#6b7280'; bim.style.borderColor='#c7d2e8';
+  }
+  var cont = document.getElementById('f300mp-periodos');
+  var periodos = f300mp_PERIODOS[tipo];
+  cont.innerHTML = periodos.map(function(p){
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #c7d2e8;border-radius:8px;cursor:pointer;background:#f8faff;">'
+      +'<input type="checkbox" checked data-cod="'+p.cod+'" style="width:14px;height:14px;accent-color:#1a2580;"/>'
+      +'<div>'
+      +'<div style="font-size:11px;font-weight:700;color:#1a2580;">'+p.label+'</div>'
+      +'<div style="font-size:9px;color:#6b7280;">'+p.meses.join(' · ')+'</div>'
+      +'</div></label>';
+  }).join('');
+}
+
+function f300mp_selTodos(val){
+  var checks = document.querySelectorAll('#f300mp-periodos input[type=checkbox]');
+  checks.forEach(function(c){ c.checked = val; });
+}
+
+function f300mp_cargarExcel(file){
+  if(!file) return;
+  document.getElementById('f300mp-fileName').textContent = '📄 '+file.name;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      f300mp_wb = XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      var sheetNames = Object.keys(f300mp_wb.Sheets);
+      var needed = ['VENTAS','COSTOS','DEV EN VENTAS','DV COSTOS','SERV PUBLICOS','DOC. SOPORTE','NOMINA','SALDO A FAVOR'];
+      var tagsHtml = needed.map(function(n){
+        var found = sheetNames.some(function(s){ return s.trim().toUpperCase()===n.toUpperCase(); });
+        return '<span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;background:'
+          +(found?'#d1fae5':'#fee2e2')+';color:'+(found?'#065f46':'#991b1b')+';font-family:Montserrat,sans-serif;">'
+          +(found?'✓':'✗')+' '+n+'</span>';
+      }).join('');
+      document.getElementById('f300mp-sheets').innerHTML = tagsHtml;
+    } catch(ex){
+      document.getElementById('f300mp-fileName').textContent = '✗ Error: '+ex.message;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function f300mp_calcularPeriodo(anio, tipo, pCod, meses, saldoArrastre){
+  // Reutiliza la lógica de f300_procesar pero con el workbook del modal
+  var wb_bak = f300_wb;
+  var sm_bak = JSON.parse(JSON.stringify(f300_sheetMap));
+  f300_wb = f300mp_wb;
+
+  // Detectar hojas
+  function findSh(names){
+    for(var n of names){
+      for(var sn of Object.keys(f300_wb.Sheets)){
+        if(sn.trim().toUpperCase()===n.toUpperCase()) return sn;
+      }
+    }
+    return null;
+  }
+  f300_sheetMap = {
+    ventas:     findSh(['VENTAS','INGRESOS']),
+    dvVentas:   findSh(['DEV VENTAS','DEV EN VENTAS','DV VENTAS']),
+    costos:     findSh(['COSTOS','COMPRAS']),
+    dvCostos:   findSh(['DEV COSTOS','DV COSTOS.','DV COSTOS']),
+    servPub:    findSh(['SERV PUBLICOS','SERV. PUBLICOS']),
+    docSoporte: findSh(['DOC. SOPORTE','DOC SOPORTE']),
+    nomina:     findSh(['NOMINA','NÓMINA']),
+    saldoFavor: findSh(['SALDO A FAVOR']),
+  };
+
+  var mesColsV=['Fecha Emisión','FECHA EMISION','MES'];
+  var mesColsC=['MES','FECHA','MES.','FECHA EMISION'];
+
+  var v_b5=sumByMes(f300_sheetMap.ventas,['BASE 5','BASE5','BASE 5%'],mesColsV,meses);
+  var v_b19=sumByMes(f300_sheetMap.ventas,['BASE 19','BASE19','BASE 19%'],mesColsV,meses);
+  var v_i5=sumByMes(f300_sheetMap.ventas,['IVA 5%','IVA5','IVA 5'],mesColsV,meses);
+  var v_i19=sumByMes(f300_sheetMap.ventas,['IVA 19%','IVA19','IVA 19'],mesColsV,meses);
+  var v_exen=sumByMes(f300_sheetMap.ventas,['EXENTO','EXENTA'],mesColsV,meses);
+  var v_excl=sumByMes(f300_sheetMap.ventas,['EXCLUIDO/BASE IPO','EXCLUIDO'],mesColsV,meses);
+
+  var dv_b5=sumByMes(f300_sheetMap.dvVentas,['BASE 5%','BASE 5'],mesColsV,meses);
+  var dv_b19=sumByMes(f300_sheetMap.dvVentas,['BASE 19%','BASE 19'],mesColsV,meses);
+  var dv_i5=sumByMes(f300_sheetMap.dvVentas,['IVA 5%','IVA5'],mesColsV,meses);
+  var dv_i19=sumByMes(f300_sheetMap.dvVentas,['IVA 19%','IVA19'],mesColsV,meses);
+  var dv_excl=sumByMes(f300_sheetMap.dvVentas,['EXCLUIDO/BASE IPO','EXCLUIDO'],mesColsV,meses);
+  var dv_exen=sumByMes(f300_sheetMap.dvVentas,['EXENTO','EXENTA'],mesColsV,meses);
+
+  var c_b5=sumByMes(f300_sheetMap.costos,['BASE 5','BASE5','BASE 5%'],mesColsC,meses);
+  var c_b19=sumByMes(f300_sheetMap.costos,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
+  var c_i5=sumByMes(f300_sheetMap.costos,['IVA 5%','IVA5'],mesColsC,meses);
+  var c_i19=sumByMes(f300_sheetMap.costos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
+  var c_exen=sumByMes(f300_sheetMap.costos,['EXENTO','EXENTA'],mesColsC,meses);
+  var c_excl=sumByMes(f300_sheetMap.costos,['EXCLUIDO','EXCLUIDOS'],mesColsC,meses);
+
+  var dc_b5=sumByMes(f300_sheetMap.dvCostos,['BASE 5','BASE5'],mesColsC,meses);
+  var dc_b19=sumByMes(f300_sheetMap.dvCostos,['BASE 19','BASE19','BASE 19%'],mesColsC,meses);
+  var dc_i5=sumByMes(f300_sheetMap.dvCostos,['IVA 5%','IVA5'],mesColsC,meses);
+  var dc_i19=sumByMes(f300_sheetMap.dvCostos,['IVA 19%','IVA19','IVA19%'],mesColsC,meses);
+  var dc_total=sumByMes(f300_sheetMap.dvCostos,['TOTAL','Total'],mesColsC,meses);
+
+  var sp_exen=sumByMes(f300_sheetMap.servPub,['EXENTO','EXENTA'],mesColsC,meses);
+  var sp_excl=sumByMes(f300_sheetMap.servPub,['EXCLUIDO'],mesColsC,meses);
+  var sp_b19=sumByMes(f300_sheetMap.servPub,['BASE 19','BASE19'],mesColsC,meses);
+  var sp_b5=sumByMes(f300_sheetMap.servPub,['BASE 5','BASE5'],mesColsC,meses);
+  var sp_total=sp_exen+sp_excl+sp_b19+sp_b5;
+  var ds_total=sumPivot(f300_sheetMap.docSoporte,meses);
+
+  // NÓMINA
+  var nom_total=0;
+  var sn_nom=f300_sheetMap.nomina;
+  if(sn_nom && f300_wb.Sheets[sn_nom]){
+    var ws_nom=f300_wb.Sheets[sn_nom];
+    var hrow_nom=f300_findHeaderRow(ws_nom);
+    var range_nom=XLSX.utils.decode_range(ws_nom['!ref']||'A1:A1');
+    var mi_nom=colIdxFrom(ws_nom,'Fecha Emisión',hrow_nom)>=0?colIdxFrom(ws_nom,'Fecha Emisión',hrow_nom):colIdxFrom(ws_nom,'MES',hrow_nom);
+    var ci_nom=colIdxFrom(ws_nom,'Total',hrow_nom)>=0?colIdxFrom(ws_nom,'Total',hrow_nom):colIdxFrom(ws_nom,'TOTAL',hrow_nom);
+    if(ci_nom>=0){
+      for(var rr=hrow_nom+1;rr<=range_nom.e.r;rr++){
+        var cA=ws_nom[XLSX.utils.encode_cell({r:rr,c:0})];
+        if(cA&&String(cA.v||'').trim().toUpperCase()==='TOTAL') continue;
+        if(mi_nom>=0&&meses&&meses.length>0){
+          var mc=ws_nom[XLSX.utils.encode_cell({r:rr,c:mi_nom})];
+          if(!mc) continue;
+          var mv=f300_getMesFromCell(mc);
+          if(!meses.includes(mv)) continue;
+        }
+        var cell=ws_nom[XLSX.utils.encode_cell({r:rr,c:ci_nom})];
+        if(cell&&typeof cell.v==='number') nom_total+=cell.v;
+      }
+    }
+  }
+
+  // SALDO A FAVOR
+  // Si viene saldoArrastre del período anterior (c89 previo), usarlo directamente.
+  // Solo para el primer período se lee la pestaña SALDO A FAVOR del Excel.
+  var saldo_favor_anterior=0;
+  if(typeof saldoArrastre==='number' && saldoArrastre>0){
+    // Arrastre automático: c89 del período anterior
+    saldo_favor_anterior=saldoArrastre;
+  } else {
+    // Primer período: leer la pestaña SALDO A FAVOR del Excel
+    var sn_sf=f300_sheetMap.saldoFavor;
+    if(sn_sf&&f300_wb.Sheets[sn_sf]){
+      var rows_sf=XLSX.utils.sheet_to_json(f300_wb.Sheets[sn_sf],{header:1,defval:''});
+      for(var ii=0;ii<rows_sf.length;ii++){
+        for(var jj=0;jj<rows_sf[ii].length;jj++){
+          var vv=rows_sf[ii][jj];
+          if(typeof vv==='number'&&vv>0){saldo_favor_anterior=vv;break;}
+        }
+        if(saldo_favor_anterior) break;
+      }
+    }
+  }
+
+  // CASILLEROS
+  var R=f300_rdMil;
+  var c27=R(v_b5),c28=R(v_b19),c35=R(v_exen),c39=R(v_excl||0);
+  var c41=R(c27+c28+c35+c39);
+  var c42=R((dv_b19||0)+(dv_b5||0)+(dv_excl||0)+(dv_exen||0));
+  var c43=Math.max(0,c41-c42);
+  var c50=R(c_b5),c51=R(c_b19),c52=0,c53=0;
+  var c54=R((c_exen||0)+(c_excl||0)+sp_total+ds_total+nom_total);
+  var c55=R(c50+c51+c52+c53+c54);
+  var c56=R(dc_total);
+  var c57=R(c55-c56);
+  var c58=R(v_i5),c59=R(v_i19);
+  var c66=R((dc_i19||0)+(dc_i5||0));
+  var c67=R(c58+c59+c66);
+  var c71=R(c_i5),c72=R(c_i19),c74=0,c75=0;
+  var c77=R(c71+c72+c74+c75);
+  var c79=R(dv_i5+dv_i19);
+  var c81=R(c77+c79);
+  var c82=Math.max(0,R(c67-c81));
+  var c83=Math.max(0,R(c81-c67));
+  var c84=saldo_favor_anterior,c85=0,c87=0;
+  var _neto=R((c83||0)+(c84||0)+(c85||0)-(c82||0)-(c87||0));
+  var c88=_neto<0?Math.abs(_neto):0;
+  var c89=_neto>0?_neto:0;
+
+  // Restaurar workbook original
+  f300_wb = wb_bak;
+  f300_sheetMap = sm_bak;
+
+  return {anio,tipo,pCod,pLabel:f300mp_PERIODOS[tipo].find(function(p){return p.cod===pCod;}).label,meses,
+    c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
+    c58,c59,c66,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
+    sp_total,ds_total,nom_total};
+}
+
+async function f300mp_generar(){
+  if(!f300mp_wb){
+    alert('Primero carga un archivo Excel.');
+    return;
+  }
+  var anio = document.getElementById('f300mp-anio').value;
+  var checks = document.querySelectorAll('#f300mp-periodos input[type=checkbox]:checked');
+  if(!checks.length){ alert('Selecciona al menos un período.'); return; }
+
+  var progress = document.getElementById('f300mp-progress');
+  progress.style.display = 'block';
+  var total = checks.length;
+  var i = 0;
+  var saldoArrastre = 0;  // Acumula el c89 de cada período para pasarlo al siguiente
+
+  for(var ch of checks){
+    var cod = ch.dataset.cod;
+    var pObj = f300mp_PERIODOS[f300mp_per].find(function(p){ return p.cod===cod; });
+    progress.textContent = '⏳ Generando '+pObj.label+' ('+(++i)+'/'+total+')'
+      +(saldoArrastre>0?' · Arrastrando saldo a favor: $'+Math.round(saldoArrastre).toLocaleString('es-CO'):'')+'...';
+    await new Promise(function(r){ setTimeout(r,50); });
+
+    // Primer período (i===1): saldoArrastre=0 → lee pestaña Excel
+    // Períodos siguientes: saldoArrastre = c89 del período anterior
+    var d = f300mp_calcularPeriodo(anio, f300mp_per, cod, pObj.meses, saldoArrastre);
+    f300mp_generarPDF(d);
+
+    // El c89 de este período se arrastra como c84 del siguiente
+    saldoArrastre = d.c89 || 0;
+
+    await new Promise(function(r){ setTimeout(r,200); });
+  }
+
+  var msg = '✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'')+' correctamente';
+  if(saldoArrastre>0){
+    msg += ' · Saldo final a favor: $'+Math.round(saldoArrastre).toLocaleString('es-CO');
+  }
+  progress.textContent = msg;
+  setTimeout(function(){ progress.style.display='none'; }, 4000);
+}
+
+function f300mp_generarPDF(d){
+  var blue=[26,37,128],gold=[201,162,39],gray=[100,100,100];
+  var lBlue=[238,241,255],lGold=[255,248,230];
+  var {jsPDF}=window.jspdf;
+  var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  var W=216,H=279;
+
+  // Encabezado
+  doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,0,W,22,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('DECLARACIÓN DEL IMPUESTO SOBRE LAS VENTAS - IVA',W/2,9,{align:'center'});
+  doc.setFontSize(8);doc.text(d.pLabel+' · Año '+d.anio,W/2,15,{align:'center'});
+  doc.setFontSize(26);doc.setTextColor(gold[0],gold[1],gold[2]);doc.text('300',W-12,16,{align:'right'});
+
+  // Franja dorada
+  doc.setFillColor(gold[0],gold[1],gold[2]);doc.rect(0,22,W,2,'F');
+
+  // Info período
+  doc.setFillColor(lBlue[0],lBlue[1],lBlue[2]);doc.setDrawColor(blue[0],blue[1],blue[2]);
+  doc.roundedRect(10,26,W-20,14,2,2,'FD');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('Año: '+d.anio+'   |   Período: '+d.pCod+'   |   Periodicidad: '+(d.tipo==='bimestral'?'Bimestral':'Cuatrimestral'),14,32);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(gray[0],gray[1],gray[2]);
+  doc.text('Meses: '+d.meses.join(', '),14,37);
+  if(d.c84>0){
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(201,162,39);
+    doc.text('Saldo a favor arrastrado: $'+Math.round(d.c84).toLocaleString('es-CO'),W-14,37,{align:'right'});
+  }
+
+  var y=44;var lH=7;
+  function sec(title,yy){
+    if(yy+8>H-16){ doc.addPage(); yy=14; }
+    doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(10,yy,W-20,6,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
+    doc.text(title.toUpperCase(),14,yy+4.3);return yy+6;
+  }
+  function row(label,cas,val,yy,total){
+    if(yy+lH>H-16){ doc.addPage(); yy=14; }
+    var bg=total?lBlue:(yy%14<7?[248,250,255]:[255,255,255]);
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(10,yy,W-20,lH-1,'F');
+    doc.setDrawColor(220,225,240);doc.rect(10,yy,W-20,lH-1,'S');
+    doc.setFont('helvetica',total?'bold':'normal');doc.setFontSize(7.5);
+    doc.setTextColor(total?blue[0]:55,total?blue[1]:65,total?blue[2]:81);
+    doc.text(label,14,yy+4.3);
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(blue[0],blue[1],blue[2]);
+    doc.text(String(cas),W-52,yy+4.3,{align:'center'});
+    var vc=val>0?[6,95,70]:val<0?[153,27,27]:[160,160,160];
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(vc[0],vc[1],vc[2]);
+    doc.text('$'+Math.round(val).toLocaleString('es-CO'),W-12,yy+4.3,{align:'right'});
+    return yy+lH;
+  }
+
+  // ── SECCIÓN INGRESOS ──────────────────────────────────────
+  y=sec('INGRESOS',y);
+  y=row('Por operaciones gravadas al 5%',27,d.c27,y,false);
+  y=row('Por operaciones gravadas a la tarifa general (19%)',28,d.c28,y,false);
+  y=row('Por operaciones exentas',35,d.c35,y,false);
+  y=row('Por operaciones excluidas',39,d.c39,y,false);
+  y=row('Total ingresos brutos (27+28+35+39)',41,d.c41,y,true);
+  y=row('Devoluciones en ventas',42,d.c42,y,false);
+  y=row('Total ingresos netos (41 - 42)',43,d.c43,y,true);y+=2;
+
+  // ── SECCIÓN COMPRAS ───────────────────────────────────────
+  y=sec('COMPRAS',y);
+  y=row('De bienes gravados a la tarifa del 5%',50,d.c50,y,false);
+  y=row('De bienes gravados a la tarifa general (19%)',51,d.c51,y,false);
+  y=row('De servicios gravados a la tarifa del 5%',52,d.c52,y,false);
+  y=row('De servicios gravados a la tarifa general (19%)',53,d.c53,y,false);
+  y=row('Excluidos/exentos (COSTOS+SERV PÚB+DOC SOP+NÓMINA)',54,d.c54,y,false);
+  y=row('Total compras e importaciones brutas',55,d.c55,y,true);
+  y=row('Devoluciones en compras',56,d.c56,y,false);
+  y=row('Total compras netas (55 - 56)',57,d.c57,y,true);y+=2;
+
+  // ── SECCIÓN IMPUESTO GENERADO ─────────────────────────────
+  y=sec('IMPUESTO GENERADO',y);
+  y=row('A la tarifa del 5%',58,d.c58,y,false);
+  y=row('A la tarifa general (19%)',59,d.c59,y,false);
+  y=row('IVA recuperado en devoluciones en compras',66,d.c66,y,false);
+  y=row('Total impuesto generado (58+59+66)',67,d.c67,y,true);y+=2;
+
+  // ── SECCIÓN IMPUESTO DESCONTABLE ──────────────────────────
+  y=sec('IMPUESTO DESCONTABLE',y);
+  y=row('Por compras de bienes gravados al 5%',71,d.c71,y,false);
+  y=row('Por compras de bienes gravados a la tarifa general (19%)',72,d.c72,y,false);
+  y=row('Por servicios gravados a la tarifa del 5%',74,d.c74,y,false);
+  y=row('Por servicios gravados a la tarifa general (19%)',75,d.c75,y,false);
+  y=row('Total impuesto pagado o facturado',77,d.c77,y,true);
+  y=row('IVA resultante devoluciones en ventas',79,d.c79,y,false);
+  y=row('Total impuestos descontables (77+79)',81,d.c81,y,true);y+=2;
+
+  // ── SECCIÓN RESULTADO ─────────────────────────────────────
+  y=sec('RESULTADO',y);
+  y=row('Saldo a pagar por el período fiscal (67-81)',82,d.c82,y,d.c82>0);
+  y=row('Saldo a favor del período fiscal (81-67)',83,d.c83,y,d.c83>0);
+  y=row('Saldo a favor período fiscal anterior',84,d.c84,y,false);
+  y=row('Retenciones por IVA que le practicaron',85,d.c85,y,false);
+  y=row('Sanciones',87,d.c87,y,false);
+  y=row('Total saldo a pagar (82-84-85+87)',88,d.c88,y,d.c88>0);
+  y=row('Total saldo a favor (83+84+85-87)',89,d.c89,y,d.c89>0);y+=4;
+
+  // ── DETALLE CASILLA 54 ────────────────────────────────────
+  if(y+40<H-16){
+    y=sec('DETALLE — CASILLA 54 (Excluidos/Exentos Compras)',y);
+    y=row('COSTOS excluidos/exentos','-',d.c_exen||0,y,false);
+    y=row('SERV PÚBLICOS','-',d.sp_total,y,false);
+    y=row('DOC. SOPORTE','-',d.ds_total,y,false);
+    y=row('NÓMINA','-',d.nom_total,y,false);
+    y=row('Total casilla 54',54,d.c54,y,true);
+  }
+
+  // Pie de página
+  var curPage=doc.internal.getNumberOfPages();
+  for(var pp=1;pp<=curPage;pp++){
+    doc.setPage(pp);
+    doc.setFillColor(blue[0],blue[1],blue[2]);doc.rect(0,H-12,W,12,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
+    doc.text('Asesorías y Consultorías JNF S.A.S. · NIT 901.904.435-9',W/2,H-7,{align:'center'});
+    doc.text('Borrador — No reemplaza el formulario oficial DIAN',W/2,H-3.5,{align:'center'});
+    doc.setTextColor(gold[0],gold[1],gold[2]);
+    doc.text('Pág. '+pp+' / '+curPage,W-12,H-7,{align:'right'});
+  }
+
+  var periodo_label = d.tipo==='bimestral'?'Bimestre':'Cuatrimestre';
+  doc.save('F300_'+d.anio+'_'+d.pCod+'_'+periodo_label+'.pdf');
+}
+
+
 function f350_renderTablas(){
   var tpj=document.getElementById('f350-tbody-pj');
   if(tpj)tpj.innerHTML=F350_PJ.map(function(c){return f350_filaR(c,'pj');}).join('');
@@ -7248,6 +7641,7 @@ function poblarFiltroContador(){
     <div id="f300-detalleSection" style="margin-top:12px;background:#f8faff;border-radius:8px;padding:12px;"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
       <button onclick="f300_descargarPDF()" style="background:#c9a227;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">⬇ Descargar PDF Formulario 300</button>
+      <button onclick="f300_abrirMultiPeriodo()" style="background:#1a2580;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📅 Generar declaraciones por período</button>
       <button onclick="openModulos()" style="background:#fff;color:#1a2580;border:2px solid #1a2580;border-radius:8px;padding:10px 20px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">← Volver a Módulos</button>
     </div>
   </div>
@@ -7256,6 +7650,51 @@ function poblarFiltroContador(){
   </div>
 
 </div>
+<!-- ═══ MODAL: GENERADOR MULTI-PERÍODO F300 ═══════════════════════════ -->
+<div id="f300-multiModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-size:15px;font-weight:800;color:#1a2580;">📅 Declaraciones por período</div>
+      <button onclick="document.getElementById('f300-multiModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">✕</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;">1. Excel con todas las pestañas del año</div>
+      <label style="display:flex;align-items:center;gap:10px;border:2px dashed #c7d2e8;border-radius:8px;padding:14px;cursor:pointer;background:#f8faff;">
+        <span style="font-size:20px;">📂</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:700;color:#1a2580;">Haz clic para seleccionar el Excel</div>
+          <div id="f300mp-fileName" style="font-size:10px;color:#6b7280;margin-top:2px;">VENTAS · COSTOS · DEV VENTAS · DEV COSTOS · SERV PÚBLICOS · DOC SOPORTE · NÓMINA</div>
+        </div>
+        <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="f300mp_cargarExcel(this.files[0]);this.value=''"/>
+      </label>
+      <div id="f300mp-sheets" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;"></div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;">2. Año gravable</div>
+      <input id="f300mp-anio" type="number" value="2026" min="2020" max="2035" style="width:100%;border:1.5px solid #c7d2e8;border-radius:8px;padding:8px 12px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;outline:none;"/>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;">3. Periodicidad</div>
+      <div style="display:flex;gap:8px;">
+        <button id="f300mp-btn-bim" onclick="f300mp_setPer('bimestral')" style="flex:1;padding:10px;border-radius:8px;border:2px solid #1a2580;background:#1a2580;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Bimestral (6 períodos)</button>
+        <button id="f300mp-btn-cua" onclick="f300mp_setPer('cuatrimestral')" style="flex:1;padding:10px;border-radius:8px;border:2px solid #c7d2e8;background:#fff;color:#6b7280;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Cuatrimestral (3 períodos)</button>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:700;color:#374151;">4. Períodos a generar</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="f300mp_selTodos(true)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #1a2580;background:#1a2580;color:#fff;cursor:pointer;font-family:Montserrat,sans-serif;">Todos</button>
+          <button onclick="f300mp_selTodos(false)" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #c7d2e8;background:#fff;color:#6b7280;cursor:pointer;font-family:Montserrat,sans-serif;">Ninguno</button>
+        </div>
+      </div>
+      <div id="f300mp-periodos" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
+    </div>
+    <div id="f300mp-progress" style="display:none;margin-bottom:12px;font-size:11px;color:#1a2580;font-weight:700;text-align:center;padding:10px;background:#eef1ff;border-radius:8px;"></div>
+    <button onclick="f300mp_generar()" style="width:100%;padding:12px;background:#c9a227;color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">⬇ Generar PDFs seleccionados</button>
+  </div>
+</div>
+
 <!-- ═══ PANTALLA INC F310 ════════════════════════════════ -->
 <div id="screen-inc" style="display:none;min-height:100vh;background:#f0f2f8;">
   <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
