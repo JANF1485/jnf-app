@@ -4299,7 +4299,18 @@ function cargarArchivo(clientId, year){
             var per = btnVer.getAttribute('data-per');
             // Guardar período destino globalmente para que openF350 lo use
             window._f350AbrirPer = per;
-            if(window.openF350) window.openF350();
+            if(window.openF350){
+              window.openF350();
+              // Pequeño delay para asegurar que la pantalla cargó
+              setTimeout(function(){
+                if(window._f350AbrirPer && typeof f350_cargarPeriodo==='function'){
+                  document.getElementById('f350-periodo').value = window._f350AbrirPer;
+                  window._f350Per = window._f350AbrirPer;
+                  window._f350AbrirPer = null;
+                  f350_cargarPeriodo();
+                }
+              }, 300);
+            }
           }
           if(btnDel){
             var key = btnDel.getAttribute('data-key');
@@ -4366,7 +4377,9 @@ window.guardadoEliminarF350 = function(key, mes){
       db.collection('resultados_historico').doc(key).delete().catch(function(){});
       ss('Declaración F350 de '+mesLabel+' eliminada','ok');
       audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
-      if(window._openGuardado) window._openGuardado();
+      // Recargar el Archivo de Reportes para reflejar el cambio
+      if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
+      else if(window._openGuardado) window._openGuardado();
     }).catch(function(e){ ss('Error: '+e.message,'err'); });
   });
 };
@@ -5383,7 +5396,8 @@ function f350_cargarPeriodo(){
     .get().then(function(snap){
       if(snap.empty){f350_limpiarCampos();return;}
       // Ordenar manualmente por fecha y tomar el más reciente
-      var docs=snap.docs.sort(function(a,b){return (b.data().fechaGuardado||'')>(a.data().fechaGuardado||'')?1:-1;});
+      var docs=snap.docs.slice().sort(function(a,b){return (b.data().fechaGuardado||'')>(a.data().fechaGuardado||'')?1:-1;});
+      if(!docs.length){f350_limpiarCampos();return;}
       var d=JSON.parse(docs[0].data().data||'{}');
       f350_llenar(d);f350_calcularTotales();
       var fechaStr=snap.docs[0].data().fechaGuardado;
@@ -5472,11 +5486,20 @@ function f350_limpiarCampos(){
   F350_AR.forEach(function(c){var be=document.getElementById('f350-base-'+c.id),re=document.getElementById('f350-ret-'+c.id);if(be)be.value='';if(re)re.textContent='$ 0';});
   ['f350-c129','f350-c131','f350-c132','f350-c133','f350-c135','f350-c137'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   f350_calcularTotales();
+  // Ocultar vista previa y tarjetas resumen
+  var sc=document.getElementById('f350-summary-cards');
+  if(sc) sc.style.display='none';
+  var cr=document.getElementById('f350-casilleros-result');
+  if(cr) cr.style.display='none';
+  var fn=document.getElementById('f350-fileNameDisplay');
+  if(fn) fn.textContent='';
+  var es=document.getElementById('f350-excel-status');
+  if(es) es.style.display='none';
 }
 function f350_limpiar(){if(!confirm('¿Limpiar período '+f350_mes(_f350Per)+'?'))return;f350_limpiarCampos();f350_st('Período limpiado.','info');}
 function f350_cargarHistorial(){
-  var he=document.getElementById('f350-historial');
-  if(!he||!db||!activeClientId)return;
+  // El historial ahora está en el Archivo de Reportes, no en el módulo F350
+  return;
   he.innerHTML='<div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando...</div>';
   var year=String(activeYear||new Date().getFullYear());
 
