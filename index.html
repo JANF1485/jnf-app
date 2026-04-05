@@ -5060,9 +5060,24 @@ function f350_guardar(){
   var tot=f350_calcularTotales();
   var d=f350_recolectar(tot);
   audRegistrar('Guardar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||activeClientId,'Período '+f350_mes(_f350Per)+' '+( activeYear||new Date().getFullYear()));
+  var anioF350 = String(activeYear||new Date().getFullYear());
+  var _ts = Date.now();
+  var _k = ('jnf_f350_'+activeClientId+'_'+anioF350+'_'+_f350Per+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
+  var dataH = Object.assign({},d,{
+    clienteId: activeClientId, tipo:'f350', pCod:_f350Per, anio:anioF350,
+    pLabel: f350_mes(_f350Per), fechaLiquidacion: new Date().toISOString()
+  });
+  // Guardar en historial
+  db.collection('resultados_historico').doc(_k).set({
+    key: _k, clienteId: activeClientId, tipo: 'f350',
+    anio: anioF350, pCod: _f350Per,
+    fechaLiquidacion: new Date().toISOString(),
+    data: JSON.stringify(dataH)
+  }).catch(function(e){ console.warn('[F350 hist]',e); });
+  // Guardar en resultados (compatibilidad)
   db.collection('resultados').add({
     clienteId:   activeClientId,
-    anio:        String(activeYear||new Date().getFullYear()),
+    anio:        anioF350,
     periodo:     _f350Per,
     tipo:        'f350',
     data:        JSON.stringify(d),
@@ -5352,46 +5367,110 @@ function f350_leerExcel(file){
       var mesPeriodo=document.getElementById('f350-periodo').value;
       var mesNombres={'01':'ENERO','02':'FEBRERO','03':'MARZO','04':'ABRIL','05':'MAYO','06':'JUNIO',
                       '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE'};
+      var mesNum=parseInt(mesPeriodo,10);
       var mesNom=mesNombres[mesPeriodo]||'';
       if(!shCostos){setStatus('#fee2e2','#b91c1c','✗ No se encontró la pestaña COSTOS');return;}
-      var rowsCostos=XLSX.utils.sheet_to_json(wb.Sheets[shCostos],{defval:''});
+
+      // Leer con encabezados correctos: buscar la fila de headers (fila 6 = index 5)
+      function leerConHeaders(shName){
+        var ws=wb.Sheets[shName];
+        var range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+        // Encontrar fila de encabezados (primera con >=4 celdas con texto)
+        var hrow=range.s.r;
+        var KWORDS=['MES','FECHA','BASE','IVA','NIT','TIPO','FOLIO','T.P','APLIC','TARIFA','NOMBRE','TOTAL'];
+        for(var r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
+          var hits=0;
+          for(var c=range.s.c;c<=range.e.c;c++){
+            var cv=ws[XLSX.utils.encode_cell({r:r,c:c})];
+            if(cv&&KWORDS.some(function(k){return String(cv.v||'').toUpperCase().indexOf(k)>=0;})) hits++;
+          }
+          if(hits>=3){hrow=r;break;}
+        }
+        // Extraer headers de esa fila
+        var headers=[];
+        for(var c=range.s.c;c<=range.e.c;c++){
+          var cv=ws[XLSX.utils.encode_cell({r:hrow,c:c})];
+          headers.push(cv?String(cv.v||''):'');
+        }
+        // Leer filas de datos
+        var rows=[];
+        for(var r=hrow+1;r<=range.e.r;r++){
+          var obj={};
+          var hasData=false;
+          for(var c=range.s.c;c<=range.e.c;c++){
+            var cv=ws[XLSX.utils.encode_cell({r:r,c:c})];
+            var val=cv?cv.v:'';
+            obj[headers[c-range.s.c]]=val;
+            if(val!==''&&val!==null&&val!==undefined) hasData=true;
+          }
+          if(hasData) rows.push(obj);
+        }
+        return rows;
+      }
+
+      // Función para extraer mes de un valor (igual que getMesFromCell del F300)
+      function getMesVal(v){
+        if(v===null||v===undefined||v==='') return '';
+        if(typeof v==='number'&&v>1000&&v<2958465){
+          var d=new Date(Math.round((v-25569)*86400*1000));
+          if(!isNaN(d.getTime())){
+            var MNAMES=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+            return MNAMES[d.getUTCMonth()+1]||'';
+          }
+        }
+        var s=String(v).trim();
+        var m1=s.match(/^\d{1,2}[-\/](\d{1,2})[-\/]\d{4}/);
+        if(m1){var mn=parseInt(m1[1],10);var MN2=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];return MN2[mn]||'';}
+        var clean=s.toUpperCase().replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U');
+        var MNCLEAN=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        var idx2=MNCLEAN.indexOf(clean);
+        return idx2>0?MNCLEAN[idx2]:s.toUpperCase();
+      }
+
+      function getNum(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
+
+      var rowsCostos=leerConHeaders(shCostos);
       var dvMap={};
       if(shDvCostos){
-        XLSX.utils.sheet_to_json(wb.Sheets[shDvCostos],{defval:''}).forEach(function(r){
+        leerConHeaders(shDvCostos).forEach(function(r){
           var folio=String(r['Folio']||r['FOLIO']||'').trim();
           if(!folio) return;
-          var mesR=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
-          if(mesNom&&mesR.indexOf(mesNom)<0) return;
+          var mesR=getMesVal(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||r['Fecha Emision']||'');
+          if(mesNom&&mesR!==mesNom) return;
+          if(String(r['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') return;
           if(!dvMap[folio])dvMap[folio]={b19:0,b5:0,exen:0,excl:0};
-          dvMap[folio].b19 +=parseFloat(String(r['BASE 19']||r['BASE19']||0).replace(/[^0-9.-]/g,''))||0;
-          dvMap[folio].b5  +=parseFloat(String(r['BASE 5'] ||r['BASE5'] ||0).replace(/[^0-9.-]/g,''))||0;
-          dvMap[folio].exen+=parseFloat(String(r['EXENTO']  ||0).replace(/[^0-9.-]/g,''))||0;
-          dvMap[folio].excl+=parseFloat(String(r['EXCLUIDO']||0).replace(/[^0-9.-]/g,''))||0;
+          dvMap[folio].b19 +=getNum(r['BASE 19']||r['BASE19']||0);
+          dvMap[folio].b5  +=getNum(r['BASE 5'] ||r['BASE5'] ||0);
+          dvMap[folio].exen+=getNum(r['EXENTO']  ||0);
+          dvMap[folio].excl+=getNum(r['EXCLUIDO']||0);
         });
       }
+
       var pjBases={},pnBases={};
       rowsCostos.forEach(function(r){
-        var mesR=String(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||'').trim().toUpperCase();
-        if(mesNom&&mesR.indexOf(mesNom)<0) return;
+        if(String(r['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') return;
+        var mesR=getMesVal(r['MES']||r['Fecha Emisión']||r['FECHA EMISION']||r['Fecha Emision']||'');
+        if(mesNom&&mesR!==mesNom) return;
         var aplic=String(r['APLIC. RETEFUENTE']||r['APLIC.RETEFUENTE']||r['APLIC RETEFUENTE']||'').trim().toUpperCase();
         if(aplic!=='S') return;
         var tp=String(r['T.P.']||r['TP']||r['T.P']||'').trim().toUpperCase();
         var esPJ=(tp==='PJ'),esPN=(tp==='PN');
         if(!esPJ&&!esPN) return;
-        var tarifa=parseFloat(String(r['TARIFA RETEFUENTE']||r['TARIFA']||0).replace(/[^0-9.-]/g,''))||0;
+        var tarifa=getNum(r['TARIFA RETEFUENTE']||r['TARIFA']||0);
         if(tarifa<=0) return;
         var folio=String(r['Folio']||r['FOLIO']||'').trim();
         var dv=dvMap[folio]||{b19:0,b5:0,exen:0,excl:0};
-        var b19 =Math.max(0,(parseFloat(String(r['BASE 19']||r['BASE19']||0).replace(/[^0-9.-]/g,''))||0)-dv.b19);
-        var b5  =Math.max(0,(parseFloat(String(r['BASE 5'] ||r['BASE5'] ||0).replace(/[^0-9.-]/g,''))||0)-dv.b5);
-        var exen=Math.max(0,(parseFloat(String(r['EXENTO']  ||0).replace(/[^0-9.-]/g,''))||0)-dv.exen);
-        var excl=Math.max(0,(parseFloat(String(r['EXCLUIDO']||0).replace(/[^0-9.-]/g,''))||0)-dv.excl);
+        var b19 =Math.max(0,getNum(r['BASE 19']||r['BASE19']||0)-dv.b19);
+        var b5  =Math.max(0,getNum(r['BASE 5'] ||r['BASE5'] ||0)-dv.b5);
+        var exen=Math.max(0,getNum(r['EXENTO']  ||0)-dv.exen);
+        var excl=Math.max(0,getNum(r['EXCLUIDO']||0)-dv.excl);
         var base=b19+b5+exen+excl;
         if(base<=0) return;
         var key=tarifa.toString();
         if(esPJ){if(!pjBases[key])pjBases[key]={base:0,tarifa:tarifa};pjBases[key].base+=base;}
         else    {if(!pnBases[key])pnBases[key]={base:0,tarifa:tarifa};pnBases[key].base+=base;}
       });
+
       function llenarTabla(basesMap,tablaArr,prefijo){
         Object.values(basesMap).forEach(function(item){
           var match=tablaArr.find(function(c){return c.t===item.tarifa;});
