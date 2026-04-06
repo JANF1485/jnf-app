@@ -2602,8 +2602,9 @@ window._doLogin = window.doLogin = function doLogin(){
       return;
     }
   }
-  // Guardar contraseña en memoria para verificación de eliminaciones
+  // Guardar contraseña en memoria y sessionStorage para verificación de eliminaciones
   window._sessionPwd = pass;
+  try{sessionStorage.setItem('_jnf_sp', btoa(unescape(encodeURIComponent(pass))));}catch(e){}
   auth.signInWithEmailAndPassword(email, pass).catch(function(e){
     btn.disabled = false; btn.textContent = 'Ingresar';
     var msgs = {'auth/user-not-found':'Usuario no encontrado','auth/wrong-password':'Contraseña incorrecta','auth/invalid-credential':'Email o contraseña incorrectos','auth/invalid-email':'Email inválido','auth/too-many-requests':'Demasiados intentos. Espera un momento.'};
@@ -4361,14 +4362,15 @@ window.guardadoEliminarF350 = function(key, mes){
   var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
     '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
   var mesLabel = MESES[mes]||mes;
-  if(!confirm('¿Eliminar la declaración F350 de '+mesLabel+'?\nEsta acción no se puede deshacer.')) return;
-  db.collection('resultados').doc(key).delete().then(function(){
-    db.collection('resultados_historico').doc(key).delete().catch(function(){});
-    ss('Declaración F350 de '+mesLabel+' eliminada','ok');
-    audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
-    if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
-    else if(window._openGuardado) window._openGuardado();
-  }).catch(function(e){ ss('Error al eliminar: '+e.message,'err'); });
+  pedirConfirmPwd('¿Eliminar la declaración F350 de '+mesLabel+'? Esta acción no se puede deshacer.', function(){
+    db.collection('resultados').doc(key).delete().then(function(){
+      db.collection('resultados_historico').doc(key).delete().catch(function(){});
+      ss('Declaración F350 de '+mesLabel+' eliminada','ok');
+      audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
+      if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
+      else if(window._openGuardado) window._openGuardado();
+    }).catch(function(e){ ss('Error al eliminar: '+e.message,'err'); });
+  });
 };
 
 window.inc_eliminarVersion = function(key){
@@ -5629,26 +5631,43 @@ window.confirmarConPwd = function(){
   if(!pwd){if(errEl){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';}return;}
   if(!currentUser){if(errEl){errEl.textContent='No hay sesión activa.';errEl.style.display='block';}return;}
   if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
-  if(errEl) errEl.style.display='none';
+  if(errEl)errEl.style.display='none';
+
   var doExecute=function(){cerrarConfirmPwd();if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();};
   var doError=function(msg){if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}if(errEl){errEl.textContent=msg;errEl.style.display='block';}};
-  // Verificación 1: contraseña guardada en sesión (disponible si el usuario inició sesión en esta pestaña)
-  if(window._sessionPwd && pwd===window._sessionPwd){doExecute();return;}
+
+  // Recuperar contraseña de sesión (guardada al login o en sessionStorage)
+  var sp=window._sessionPwd;
+  if(!sp){try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}}
+
+  // Verificación 1: comparar con contraseña guardada en sesión
+  if(sp && pwd===sp){doExecute();return;}
+
   // Verificación 2: re-autenticar con Firebase
   try{
     var cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,pwd);
     currentUser.reauthenticateWithCredential(cred)
-      .then(function(){window._sessionPwd=pwd;doExecute();})
+      .then(function(){
+        window._sessionPwd=pwd;
+        try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
+        doExecute();
+      })
       .catch(function(e){
         var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
-        if(WRONG.indexOf(e.code)>=0){doError('Contraseña incorrecta. Intenta de nuevo.');}
-        else{
-          // Firebase falla por otro motivo — intentar signIn
+        if(WRONG.indexOf(e.code)>=0){
+          doError('Contraseña incorrecta. Intenta de nuevo.');
+        } else {
+          // Firebase falla por problema técnico, no por contraseña incorrecta
+          // Intentar signInWithEmailAndPassword como fallback
           firebase.auth().signInWithEmailAndPassword(currentUser.email,pwd)
-            .then(function(){window._sessionPwd=pwd;doExecute();})
+            .then(function(){
+              window._sessionPwd=pwd;
+              try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
+              doExecute();
+            })
             .catch(function(e2){
               if(WRONG.indexOf(e2.code)>=0){doError('Contraseña incorrecta. Intenta de nuevo.');}
-              else{doError('Error de conexión ('+e2.code+'). Intenta de nuevo.');}
+              else{doError('Error ('+e2.code+'). Intenta de nuevo.');}
             });
         }
       });
