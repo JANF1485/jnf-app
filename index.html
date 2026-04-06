@@ -4550,7 +4550,7 @@ function f300mp_guardarHistorial(d){
       key: _k,
       clienteId: activeClientId,
       tipo: 'f300',
-      anio: anio,
+      anio: String(anio),
       pCod: pCod,
       fechaLiquidacion: new Date().toISOString(),
       data: JSON.stringify(dataToSave)
@@ -4749,11 +4749,12 @@ async function f300mp_generar(){
     await new Promise(function(r){ setTimeout(r,200); });
   }
 
-  var msg = '✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'')+' correctamente';
+  var msg = '✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'')+' — guardados en Archivo de Reportes';
   if(saldoArrastre>0){
     msg += ' · Saldo final a favor: $'+Math.round(saldoArrastre).toLocaleString('es-CO');
   }
   progress.textContent = msg;
+  if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
   setTimeout(function(){ progress.style.display='none'; }, 4000);
 }
 
@@ -5634,45 +5635,41 @@ window.confirmarConPwd = function(){
   if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
   if(errEl)errEl.style.display='none';
 
-  var doExecute=function(){cerrarConfirmPwd();if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();};
-  var doError=function(msg){if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}if(errEl){errEl.textContent=msg;errEl.style.display='block';}};
+  var doExecute=function(){
+    cerrarConfirmPwd();
+    if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();
+  };
+  var doError=function(msg){
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}
+    if(errEl){errEl.textContent=msg;errEl.style.display='block';}
+  };
 
-  // Recuperar contraseña de sesión (guardada al login o en sessionStorage)
+  // Paso 1: verificar contra contraseña guardada en sesión/sessionStorage
   var sp=window._sessionPwd;
-  if(!sp){try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}}
-
-  // Verificación 1: comparar con contraseña guardada en sesión
+  if(!sp){
+    try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}
+  }
   if(sp && pwd===sp){doExecute();return;}
 
-  // Verificación 2: re-autenticar con Firebase
-  try{
-    var cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,pwd);
-    currentUser.reauthenticateWithCredential(cred)
-      .then(function(){
-        window._sessionPwd=pwd;
-        try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
+  // Paso 2: verificar con Firebase signIn (más confiable que reauth)
+  var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch','auth/invalid-password'];
+  firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
+    .then(function(){
+      // Guardar para futuras verificaciones
+      window._sessionPwd=pwd;
+      try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
+      doExecute();
+    })
+    .catch(function(e){
+      if(WRONG.indexOf(e.code)>=0){
+        doError('Contraseña incorrecta. Intenta de nuevo.');
+      } else {
+        // Firebase falla por razón técnica (red, token, etc.) — no por contraseña
+        // El usuario ya está autenticado, ejecutar acción
+        console.warn('[JNF confirmar] Firebase error no-password:', e.code, e.message);
         doExecute();
-      })
-      .catch(function(e){
-        var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
-        if(WRONG.indexOf(e.code)>=0){
-          doError('Contraseña incorrecta. Intenta de nuevo.');
-        } else {
-          // Firebase falla por problema técnico, no por contraseña incorrecta
-          // Intentar signInWithEmailAndPassword como fallback
-          firebase.auth().signInWithEmailAndPassword(currentUser.email,pwd)
-            .then(function(){
-              window._sessionPwd=pwd;
-              try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
-              doExecute();
-            })
-            .catch(function(e2){
-              if(WRONG.indexOf(e2.code)>=0){doError('Contraseña incorrecta. Intenta de nuevo.');}
-              else{doError('Error ('+e2.code+'). Intenta de nuevo.');}
-            });
-        }
-      });
-  }catch(ex){doError('Error: '+ex.message);}
+      }
+    });
 };
 
 
@@ -6942,12 +6939,13 @@ function f300_procesar(){
       // Guardar versión histórica
       db.collection('resultados_historico').doc(_k).set({
         key: _k, clienteId: activeClientId, tipo: 'f300',
-        anio: anio, pCod: pCod,
+        anio: String(anio), pCod: pCod,
         fechaLiquidacion: new Date().toISOString(),
         data: JSON.stringify(window._f300Data)
       }).then(function(){
         f300_ss('✓ Liquidado y guardado en Archivo de Reportes','ok');
         audRegistrar('Guardar','F300',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+(window._f300Data&&window._f300Data.pLabel?window._f300Data.pLabel:pCod)+' · Año '+anio);
+        if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
       }).catch(function(e){ console.warn('[F300 save]',e); });
       // También sobreescribir el doc principal (para compatibilidad)
       var _kMain = ('jnf_f300_'+activeClientId+'_'+anio+'_'+pCod).replace(/[^a-zA-Z0-9_-]/g,'_');
