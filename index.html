@@ -937,23 +937,18 @@ window.addEventListener('online', function(){
 
 <!-- ═══ PANTALLA 3: CONSOLIDADOR ════════════════════════ -->
 <!-- ═══ PANTALLA F350: RETENCIÓN EN LA FUENTE ════════════════════ -->
-<div id="screen-f350" class="main" style="display:none;">
-  <div class="gold-bar"></div>
-
-  <!-- Breadcrumb -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-    <button class="btn btn-ol btn-sm" onclick="showScreen('contabilidad');setTimeout(function(){loadSavedResults(activeClientId,activeYear);},100);" style="gap:5px;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      Volver a módulos
-    </button>
-    <span style="font-size:10px;color:var(--t3);">›</span>
-    <span id="f350-client-name" style="font-size:10px;font-weight:700;color:var(--bd);"></span>
-    <span style="font-size:10px;color:var(--t3);">›</span>
-    <span style="font-size:10px;font-weight:700;color:var(--bd);">🧾 Retención en la Fuente — Formulario 350</span>
-    <span id="f350-year-badge" style="font-size:10px;font-weight:900;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;"></span>
+<div id="screen-f350" style="display:none;min-height:100vh;background:#f0f2f8;">
+  <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
+    <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
+    <div style="flex:1;text-align:center;">
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;">Retención en la Fuente — Formulario 350</div>
+      <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600;" id="f350-cliente-info">—</div>
+    </div>
+    <div style="width:80px;flex-shrink:0;"></div>
   </div>
+  <div style="background:#c9a227;height:4px;"></div>
+  <div style="max-width:960px;margin:0 auto;padding:20px;">
 
-  <!-- Status bar -->
   <div id="f350-status" style="display:none;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;"></div>
 
   <!-- SELECTOR DE MODO -->
@@ -1101,17 +1096,10 @@ window.addEventListener('online', function(){
     </div>
   </div>
 
-  <!-- HISTORIAL -->
-  <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
-    <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">
-      🗂 Declaraciones guardadas — Año <span id="f350-hist-year"></span>
-    </div>
-    <div id="f350-historial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
-      <div style="color:var(--t3);font-size:12px;padding:20px 0;">Cargando historial...</div>
-    </div>
-  </div>
+
 
 </div>
+</div><!-- /max-width f350 -->
 
 <!-- ═══ PANTALLA AUDITORÍA ══════════════════════════════════════════ -->
 <div id="screen-auditoria" class="main" style="display:none;">
@@ -4448,7 +4436,10 @@ if(!window['openF350'])window['openF350']=function(){var a=arguments,t=this;var 
 window._openF350=window.openF350=function openF350(){
   var c=clients.find(function(x){return x.id===activeClientId;});
   if(!c)return;
-  document.getElementById('f350-client-name').textContent=c.razon||c.nit;
+  var ci350=document.getElementById('f350-cliente-info');
+  if(ci350) ci350.textContent=(c.razon||c.nit)+' · Año '+(activeYear||new Date().getFullYear());
+  var cb=document.getElementById('f350-client-name');
+  if(cb) cb.textContent=c.razon||c.nit;
   document.getElementById('f350-year-badge').textContent=activeYear||new Date().getFullYear();
   document.getElementById('f350-hist-year').textContent=activeYear||new Date().getFullYear();
   if(c.ciiu){
@@ -5682,33 +5673,21 @@ window.confirmarConPwd = function(){
     if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
   };
 
-  // Verificar contraseña con signInWithEmailAndPassword (más compatible)
-  firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
+  // Verificar contraseña con reauthenticate (no interrumpe la sesión)
+  var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+  currentUser.reauthenticateWithCredential(cred)
     .then(function(){ doExecute(); })
-    .catch(function(e1){
-      // Si falla, intentar con reauthenticateWithCredential
-      try {
-        var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
-        currentUser.reauthenticateWithCredential(cred)
-          .then(doExecute)
-          .catch(function(e2){
-            var msgs = {
-              'auth/wrong-password':     'Contraseña incorrecta. Intenta de nuevo.',
-              'auth/invalid-credential': 'Contraseña incorrecta. Intenta de nuevo.',
-              'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
-              'auth/user-mismatch':      'Contraseña incorrecta. Intenta de nuevo.',
-            };
-            doError(msgs[e2.code] || msgs[e1.code] || 'Contraseña incorrecta. Intenta de nuevo.');
-          });
-      } catch(ex){
-        var msgs2 = {
-          'auth/wrong-password':     'Contraseña incorrecta. Intenta de nuevo.',
-          'auth/invalid-credential': 'Contraseña incorrecta. Intenta de nuevo.',
-          'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
-        };
-        doError(msgs2[e1.code] || 'Contraseña incorrecta. Intenta de nuevo.');
-      }
-    });
+    .catch(function(e){
+      if(btnEl){ btnEl.disabled=false; btnEl.textContent='Confirmar eliminación'; }
+      var msgs={
+        'auth/wrong-password':'Contraseña incorrecta. Intenta de nuevo.',
+        'auth/invalid-credential':'Contraseña incorrecta. Intenta de nuevo.',
+        'auth/too-many-requests':'Demasiados intentos. Espera un momento.',
+        'auth/user-mismatch':'Contraseña incorrecta. Intenta de nuevo.',
+      };
+      var msg=msgs[e.code]||'Contraseña incorrecta. Intenta de nuevo.';
+      if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
+    })
 };
 
 
