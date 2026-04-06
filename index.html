@@ -4438,40 +4438,17 @@ if(!window['openF350'])window['openF350']=function(){var a=arguments,t=this;var 
 window._openF350=window.openF350=function openF350(){
   var c=clients.find(function(x){return x.id===activeClientId;});
   if(!c)return;
-  var ci350=document.getElementById('f350-cliente-info');
-  if(ci350) ci350.textContent=(c.razon||c.nit)+' · Año '+(activeYear||new Date().getFullYear());
-  var cb=document.getElementById('f350-client-name');
-  if(cb) cb.textContent=c.razon||c.nit;
-  document.getElementById('f350-year-badge').textContent=activeYear||new Date().getFullYear();
-  document.getElementById('f350-hist-year').textContent=activeYear||new Date().getFullYear();
-  if(c.ciiu){
-    var sc=document.getElementById('f350-ciiu-ar');
-    if(sc){
-      var n=parseInt(c.ciiu);
-      for(var i=0;i<sc.options.length;i++){
-        var v=sc.options[i].value;if(!v)continue;
-        var p=v.split('|'),r=p[0].split('-');
-        if(n>=parseInt(r[0])&&n<=parseInt(r[1]||r[0])){sc.value=v;break;}
-      }
-      f350_calcularTarifaAR();
-    }
-  }
-  f350_renderTablas();
-  // Si viene desde "Ver" en Archivo de Reportes, usar ese período
+  var ci=document.getElementById('f350-cliente-info');
+  if(ci) ci.textContent=(c.razon||c.nit)+' · Año '+(activeYear||new Date().getFullYear());
   var mp;
-  if(window._f350AbrirPer){
-    mp=window._f350AbrirPer;
-    window._f350AbrirPer=null;
-  } else {
-    var ahora=new Date();
-    mp=ahora.getMonth()===0?'12':String(ahora.getMonth()).padStart(2,'0');
-  }
-  document.getElementById('f350-periodo').value=mp;
+  if(window._f350AbrirPer){mp=window._f350AbrirPer;window._f350AbrirPer=null;}
+  else{var ahora=new Date();mp=ahora.getMonth()===0?'12':String(ahora.getMonth()).padStart(2,'0');}
+  var selPer=document.getElementById('f350-periodo');
+  if(selPer) selPer.value=mp;
   _f350Per=mp;
   showScreen('f350');
   f350_setModo(1);
   f350_cargarPeriodo();
-  f350_cargarHistorial();
 };
 
 
@@ -5648,60 +5625,37 @@ window.cerrarConfirmPwd = function(){
 };
 
 window.confirmarConPwd = function(){
-  var inputEl = document.getElementById('confirm-pwd-input');
-  var errEl   = document.getElementById('confirm-pwd-error');
-  var btnEl   = document.getElementById('confirm-pwd-btn');
-  var pwd     = inputEl ? inputEl.value.trim() : '';
-
-  if(!pwd){
-    if(errEl){ errEl.textContent='Ingresa tu contraseña.'; errEl.style.display='block'; }
-    return;
-  }
-  if(!currentUser){
-    if(errEl){ errEl.textContent='No hay sesión activa.'; errEl.style.display='block'; }
-    return;
-  }
-
-  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Verificando…'; }
+  var inputEl=document.getElementById('confirm-pwd-input');
+  var errEl=document.getElementById('confirm-pwd-error');
+  var btnEl=document.getElementById('confirm-pwd-btn');
+  var pwd=inputEl?inputEl.value.trim():'';
+  if(!pwd){if(errEl){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';}return;}
+  if(!currentUser){if(errEl){errEl.textContent='No hay sesión activa.';errEl.style.display='block';}return;}
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
   if(errEl) errEl.style.display='none';
-
-  var doExecute = function(){
-    cerrarConfirmPwd();
-    if(typeof _confirmPwdCallback === 'function') _confirmPwdCallback();
-  };
-
-  var doError = function(msg){
-    if(btnEl){ btnEl.disabled=false; btnEl.textContent='Confirmar eliminación'; }
-    if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
-  };
-
-  // Comparar contra la contraseña guardada en sesión (más confiable que re-autenticar)
-  if(window._sessionPwd && pwd === window._sessionPwd){
-    doExecute();
-    return;
-  }
-
-  // Fallback: re-autenticar con Firebase si no hay contraseña en sesión
+  var doExecute=function(){cerrarConfirmPwd();if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();};
+  var doError=function(msg){if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}if(errEl){errEl.textContent=msg;errEl.style.display='block';}};
+  // Verificación 1: contraseña guardada en sesión (disponible si el usuario inició sesión en esta pestaña)
+  if(window._sessionPwd && pwd===window._sessionPwd){doExecute();return;}
+  // Verificación 2: re-autenticar con Firebase
   try{
-    var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+    var cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,pwd);
     currentUser.reauthenticateWithCredential(cred)
-      .then(function(){
-        window._sessionPwd = pwd; // Actualizar la contraseña en memoria
-        doExecute();
-      })
+      .then(function(){window._sessionPwd=pwd;doExecute();})
       .catch(function(e){
-        var WRONG = ['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
-        if(WRONG.indexOf(e.code) >= 0){
-          doError('Contraseña incorrecta. Intenta de nuevo.');
-        } else {
-          // Firebase falla por razones técnicas — ejecutar de todas formas
-          console.warn('[Auth]', e.code, e.message);
-          doExecute();
+        var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
+        if(WRONG.indexOf(e.code)>=0){doError('Contraseña incorrecta. Intenta de nuevo.');}
+        else{
+          // Firebase falla por otro motivo — intentar signIn
+          firebase.auth().signInWithEmailAndPassword(currentUser.email,pwd)
+            .then(function(){window._sessionPwd=pwd;doExecute();})
+            .catch(function(e2){
+              if(WRONG.indexOf(e2.code)>=0){doError('Contraseña incorrecta. Intenta de nuevo.');}
+              else{doError('Error de conexión ('+e2.code+'). Intenta de nuevo.');}
+            });
         }
       });
-  } catch(ex){
-    doError('Error de autenticación. Intenta de nuevo.');
-  }
+  }catch(ex){doError('Error: '+ex.message);}
 };
 
 
@@ -9309,43 +9263,34 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 
 <!-- ═══ MODAL CONFIRMACIÓN POR CONTRASEÑA ══════════════════════════ -->
-<div id="modal-confirm-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
-  z-index:10003;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:16px;max-width:400px;width:100%;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);">
-    <div style="background:linear-gradient(135deg,#b91c1c,#991b1b);color:#fff;
-      padding:18px 22px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-      </svg>
+<div id="modal-confirm-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10003;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="background:linear-gradient(135deg,#b91c1c,#991b1b);color:#fff;padding:18px 22px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       <div>
         <div style="font-size:14px;font-weight:800;">Confirmar eliminación</div>
-        <div style="font-size:10px;opacity:.75;margin-top:1px;" id="confirm-pwd-subtitle">Esta acción no se puede deshacer</div>
+        <div style="font-size:11px;opacity:.8;margin-top:2px;">Esta acción no se puede deshacer</div>
       </div>
     </div>
-    <div style="padding:22px;">
-      <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:700;color:#b91c1c;" id="confirm-pwd-msg">¿Estás seguro?</div>
-      </div>
-      <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:6px;">
-        Ingresa tu contraseña de acceso al sistema
+    <div style="padding:20px 22px;">
+      <p id="confirm-pwd-msg" style="font-size:13px;color:#374151;margin-bottom:14px;line-height:1.5;"></p>
+      <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;">
+        Escribe tu contraseña para confirmar
       </label>
-      <input id="confirm-pwd-input" type="password" placeholder="••••••••"
-        style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:9px 12px;
-        font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"
-        onkeydown="if(event.key==='Enter')confirmarConPwd()"
-        onfocus="this.style.borderColor='#1a2580'" onblur="this.style.borderColor='#dde1f0'"/>
-      <div id="confirm-pwd-error" style="display:none;color:#b91c1c;font-size:11px;
-        font-weight:600;margin-top:8px;padding:6px 10px;background:#fee2e2;border-radius:6px;"></div>
-      <div style="display:flex;gap:10px;margin-top:18px;">
+      <input id="confirm-pwd-input" type="password" placeholder="Contraseña"
+        onkeydown="if(event.key==='Enter') confirmarConPwd()"
+        style="width:100%;border:1.5px solid #dde1f0;border-radius:8px;padding:10px 12px;
+               font-family:Montserrat,sans-serif;font-size:13px;outline:none;margin-bottom:8px;"/>
+      <div id="confirm-pwd-error" style="display:none;color:#b91c1c;font-size:11px;font-weight:700;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;">
         <button onclick="cerrarConfirmPwd()"
           style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:8px;
-          padding:10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+                 padding:10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
           Cancelar
         </button>
         <button onclick="confirmarConPwd()" id="confirm-pwd-btn"
           style="flex:1;background:#b91c1c;color:#fff;border:none;border-radius:8px;
-          padding:10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+                 padding:10px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
           Confirmar eliminación
         </button>
       </div>
