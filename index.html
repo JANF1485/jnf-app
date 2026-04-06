@@ -217,7 +217,16 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
 </script>
   <!-- Service Worker para modo offline -->
   <script>
+  // Limpiar SW y caché viejos
   if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(reg){ reg.unregister(); });
+    });
+    caches.keys().then(function(names){
+      names.forEach(function(name){ caches.delete(name); });
+    });
+  }
+  if(false && 'serviceWorker' in navigator){
     window.addEventListener('load', function(){
       navigator.serviceWorker.register('./sw.js')
         .then(function(reg){
