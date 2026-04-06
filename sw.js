@@ -1,5 +1,5 @@
 // JNF App Service Worker v1.0
-const CACHE_NAME = 'jnf-app-v1';
+const CACHE_NAME = 'jnf-app-v6';
 const FIREBASE_URLS = [
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
