@@ -4949,7 +4949,7 @@ function f350_liquidar(){
   }).then(function(){
     f350_st('✅ Liquidado y guardado — '+f350_mes(_f350Per)+' '+anioF,'ok');
     audRegistrar('Liquidar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+f350_mes(_f350Per)+' '+anioF);
-    f350_cargarHistorial();
+    // No llamar f350_cargarHistorial — el historial está en Archivo de Reportes
   }).catch(function(e){f350_st('Liquidado pero error al guardar: '+e.message,'err');});
 }
 
@@ -5185,19 +5185,20 @@ async function f350mp_generar(){
       var _k=('jnf_f350_'+activeClientId+'_'+anio+'_'+cod+'_'+_ts).replace(/[^a-zA-Z0-9_-]/g,'_');
       var dH=Object.assign({},d,{clienteId:activeClientId,tipo:'f350',fechaLiquidacion:new Date().toISOString()});
       db.collection('resultados_historico').doc(_k).set({
-        key:_k,clienteId:activeClientId,tipo:'f350',anio:anio,pCod:cod,
+        key:_k,clienteId:activeClientId,tipo:'f350',anio:String(anio),pCod:cod,
         fechaLiquidacion:new Date().toISOString(),data:JSON.stringify(dH)
       }).catch(function(e){console.warn('[F350mp hist]',e);});
       db.collection('resultados').add({
-        clienteId:activeClientId,anio:anio,periodo:cod,tipo:'f350',
+        clienteId:activeClientId,anio:String(anio),periodo:cod,tipo:'f350',
         data:JSON.stringify(d),fechaGuardado:new Date().toISOString()
       }).catch(function(e){console.warn('[F350mp res]',e);});
     }
     f350mp_generarPDF(d,anio,mObj.label);
     await new Promise(function(r){setTimeout(r,200);});
   }
-  prog.textContent='✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'');
-  f350_cargarHistorial();
+  prog.textContent='✅ '+total+' PDF'+(total>1?'s':'')+' generado'+(total>1?'s':'')+' — guardados en Archivo de Reportes';
+  // Recargar el Archivo de Reportes para mostrar los nuevos registros
+  if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
   setTimeout(function(){prog.style.display='none';},4000);
 }
 
