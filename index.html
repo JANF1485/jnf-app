@@ -4,6 +4,9 @@
 
 
 <meta charset="UTF-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>JNF — Sistema de Gestión Contable</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -5543,10 +5546,7 @@ function f350_generarPDF(){
   var tot=f350_calcularTotales();
   var cl=clients.find(function(x){return x.id===activeClientId;})||{};
   var yr=activeYear||new Date().getFullYear();
-  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0"><title>F350 '+f350_mes(_f350Per)+' '+yr+'</title>'
+  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>F350 '+f350_mes(_f350Per)+' '+yr+'</title>'
     +'<style>body{font-family:Montserrat,sans-serif;margin:0;padding:20px;color:#111827;font-size:12px;}'
     +'h1{font-size:16px;color:#1a2580;margin:0 0 3px;}h2{font-size:11px;color:#6b7280;font-weight:500;margin:0 0 14px;}'
     +'table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:11px;}'
