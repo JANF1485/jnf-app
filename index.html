@@ -4281,10 +4281,10 @@ function cargarArchivo(clientId, year){
       html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
       html += '<div style="background:#eef1ff;border-radius:10px;padding:12px;">'
         +'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:4px;">TOTAL RENTA (C.130)</div>'
-        +'<div style="font-size:16px;font-weight:700;color:#1a2580;">'+fmtM(totRenta)+'</div></div>';
+        +'<div class="tot-renta" style="font-size:16px;font-weight:700;color:#1a2580;">'+fmtM(totRenta)+'</div></div>';
       html += '<div style="background:#eef1ff;border-radius:10px;padding:12px;">'
         +'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:4px;">TOTAL IVA (C.134)</div>'
-        +'<div style="font-size:16px;font-weight:700;color:#1a2580;">'+fmtM(totIva)+'</div></div>';
+        +'<div class="tot-iva" style="font-size:16px;font-weight:700;color:#1a2580;">'+fmtM(totIva)+'</div></div>';
       html += '<div style="background:'+(totPago>0?'#fee2e2':'#d1fae5')+';border-radius:10px;padding:12px;">'
         +'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:4px;">TOTAL PAGO (C.138)</div>'
         +'<div style="font-size:16px;font-weight:700;color:'+(totPago>0?'#991b1b':'#065f46')+';">'+fmtM(totPago)+'</div></div>';
@@ -4303,7 +4303,7 @@ function cargarArchivo(clientId, year){
         var badge = c138>0
           ? '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Pago: '+fmtM(c138)+'</span>'
           : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Sin retenciones</span>';
-        html += '<div style="background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:6px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
+        html += '<div class="period-row-item" data-c130="'+(d.c130||0)+'" data-c134="'+(d.c134||0)+'" data-c138="'+(d.c138||0)+'" style="background:#f8faff;border:1px solid #e5e7f0;border-radius:8px;margin-bottom:6px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
         html += '<div>'
           +'<div style="font-size:12px;font-weight:700;color:#1a2580;">'+(MESES_LABEL[p]||p)+' '+year+'</div>'
           +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Guardado: '+fecha+' &nbsp;·&nbsp; Renta: '+fmtM(d.c130||0)+' &nbsp;·&nbsp; IVA: '+fmtM(d.c134||0)+'</div>'
@@ -4329,7 +4329,8 @@ function cargarArchivo(clientId, year){
           if(btnDel){
             var key=btnDel.getAttribute('data-key');
             var per=btnDel.getAttribute('data-per');
-            window.guardadoEliminarF350(key,per);
+            var filaEl=btnDel.closest('div[style*="background:#f8faff"]')||btnDel.parentElement.parentElement;
+            window.guardadoEliminarF350(key,per,filaEl);
           }
         });
       }
@@ -4381,11 +4382,41 @@ window.inc_verVersion = function(key){
   });
 };
 
-window.guardadoEliminarF350 = function(key, mes){
+window.guardadoEliminarF350 = function(key, mes, filaEl){
   var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
     '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-  var mesLabel = MESES[mes]||mes;
-  eliminarReporte('f350', key, null, mesLabel);
+  var mesLabel=MESES[mes]||mes;
+  if(!db) return;
+  if(!confirm('\xbfEliminar la declaraci\xf3n F350 de '+mesLabel+'?\nEsta acci\xf3n no se puede deshacer.')) return;
+  if(filaEl) filaEl.remove();
+  var lista=document.getElementById('guardado-f350-list');
+  if(lista){
+    var filas=lista.querySelectorAll('.period-row-item');
+    var totR=0,totI=0,totP=0;
+    filas.forEach(function(f){
+      totR+=parseFloat(f.dataset.c130||0);
+      totI+=parseFloat(f.dataset.c134||0);
+      totP+=parseFloat(f.dataset.c138||0);
+    });
+    var fmt=function(n){return '$'+Math.round(n).toLocaleString('es-CO');};
+    var t1=lista.querySelector('.tot-renta');if(t1)t1.textContent=fmt(totR);
+    var t2=lista.querySelector('.tot-iva');if(t2)t2.textContent=fmt(totI);
+    if(!filas.length) lista.innerHTML='<div style="color:#9ca3af;font-size:12px;">No hay declaraciones guardadas para este a\xf1o.</div>';
+  }
+  var docId=key.replace(/[^a-zA-Z0-9_-]/g,'_');
+  db.collection('resultados').doc(docId).delete().then(function(){
+    db.collection('resultados_historico').doc(docId).delete().catch(function(){});
+    var c=clients.find(function(x){return x.id===activeClientId;});
+    audRegistrar('Eliminar','F350',activeClientId,(c||{}).razon||'','Per\xedodo '+mesLabel+' eliminado');
+    var sb=document.createElement('div');
+    sb.textContent='\u2713 F350 de '+mesLabel+' eliminado';
+    sb.style.cssText='position:fixed;bottom:24px;right:24px;background:#1a2580;color:#fff;padding:12px 20px;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;z-index:9999;';
+    document.body.appendChild(sb);
+    setTimeout(function(){if(sb.parentNode)sb.parentNode.removeChild(sb);},3000);
+  }).catch(function(e){
+    alert('Error: '+e.message);
+    if(typeof loadSavedResults==='function') loadSavedResults(activeClientId,activeYear);
+  });
 };
 
 window.inc_eliminarVersion = function(key){
@@ -7984,10 +8015,10 @@ function eliminarReporte(tipo, key, divEl, label){
     ? '¿Eliminar la declaración F350 de '+label+'?\nEsta acción no se puede deshacer.'
     : '¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.';
   if(!confirm(msg)) return;
+  // Ocultar fila inmediatamente para feedback visual instantáneo
+  if(divEl) divEl.style.display='none';
   var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
-  console.log('[ELIM] Eliminando doc:', docId, 'tipo:', tipo);
   db.collection('resultados').doc(docId).delete().then(function(){
-    console.log('[ELIM] Eliminado correctamente');
     // También eliminar de resultados_historico si aplica
     if(tipo==='f350'){
       db.collection('resultados_historico').doc(docId).delete().catch(function(){});
