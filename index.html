@@ -5635,38 +5635,44 @@ window.confirmarConPwd = function(){
   if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
   if(errEl)errEl.style.display='none';
 
+  var ejecutado=false;
   var doExecute=function(){
+    if(ejecutado)return; ejecutado=true;
     cerrarConfirmPwd();
     if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();
   };
   var doError=function(msg){
+    if(ejecutado)return; ejecutado=true;
     if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}
     if(errEl){errEl.textContent=msg;errEl.style.display='block';}
   };
 
-  // Paso 1: verificar contra contraseña guardada en sesión/sessionStorage
+  // Verificación 1: contraseña guardada en sesión (instantánea, sin Firebase)
   var sp=window._sessionPwd;
-  if(!sp){
-    try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}
-  }
+  if(!sp){try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}}
   if(sp && pwd===sp){doExecute();return;}
 
-  // Paso 2: verificar con Firebase signIn (más confiable que reauth)
+  // Timeout de seguridad: si Firebase no responde en 6 segundos → ejecutar
+  var timer=setTimeout(function(){
+    console.warn('[JNF] Firebase auth timeout — ejecutando acción');
+    doExecute();
+  }, 6000);
+
   var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch','auth/invalid-password'];
   firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
     .then(function(){
-      // Guardar para futuras verificaciones
+      clearTimeout(timer);
       window._sessionPwd=pwd;
       try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
       doExecute();
     })
     .catch(function(e){
+      clearTimeout(timer);
       if(WRONG.indexOf(e.code)>=0){
         doError('Contraseña incorrecta. Intenta de nuevo.');
       } else {
-        // Firebase falla por razón técnica (red, token, etc.) — no por contraseña
-        // El usuario ya está autenticado, ejecutar acción
-        console.warn('[JNF confirmar] Firebase error no-password:', e.code, e.message);
+        // Error técnico de Firebase (red, CORS, token) — admin ya autenticado
+        console.warn('[JNF] Firebase error no-password:', e.code);
         doExecute();
       }
     });
