@@ -5630,52 +5630,74 @@ window.confirmarConPwd = function(){
   var errEl=document.getElementById('confirm-pwd-error');
   var btnEl=document.getElementById('confirm-pwd-btn');
   var pwd=inputEl?inputEl.value.trim():'';
-  if(!pwd){if(errEl){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';}return;}
-  if(!currentUser){if(errEl){errEl.textContent='No hay sesión activa.';errEl.style.display='block';}return;}
+  if(!pwd){
+    if(errEl){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';}
+    return;
+  }
+  if(!currentUser){
+    if(errEl){errEl.textContent='No hay sesión activa.';errEl.style.display='block';}
+    return;
+  }
   if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
   if(errEl)errEl.style.display='none';
 
-  var ejecutado=false;
   var doExecute=function(){
-    if(ejecutado)return; ejecutado=true;
     cerrarConfirmPwd();
     if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();
   };
   var doError=function(msg){
-    if(ejecutado)return; ejecutado=true;
     if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}
     if(errEl){errEl.textContent=msg;errEl.style.display='block';}
   };
 
-  // Verificación 1: contraseña guardada en sesión (instantánea, sin Firebase)
+  // Verificar contra contraseña guardada en sesión (login actual)
   var sp=window._sessionPwd;
-  if(!sp){try{var raw=sessionStorage.getItem('_jnf_sp');if(raw)sp=decodeURIComponent(escape(atob(raw)));}catch(e){}}
-  if(sp && pwd===sp){doExecute();return;}
+  if(!sp){
+    try{
+      var raw=sessionStorage.getItem('_jnf_sp');
+      if(raw)sp=decodeURIComponent(escape(atob(raw)));
+    }catch(e){}
+  }
 
-  // Timeout de seguridad: si Firebase no responde en 6 segundos → ejecutar
+  // Si hay contraseña en sesión, comparar directamente
+  if(sp){
+    if(pwd===sp){doExecute();}
+    else{doError('Contraseña incorrecta. Intenta de nuevo.');}
+    return;
+  }
+
+  // Si no hay contraseña en sesión (Firebase persistió la sesión sin login manual),
+  // verificar con reauthenticate con timeout de seguridad
+  var done=false;
   var timer=setTimeout(function(){
-    console.warn('[JNF] Firebase auth timeout — ejecutando acción');
-    doExecute();
-  }, 6000);
+    if(!done){done=true;doExecute();}
+  },5000);
 
-  var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch','auth/invalid-password'];
-  firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
-    .then(function(){
-      clearTimeout(timer);
-      window._sessionPwd=pwd;
-      try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
-      doExecute();
-    })
-    .catch(function(e){
-      clearTimeout(timer);
-      if(WRONG.indexOf(e.code)>=0){
-        doError('Contraseña incorrecta. Intenta de nuevo.');
-      } else {
-        // Error técnico de Firebase (red, CORS, token) — admin ya autenticado
-        console.warn('[JNF] Firebase error no-password:', e.code);
+  try{
+    var cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,pwd);
+    currentUser.reauthenticateWithCredential(cred)
+      .then(function(){
+        if(done)return; done=true;
+        clearTimeout(timer);
+        window._sessionPwd=pwd;
+        try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
         doExecute();
-      }
-    });
+      })
+      .catch(function(e){
+        if(done)return; done=true;
+        clearTimeout(timer);
+        var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
+        if(WRONG.indexOf(e.code)>=0){
+          doError('Contraseña incorrecta. Intenta de nuevo.');
+        } else {
+          // Error técnico — ejecutar directamente
+          doExecute();
+        }
+      });
+  }catch(ex){
+    clearTimeout(timer);
+    if(!done){done=true;doExecute();}
+  }
 };
 
 
