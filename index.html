@@ -4362,15 +4362,7 @@ window.guardadoEliminarF350 = function(key, mes){
   var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
     '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
   var mesLabel = MESES[mes]||mes;
-  pedirConfirmPwd('¿Eliminar la declaración F350 de '+mesLabel+'? Esta acción no se puede deshacer.', function(){
-    db.collection('resultados').doc(key).delete().then(function(){
-      db.collection('resultados_historico').doc(key).delete().catch(function(){});
-      ss('Declaración F350 de '+mesLabel+' eliminada','ok');
-      audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
-      if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
-      else if(window._openGuardado) window._openGuardado();
-    }).catch(function(e){ ss('Error al eliminar: '+e.message,'err'); });
-  });
+  eliminarReporte('f350', key, null, mesLabel);
 };
 
 window.inc_eliminarVersion = function(key){
@@ -7966,26 +7958,39 @@ function doChangePasswordDirect(){
 })();
 
 
-function eliminarReporte(tipo, key, divEl){
+function eliminarReporte(tipo, key, divEl, label){
   if(!db) return;
-  if(!confirm('¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.')) return;
-    var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
-    console.log('[ELIM] Eliminando doc:', docId, 'tipo:', tipo);
-    db.collection('resultados').doc(docId).delete().then(function(){
-      console.log('[ELIM] Eliminado correctamente');
-      var c = clients.find(function(x){return x.id===activeClientId;});
-      var yr = activeYear||new Date().getFullYear();
-      audRegistrar('Eliminar','Exógena',activeClientId,(c||{}).razon||'','Reporte eliminado desde Archivo de Reportes');
-      if(divEl) divEl.style.display='none';
+  var msg = label
+    ? '¿Eliminar la declaración F350 de '+label+'?\nEsta acción no se puede deshacer.'
+    : '¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.';
+  if(!confirm(msg)) return;
+  var docId = key.replace(/[^a-zA-Z0-9_-]/g,'_');
+  console.log('[ELIM] Eliminando doc:', docId, 'tipo:', tipo);
+  db.collection('resultados').doc(docId).delete().then(function(){
+    console.log('[ELIM] Eliminado correctamente');
+    // También eliminar de resultados_historico si aplica
+    if(tipo==='f350'){
+      db.collection('resultados_historico').doc(docId).delete().catch(function(){});
+    }
+    var c = clients.find(function(x){return x.id===activeClientId;});
+    var yr = activeYear||new Date().getFullYear();
+    var tipoLabel = tipo==='f350'?'F350':(tipo==='f300'?'F300':'Exógena');
+    audRegistrar('Eliminar',tipoLabel,activeClientId,(c||{}).razon||'','Reporte eliminado desde Archivo de Reportes');
+    if(divEl) divEl.style.display='none';
+    if(tipo==='f350'){
+      if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, yr);
+    } else {
       if(c) cargarArchivo(c.id, yr);
-      var sb = document.createElement('div');
-      sb.textContent = '✓ Reporte eliminado correctamente';
-      sb.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2580;color:#fff;padding:12px 20px;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);';
-      document.body.appendChild(sb);
-      setTimeout(function(){ document.body.removeChild(sb); }, 3000);
-    }).catch(function(e){
-      alert('Error al eliminar: ' + e.message);
-    });
+    }
+    var sb = document.createElement('div');
+    sb.textContent = '✓ '+(label||'Reporte')+' eliminado correctamente';
+    sb.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2580;color:#fff;padding:12px 20px;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;z-index:9999;';
+    document.body.appendChild(sb);
+    setTimeout(function(){ document.body.removeChild(sb); }, 3000);
+  }).catch(function(e){
+    console.error('[ELIM] Error:', e);
+    alert('Error al eliminar: ' + e.message);
+  });
 }
 
 
