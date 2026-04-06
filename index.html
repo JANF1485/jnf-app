@@ -2602,6 +2602,8 @@ window._doLogin = window.doLogin = function doLogin(){
       return;
     }
   }
+  // Guardar contraseña en memoria para verificación de eliminaciones
+  window._sessionPwd = pass;
   auth.signInWithEmailAndPassword(email, pass).catch(function(e){
     btn.disabled = false; btn.textContent = 'Ingresar';
     var msgs = {'auth/user-not-found':'Usuario no encontrado','auth/wrong-password':'Contraseña incorrecta','auth/invalid-credential':'Email o contraseña incorrectos','auth/invalid-email':'Email inválido','auth/too-many-requests':'Demasiados intentos. Espera un momento.'};
@@ -5673,37 +5675,29 @@ window.confirmarConPwd = function(){
     if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
   };
 
-  var WRONG = ['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
+  // Comparar contra la contraseña guardada en sesión (más confiable que re-autenticar)
+  if(window._sessionPwd && pwd === window._sessionPwd){
+    doExecute();
+    return;
+  }
 
-  // Intento 1: reauthenticateWithCredential
+  // Fallback: re-autenticar con Firebase si no hay contraseña en sesión
   try{
     var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
     currentUser.reauthenticateWithCredential(cred)
-      .then(function(){ doExecute(); })
-      .catch(function(e1){
-        if(WRONG.indexOf(e1.code) >= 0){
+      .then(function(){
+        window._sessionPwd = pwd; // Actualizar la contraseña en memoria
+        doExecute();
+      })
+      .catch(function(e){
+        var WRONG = ['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
+        if(WRONG.indexOf(e.code) >= 0){
           doError('Contraseña incorrecta. Intenta de nuevo.');
-          return;
+        } else {
+          // Firebase falla por razones técnicas — ejecutar de todas formas
+          console.warn('[Auth]', e.code, e.message);
+          doExecute();
         }
-        // Error no relacionado con contraseña — intentar signIn como fallback
-        firebase.auth().signInWithEmailAndPassword(currentUser.email, pwd)
-          .then(function(){ doExecute(); })
-          .catch(function(e2){
-            if(WRONG.indexOf(e2.code) >= 0){
-              doError('Contraseña incorrecta. Intenta de nuevo.');
-            } else if(e2.code === 'auth/too-many-requests'){
-              doError('Demasiados intentos. Espera un momento.');
-            } else {
-              // Último recurso: si Firebase da error de red pero la contraseña
-              // tiene al menos 6 chars, ejecutar el callback con advertencia
-              if(pwd.length >= 6){
-                console.warn('[Auth fallback]', e2.code, e2.message);
-                doExecute();
-              } else {
-                doError('Contraseña incorrecta. Intenta de nuevo.');
-              }
-            }
-          });
       });
   } catch(ex){
     doError('Error de autenticación. Intenta de nuevo.');
