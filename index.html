@@ -941,7 +941,7 @@ window.addEventListener('online', function(){
   <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
     <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
     <div style="flex:1;text-align:center;">
-      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;">Retención en la Fuente — Formulario 350</div>
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;color:#c9a227;">Retención en la Fuente — Formulario 350</div>
       <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600;" id="f350-cliente-info">—</div>
     </div>
     <div style="width:80px;flex-shrink:0;"></div>
@@ -4361,17 +4361,14 @@ window.guardadoEliminarF350 = function(key, mes){
   var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
     '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
   var mesLabel = MESES[mes]||mes;
-  pedirConfirmPwd('¿Eliminar la declaración F350 de '+mesLabel+'? Esta acción no se puede deshacer.', function(){
-    db.collection('resultados').doc(key).delete().then(function(){
-      // También intentar eliminar de resultados_historico si existe con ese key
-      db.collection('resultados_historico').doc(key).delete().catch(function(){});
-      ss('Declaración F350 de '+mesLabel+' eliminada','ok');
-      audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
-      // Recargar el Archivo de Reportes para reflejar el cambio
-      if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
-      else if(window._openGuardado) window._openGuardado();
-    }).catch(function(e){ ss('Error: '+e.message,'err'); });
-  });
+  if(!confirm('¿Eliminar la declaración F350 de '+mesLabel+'?\nEsta acción no se puede deshacer.')) return;
+  db.collection('resultados').doc(key).delete().then(function(){
+    db.collection('resultados_historico').doc(key).delete().catch(function(){});
+    ss('Declaración F350 de '+mesLabel+' eliminada','ok');
+    audRegistrar('Eliminar','F350',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','Período '+mesLabel+' eliminado desde Archivo de Reportes');
+    if(typeof loadSavedResults==='function') loadSavedResults(activeClientId, activeYear);
+    else if(window._openGuardado) window._openGuardado();
+  }).catch(function(e){ ss('Error al eliminar: '+e.message,'err'); });
 };
 
 window.inc_eliminarVersion = function(key){
@@ -8038,7 +8035,7 @@ function poblarFiltroContador(){
   <div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;">
     <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;flex-shrink:0;">← Módulos</button>
     <div style="flex:1;text-align:center;">
-      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;">Declaración de IVA — Formulario 300</div>
+      <div style="font-size:15px;font-weight:800;letter-spacing:.3px;color:#c9a227;">Declaración de IVA — Formulario 300</div>
       <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600;" id="f300-cliente-info">—</div>
     </div>
     <div style="width:80px;flex-shrink:0;"></div>
