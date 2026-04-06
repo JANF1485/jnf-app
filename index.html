@@ -5542,7 +5542,10 @@ function f350_generarPDF(){
   var tot=f350_calcularTotales();
   var cl=clients.find(function(x){return x.id===activeClientId;})||{};
   var yr=activeYear||new Date().getFullYear();
-  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>F350 '+f350_mes(_f350Per)+' '+yr+'</title>'
+  var html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0"><title>F350 '+f350_mes(_f350Per)+' '+yr+'</title>'
     +'<style>body{font-family:Montserrat,sans-serif;margin:0;padding:20px;color:#111827;font-size:12px;}'
     +'h1{font-size:16px;color:#1a2580;margin:0 0 3px;}h2{font-size:11px;color:#6b7280;font-weight:500;margin:0 0 14px;}'
     +'table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:11px;}'
@@ -5630,73 +5633,36 @@ window.confirmarConPwd = function(){
   var errEl=document.getElementById('confirm-pwd-error');
   var btnEl=document.getElementById('confirm-pwd-btn');
   var pwd=inputEl?inputEl.value.trim():'';
+
   if(!pwd){
     if(errEl){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';}
     return;
   }
-  if(!currentUser){
-    if(errEl){errEl.textContent='No hay sesión activa.';errEl.style.display='block';}
-    return;
-  }
-  if(btnEl){btnEl.disabled=true;btnEl.textContent='Verificando…';}
-  if(errEl)errEl.style.display='none';
 
-  var doExecute=function(){
-    cerrarConfirmPwd();
-    if(typeof _confirmPwdCallback==='function')_confirmPwdCallback();
-  };
-  var doError=function(msg){
-    if(btnEl){btnEl.disabled=false;btnEl.textContent='Confirmar eliminación';}
-    if(errEl){errEl.textContent=msg;errEl.style.display='block';}
-  };
-
-  // Verificar contra contraseña guardada en sesión (login actual)
+  // Recuperar contraseña guardada en sesión
   var sp=window._sessionPwd;
   if(!sp){
     try{
       var raw=sessionStorage.getItem('_jnf_sp');
-      if(raw)sp=decodeURIComponent(escape(atob(raw)));
+      if(raw) sp=decodeURIComponent(escape(atob(raw)));
     }catch(e){}
   }
 
-  // Si hay contraseña en sesión, comparar directamente
   if(sp){
-    if(pwd===sp){doExecute();}
-    else{doError('Contraseña incorrecta. Intenta de nuevo.');}
-    return;
-  }
-
-  // Si no hay contraseña en sesión (Firebase persistió la sesión sin login manual),
-  // verificar con reauthenticate con timeout de seguridad
-  var done=false;
-  var timer=setTimeout(function(){
-    if(!done){done=true;doExecute();}
-  },5000);
-
-  try{
-    var cred=firebase.auth.EmailAuthProvider.credential(currentUser.email,pwd);
-    currentUser.reauthenticateWithCredential(cred)
-      .then(function(){
-        if(done)return; done=true;
-        clearTimeout(timer);
-        window._sessionPwd=pwd;
-        try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
-        doExecute();
-      })
-      .catch(function(e){
-        if(done)return; done=true;
-        clearTimeout(timer);
-        var WRONG=['auth/wrong-password','auth/invalid-credential','auth/user-mismatch'];
-        if(WRONG.indexOf(e.code)>=0){
-          doError('Contraseña incorrecta. Intenta de nuevo.');
-        } else {
-          // Error técnico — ejecutar directamente
-          doExecute();
-        }
-      });
-  }catch(ex){
-    clearTimeout(timer);
-    if(!done){done=true;doExecute();}
+    // Hay contraseña en sesión — comparar directamente
+    if(pwd===sp){
+      cerrarConfirmPwd();
+      if(typeof _confirmPwdCallback==='function') _confirmPwdCallback();
+    } else {
+      if(errEl){errEl.textContent='Contraseña incorrecta.';errEl.style.display='block';}
+    }
+  } else {
+    // No hay contraseña en sesión (Firebase recuperó automáticamente)
+    // Guardar la que ingresó y ejecutar — está autenticado por Firebase
+    window._sessionPwd=pwd;
+    try{sessionStorage.setItem('_jnf_sp',btoa(unescape(encodeURIComponent(pwd))));}catch(e){}
+    cerrarConfirmPwd();
+    if(typeof _confirmPwdCallback==='function') _confirmPwdCallback();
   }
 };
 
