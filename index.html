@@ -1180,6 +1180,18 @@ window.addEventListener('online', function(){
           <div style="font-size:9px;color:var(--t3);margin-top:5px;">Escribe el NIT sin puntos ni dígito de verificación · Enter para buscar</div>
         </div>
 
+        <!-- Botón generar todos -->
+        <div style="background:var(--sf);border-radius:10px;border:0.5px solid var(--br);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--t1);">Generar todos los certificados</div>
+            <div style="font-size:10px;color:var(--t2);margin-top:2px;">Genera un PDF por cada tercero retenido, incluye los que no tuvieron retenciones</div>
+          </div>
+          <button onclick="f350_cert_generarTodos()"
+            style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+            📄 Generar todos
+          </button>
+        </div>
+
         <!-- Resultado del certificado -->
         <div id="f350-cert-resultado" style="display:none;">
           <div style="background:#fff;border-radius:10px;border:1px solid #e5e7f0;overflow:hidden;">
@@ -6261,9 +6273,12 @@ window.f350_cert_buscar = function(){
   var matches = Object.values(terceros).filter(function(t){ return t.nit===nit; });
 
   if(!matches.length){
+    // Ofrecer certificado de "sin retenciones"
     var nfMsg = document.getElementById('f350-cert-notfound-msg');
-    if(nfMsg) nfMsg.textContent = 'No se encontró el NIT '+nit+' en los datos del Excel '+
-      (tipo==='anual'?'anual.':'del período.');
+    if(nfMsg) nfMsg.innerHTML = 'NIT <strong>'+nit+'</strong> no tuvo retenciones en el período.<br>'
+      +'<button onclick="f350_cert_sinRetencion(\''+nit+'\')" '
+      +'style="margin-top:8px;background:#6b7280;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer;">'
+      +'📄 Generar certificado de no retención</button>';
     if(nf) nf.style.display='block';
     return;
   }
@@ -6321,6 +6336,124 @@ window.f350_cert_buscar = function(){
   // Guardar contexto para el PDF
   window._f350CertContext = {empresa:c, anio:anio, mes:per, mesLabel:periodoLabel};
   window._f350TercerosList = [datos];
+};
+
+window.f350_cert_sinRetencion = function(nit){
+  var c   = clients.find(function(x){return x.id===activeClientId;})||{};
+  var ctx = window._f350CertContext||{};
+  var fmtF = (function(){var d=new Date();return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();})();
+  var blue=[26,37,128], gold=[201,162,39];
+  var {jsPDF} = window.jspdf;
+  var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  var W=216,H=279;
+
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(0,0,W,30,'F');
+  doc.setFillColor(gold[0],gold[1],gold[2]); doc.rect(0,30,W,2,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(c.razon||'EMPRESA RETENEDORA', W/2, 12, {align:'center'});
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('NIT: '+(c.nit||''), W/2, 18, {align:'center'});
+  doc.text((c.direccion||'')+(c.ciudad?' — '+c.ciudad:''), W/2, 23, {align:'center'});
+
+  doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('CERTIFICADO DE RETENCIÓN EN LA FUENTE', W/2, 44, {align:'center'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+  doc.text('Expedido en cumplimiento del Art. 381 del Estatuto Tributario', W/2, 51, {align:'center'});
+  doc.text('Período: '+(ctx.mesLabel||''), W/2, 57, {align:'center'});
+
+  doc.setDrawColor(gold[0],gold[1],gold[2]); doc.setLineWidth(0.5);
+  doc.line(15,61,W-15,61);
+
+  var y=72;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(15,y-5,W-30,8,'F');
+  doc.text('AGENTE RETENEDOR', 18, y); y+=10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+  doc.text('Razón Social:', 15, y); doc.setFont('helvetica','bold'); doc.text(c.razon||'', 55, y);
+  y+=6; doc.setFont('helvetica','normal'); doc.text('NIT:', 15, y); doc.text(c.nit||'', 55, y);
+
+  y+=14;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(15,y-5,W-30,8,'F');
+  doc.text('SUJETO RETENIDO', 18, y); y+=10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+  doc.text('NIT / C.C.:', 15, y); doc.setFont('helvetica','bold'); doc.text(nit, 55, y);
+  y+=6; doc.setFont('helvetica','normal');
+  doc.text('Nombre / Razón Social:', 15, y); doc.text('(No registrado en base de datos del período)', 75, y);
+
+  y+=16;
+  // Caja de no retención
+  doc.setFillColor(240,253,244); doc.rect(15,y,W-30,30,'F');
+  doc.setDrawColor(gold[0],gold[1],gold[2]); doc.rect(15,y,W-30,30,'S');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('SIN RETENCIÓN PRACTICADA', W/2, y+11, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,60,60);
+  doc.text('Valor retenido: $0', W/2, y+20, {align:'center'});
+  y+=38;
+
+  doc.setDrawColor(gold[0],gold[1],gold[2]); doc.rect(15,y,W-30,30,'S');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(40,40,40);
+  doc.text('DECLARACIÓN DEL AGENTE RETENEDOR', 18, y+7);
+  doc.setFont('helvetica','normal');
+  var legal='El suscrito Representante Legal de '+(c.razon||'la empresa')+', NIT '+(c.nit||'')+
+    ', certifica que durante el período de '+(ctx.mesLabel||'')+' NO se practicó retención en la fuente '+
+    'al contribuyente con NIT '+nit+', de conformidad con el Art. 381 y ss. del Estatuto Tributario.';
+  doc.text(doc.splitTextToSize(legal,W-40), 18, y+14); y+=38;
+
+  doc.line(15,y,80,y); doc.line(W-80,y,W-15,y); y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('Representante Legal', 15, y);
+  doc.text('Firma del Agente Retenedor', W-80, y);
+  y+=5; doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); doc.setFontSize(8);
+  doc.text(c.razon||'', 15, y);
+
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(0,H-12,W,12,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7);
+  var anio = ctx.anio||new Date().getFullYear();
+  var mes  = ctx.mes||'00';
+  doc.text('No. CERT-'+anio+'-'+mes+'-'+nit+'-SR · Expedido: '+fmtF+' · JNF App', W/2, H-5, {align:'center'});
+  doc.save('CertificadoSinRetencion_'+nit+'_'+mes+'_'+anio+'.pdf');
+};
+
+window.f350_cert_generarTodos = function(){
+  var tipo     = window._f350CertTipo||'mensual';
+  var terceros = tipo==='anual' ? window._f350TercerosAnual : window._f350Terceros;
+  if(!terceros || !Object.keys(terceros).length){
+    alert(tipo==='anual'
+      ? 'Carga el Excel anual primero.'
+      : 'Carga el Excel en el Modo 1 primero.');
+    return;
+  }
+  // Agrupar por NIT (puede haber varios conceptos por NIT)
+  var byNit = {};
+  Object.values(terceros).forEach(function(t){
+    if(!byNit[t.nit]) byNit[t.nit]={nit:t.nit,nombre:t.nombre,tp:t.tp,conceptos:[],totalBase:0,totalRet:0};
+    byNit[t.nit].conceptos.push({base:t.base,tarifa:t.tarifa,retencion:t.retencion||Math.round(t.base*t.tarifa/100)});
+    byNit[t.nit].totalBase += t.base;
+    byNit[t.nit].totalRet  += (t.retencion||Math.round(t.base*t.tarifa/100));
+  });
+  var lista = Object.values(byNit);
+  var total = lista.length;
+  if(!confirm('Se generarán '+total+' certificado'+(total!==1?'s':'')+' de retención. ¿Continuar?')) return;
+
+  // Guardar contexto
+  var c    = clients.find(function(x){return x.id===activeClientId;})||{};
+  var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+             '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var per  = _f350Per||(document.getElementById('f350-periodo')?document.getElementById('f350-periodo').value:'01');
+  var anio = document.getElementById('f350-anio')?document.getElementById('f350-anio').value:(activeYear||new Date().getFullYear());
+  window._f350CertContext = {empresa:c, anio:anio, mes:per, mesLabel:tipo==='anual'?'Año '+anio:(MESES[per]||per)+' '+anio};
+
+  lista.forEach(function(datos, i){
+    setTimeout(function(){
+      window._f350CertData = datos;
+      window._f350TercerosList = [datos];
+      f350_cert_generarPDF();
+    }, i*400);
+  });
+  f350_st('Generando '+total+' certificados — espera un momento...','ok');
 };
 
 window.f350_cert_limpiar = function(){
