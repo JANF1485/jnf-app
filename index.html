@@ -964,33 +964,51 @@ window.addEventListener('online', function(){
   <div id="f350-status" style="display:none;font-size:11px;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;"></div>
 
   <!-- SELECTOR DE MODO -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-    <div id="f350-modo1-card" onclick="f350_setModo(1)"
-      style="background:var(--sf);border:2px solid var(--bd);border-radius:12px;padding:18px;cursor:pointer;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-        <div style="width:38px;height:38px;border-radius:9px;background:#eef1ff;display:flex;align-items:center;justify-content:center;font-size:18px;">⚡</div>
-        <div id="f350-chk1" style="width:17px;height:17px;border-radius:50%;background:var(--bd);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;">
-          <div style="width:7px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>
-        </div>
-      </div>
-      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:3px;">Liquidación por período</div>
-      <div style="font-size:10px;color:var(--t2);line-height:1.5;">Carga el Excel del período, lee bases por T.P. y tarifa, y liquida el formulario 350 automáticamente.</div>
-      <span style="display:inline-block;margin-top:7px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef1ff;color:#1a2580;">Un período a la vez</span>
-    </div>
-    <div id="f350-modo2-card" onclick="f350_setModo(2)"
-      style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:18px;cursor:pointer;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-        <div style="width:38px;height:38px;border-radius:9px;background:#fff8e0;display:flex;align-items:center;justify-content:center;font-size:18px;">📅</div>
-        <div id="f350-chk2" style="width:17px;height:17px;border-radius:50%;background:var(--sf);border:2px solid var(--br);"></div>
-      </div>
-      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:3px;">Generar todos los períodos</div>
-      <div style="font-size:10px;color:var(--t2);line-height:1.5;">Carga el Excel anual y genera hasta 12 PDFs mensuales automáticamente.</div>
-      <span style="display:inline-block;margin-top:7px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff3cc;color:#8a6800;">Hasta 12 PDFs</span>
-    </div>
-  </div>
+  <div style="display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start;">
 
-  <!-- MODO 1 -->
-  <div id="f350-panel-modo1" style="display:block;">
+    <!-- SIDEBAR MODOS -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+
+      <!-- Modo 1 -->
+      <div id="f350-modo1-card" onclick="f350_setModo(1)"
+        style="background:var(--sf);border:2px solid var(--bd);border-radius:12px;padding:14px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div id="f350-chk1" style="width:16px;height:16px;border-radius:50%;background:var(--bd);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="width:6px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--bd);line-height:1.3;">Modo 1<br>Por período</div>
+        </div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.4;">Liquida mes a mes cargando el Excel mensual</div>
+        <span style="display:inline-block;margin-top:6px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef1ff;color:#1a2580;">Activo</span>
+      </div>
+
+      <!-- Modo 2 -->
+      <div id="f350-modo2-card" onclick="f350_setModo(2)"
+        style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:14px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div id="f350-chk2" style="width:16px;height:16px;border-radius:50%;background:var(--sf);border:2px solid var(--br);flex-shrink:0;"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--t1);line-height:1.3;">Modo 2<br>Todos los períodos</div>
+        </div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.4;">Genera todos los meses desde un solo Excel anual</div>
+      </div>
+
+      <!-- Modo 3 — Certificados -->
+      <div id="f350-modo3-card" onclick="f350_setModo(3)"
+        style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:14px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div id="f350-chk3" style="width:16px;height:16px;border-radius:50%;background:var(--sf);border:2px solid var(--br);flex-shrink:0;"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--t1);line-height:1.3;">Modo 3<br>Certificados</div>
+        </div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.4;">Genera certificados de retención por tercero retenido</div>
+      </div>
+
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <div>
+
+      <!-- PANEL MODO 1 -->
+      <div id="f350-panel-modo1" style="display:block;">
     <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:18px;margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:14px;">⚡ Modo 1 — Liquidación por período</div>
 
@@ -1040,6 +1058,7 @@ window.addEventListener('online', function(){
           style="padding:10px 18px;background:#c9a227;color:#fff;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
           ⬇ Borrador F350
         </button>
+
         <button onclick="f350_limpiarCampos();f350_st('Limpiado.','info');"
           style="padding:10px 14px;background:var(--sf);color:var(--t2);border:1.5px solid var(--br);border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
           ↺ Limpiar
@@ -1071,7 +1090,10 @@ window.addEventListener('online', function(){
   </div>
 
   <!-- MODO 2 -->
-  <div id="f350-panel-modo2" style="display:none;">
+  <div
+
+      <!-- PANEL MODO 2 -->
+      <div id="f350-panel-modo2" style="display:none;">
     <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:18px;margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:#8a6800;margin-bottom:16px;">📅 Generar declaraciones por período</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
@@ -1108,9 +1130,100 @@ window.addEventListener('online', function(){
     </div>
   </div>
 
+      <!-- PANEL MODO 3 — CERTIFICADOS -->
+      <div id="f350-panel-modo3" style="display:none;">
+        <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:18px;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:4px;">Certificados de Retención en la Fuente</div>
+          <div style="font-size:11px;color:var(--t2);">Selecciona el tipo de certificado, busca el tercero por NIT y genera el PDF</div>
+        </div>
 
+        <!-- Selector tipo -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div id="f350-cert-tipo-per" onclick="f350_cert_setTipo('mensual')"
+            style="background:var(--sf);border:2px solid #1a2580;border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+            <div style="font-size:22px;margin-bottom:6px;">📅</div>
+            <div style="font-size:12px;font-weight:700;color:#1a2580;">Por Período</div>
+            <div id="f350-cert-per-label" style="font-size:10px;color:var(--t2);margin-top:3px;">Período actual</div>
+            <div style="font-size:10px;color:var(--t2);">Usa el Excel ya cargado</div>
+          </div>
+          <div id="f350-cert-tipo-anu" onclick="f350_cert_setTipo('anual')"
+            style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+            <div style="font-size:22px;margin-bottom:6px;">📊</div>
+            <div style="font-size:12px;font-weight:700;color:var(--t1);">Acumulado Anual</div>
+            <div id="f350-cert-anu-label" style="font-size:10px;color:var(--t2);margin-top:3px;">Todo el año</div>
+            <div style="font-size:10px;color:var(--t2);">Carga el Excel anual</div>
+          </div>
+        </div>
 
-</div>
+        <!-- Carga Excel anual (solo visible en modo anual) -->
+        <div id="f350-cert-excel-area" style="display:none;background:var(--sf);border-radius:10px;border:0.5px solid var(--br);padding:14px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:8px;">Cargar Excel anual completo</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file" id="f350-cert-file-input" accept=".xlsx,.xls" onchange="f350_cert_leerExcel(this.files[0])"
+              style="flex:1;font-size:11px;border:1px solid var(--br);border-radius:6px;padding:6px 8px;"/>
+          </div>
+          <div id="f350-cert-excel-status" style="display:none;margin-top:8px;font-size:10px;font-weight:700;padding:6px 10px;border-radius:6px;"></div>
+        </div>
+
+        <!-- Buscador NIT -->
+        <div style="background:var(--sf);border-radius:10px;border:0.5px solid var(--br);padding:14px;margin-bottom:14px;">
+          <div style="font-size:9px;font-weight:700;color:var(--t2);letter-spacing:.4px;margin-bottom:6px;">NIT DEL TERCERO RETENIDO</div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="f350-cert-nit" placeholder="Ej: 900123456"
+              onkeydown="if(event.key==='Enter') f350_cert_buscar()"
+              style="flex:1;border:1.5px solid #1a2580;border-radius:7px;padding:9px 12px;font-size:14px;font-weight:700;color:#1a2580;letter-spacing:1px;font-family:monospace;outline:none;"/>
+            <button onclick="f350_cert_buscar()"
+              style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+              Buscar
+            </button>
+          </div>
+          <div style="font-size:9px;color:var(--t3);margin-top:5px;">Escribe el NIT sin puntos ni dígito de verificación · Enter para buscar</div>
+        </div>
+
+        <!-- Resultado del certificado -->
+        <div id="f350-cert-resultado" style="display:none;">
+          <div style="background:#fff;border-radius:10px;border:1px solid #e5e7f0;overflow:hidden;">
+            <div style="background:#1a2580;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div id="f350-cert-res-title" style="font-size:12px;font-weight:700;color:#fff;"></div>
+                <div id="f350-cert-res-sub" style="font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;"></div>
+              </div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div style="background:#eef1ff;border-radius:7px;padding:8px 12px;margin-bottom:12px;">
+                <div id="f350-cert-emp-name" style="font-size:11px;font-weight:700;color:#1a2580;"></div>
+                <div id="f350-cert-emp-nit" style="font-size:9px;color:#6b7280;margin-top:2px;"></div>
+              </div>
+              <div id="f350-cert-campos" style="margin-bottom:12px;"></div>
+              <div id="f350-cert-total-box" style="background:#1a2580;border-radius:7px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <span style="font-size:10px;color:rgba(255,255,255,.8);">TOTAL RETENIDO</span>
+                <span id="f350-cert-total-val" style="font-size:17px;font-weight:700;color:#c9a227;"></span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="f350_cert_limpiar()"
+                  style="flex:1;background:#f1f5f9;color:#374151;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+                  ← Buscar otro
+                </button>
+                <button onclick="f350_cert_generarPDF()"
+                  style="flex:2;background:#065f46;color:#fff;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+                  📄 Generar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No encontrado -->
+        <div id="f350-cert-notfound" style="display:none;text-align:center;padding:24px;background:var(--sf);border-radius:10px;border:0.5px solid var(--br);">
+          <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;">NIT no encontrado</div>
+          <div id="f350-cert-notfound-msg" style="font-size:11px;color:var(--t2);"></div>
+        </div>
+
+      </div><!-- /panel-modo3 -->
+
+    </div><!-- /panel derecho -->
+  </div><!-- /grid -->
 </div><!-- /max-width f350 -->
 
 <!-- ═══ PANTALLA AUDITORÍA ══════════════════════════════════════════ -->
@@ -4938,28 +5051,45 @@ function f300mp_generarPDF(d){
 // ═══════════════════════════════════════════════════
 
 function f350_setModo(modo){
-  var p1=document.getElementById('f350-panel-modo1');
-  var p2=document.getElementById('f350-panel-modo2');
-  var c1=document.getElementById('f350-modo1-card');
-  var c2=document.getElementById('f350-modo2-card');
-  var chk1=document.getElementById('f350-chk1');
-  var chk2=document.getElementById('f350-chk2');
-  var CHK_ON='<div style="width:7px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>';
-  if(modo===1){
-    if(p1)p1.style.display='block';
-    if(p2)p2.style.display='none';
-    if(c1){c1.style.borderColor='#1a2580';c1.style.background='#f0f3ff';}
-    if(c2){c2.style.borderColor='var(--br)';c2.style.background='var(--sf)';}
-    if(chk1){chk1.style.background='#1a2580';chk1.style.borderColor='#1a2580';chk1.innerHTML=CHK_ON;}
-    if(chk2){chk2.style.background='var(--sf)';chk2.style.borderColor='var(--br)';chk2.innerHTML='';}
-  } else {
-    if(p1)p1.style.display='none';
-    if(p2){p2.style.display='block';f350mp_renderMeses();}
-    if(c2){c2.style.borderColor='#c9a227';c2.style.background='#fffbf0';}
-    if(c1){c1.style.borderColor='var(--br)';c1.style.background='var(--sf)';}
-    if(chk2){chk2.style.background='#c9a227';chk2.style.borderColor='#c9a227';chk2.innerHTML=CHK_ON;}
-    if(chk1){chk1.style.background='var(--sf)';chk1.style.borderColor='var(--br)';chk1.innerHTML='';}
-  }
+  var cards = ['f350-modo1-card','f350-modo2-card','f350-modo3-card'];
+  var chks  = ['f350-chk1','f350-chk2','f350-chk3'];
+  var panels= ['f350-panel-modo1','f350-panel-modo2','f350-panel-modo3'];
+  var colors= ['#1a2580','#1a2580','#065f46'];
+
+  cards.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el)return;
+    var active=(i===modo-1);
+    el.style.borderColor = active ? colors[i] : 'var(--br)';
+    el.style.background  = active ? (i===2?'#f0fdf4':'var(--sf)') : 'var(--sf)';
+  });
+  chks.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el)return;
+    var active=(i===modo-1);
+    el.style.background  = active ? colors[i] : 'var(--sf)';
+    el.style.borderColor = active ? colors[i] : 'var(--br)';
+    el.innerHTML = active ? '<div style="width:6px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);"></div>' : '';
+  });
+  panels.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el)return;
+    el.style.display=(i===modo-1)?'block':'none';
+  });
+
+  // Actualizar badge en sidebar
+  cards.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el)return;
+    var badge=el.querySelector('.modo-badge-active');
+    if(badge) badge.remove();
+    if(i===modo-1){
+      var b=document.createElement('span');
+      b.className='modo-badge-active';
+      b.style.cssText='display:inline-block;margin-top:6px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+(i===2?'#d1fae5':'#eef1ff')+';color:'+colors[i]+';';
+      b.textContent='Activo';
+      el.appendChild(b);
+    }
+  });
+
+  // Si es modo 3, inicializar tipo por defecto
+  if(modo===3) f350_cert_setTipo('mensual');
 }
 
 // Liquidar F350 — calcula, muestra casilleros y guarda automáticamente
@@ -5180,6 +5310,17 @@ function f350mp_calcularMes(mes, wb_usar){
             +Math.max(0,getN(r['EXENTO']||0)-dv.exen)
             +Math.max(0,getN(r['EXCLUIDO']||0)-dv.excl);
     if(base<=0) return;
+    // Capturar datos del tercero para certificados
+    var nit=String(r['NIT']||r['Nit']||r['nit']||'').trim().replace(/[^0-9]/g,'');
+    var nombre=String(r['NOMBRE']||r['Nombre']||r['RAZON SOCIAL']||r['Razón Social']||r['RAZON']||'').trim();
+    if(nit && nombre){
+      if(!window._f350Terceros) window._f350Terceros={};
+      // Por período mensual
+      var tk=nit+'_'+tarifa;
+      if(!window._f350Terceros[tk]) window._f350Terceros[tk]={nit:nit,nombre:nombre,tarifa:tarifa,base:0,retencion:0,tp:tp};
+      window._f350Terceros[tk].base+=base;
+      window._f350Terceros[tk].retencion+=Math.round(base*tarifa/100);
+    }
     var key=tarifa.toString();
     if(esPJ){if(!pjBases[key])pjBases[key]={base:0,tarifa:tarifa};pjBases[key].base+=base;}
     else    {if(!pnBases[key])pnBases[key]={base:0,tarifa:tarifa};pnBases[key].base+=base;}
@@ -5712,7 +5853,660 @@ window.confirmarConPwd = function(){
 
 
 
+// ══════════════════════════════════════════════════════════
+// CERTIFICADOS DE RETENCIÓN EN LA FUENTE — F350
+// ══════════════════════════════════════════════════════════
+
+window.f350_abrirCertificados = function(){
+  var c = clients.find(function(x){ return x.id===activeClientId; }) || {};
+  var anio = document.getElementById('f350-anio') ? document.getElementById('f350-anio').value : (activeYear||new Date().getFullYear());
+  var per  = _f350Per || (document.getElementById('f350-periodo')?document.getElementById('f350-periodo').value:'01');
+  var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+             '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var mesLabel = MESES[per]||per;
+
+  // Modal de selección de tipo
+  var modal = document.getElementById('modal-f350-cert');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modal-f350-cert';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+    +'<div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:16px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">'
+      +'<div><div style="font-size:14px;font-weight:800;">📄 Certificados de Retención</div>'
+      +'<div style="font-size:10px;opacity:.8;margin-top:2px;">Selecciona el tipo de certificado a generar</div></div>'
+      +'<button onclick="var m=document.getElementById(\'modal-f350-cert\');if(m)m.style.display=\'none\';" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;">✕</button>'
+    +'</div>'
+    +'<div style="padding:24px;">'
+      +'<p style="font-size:12px;color:#374151;margin-bottom:20px;">¿Deseas generar los certificados para el período mensual o acumulado por todo el año?</p>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+        // Mensual
+        +'<div onclick="f350_mostrarCertificados(\'mensual\')" style="border:2px solid #1a2580;border-radius:12px;padding:20px;cursor:pointer;text-align:center;transition:all .2s;" '
+          +'style="cursor:pointer;border:2px solid #1a2580;border-radius:12px;padding:20px;text-align:center;">'  
+          +'<div style="font-size:28px;margin-bottom:8px;">📅</div>'
+          +'<div style="font-size:13px;font-weight:700;color:#1a2580;">Por Período</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:4px;">'+mesLabel+' '+anio+'</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Usa el Excel cargado</div>'
+        +'</div>'
+        // Anual
+        +'<div onclick="f350_mostrarCertificados(\'anual\')" style="border:2px solid #065f46;border-radius:12px;padding:20px;cursor:pointer;text-align:center;transition:all .2s;" '
+          +'style="cursor:pointer;border:2px solid #065f46;border-radius:12px;padding:20px;text-align:center;">'  
+          +'<div style="font-size:28px;margin-bottom:8px;">📊</div>'
+          +'<div style="font-size:13px;font-weight:700;color:#065f46;">Acumulado Anual</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:4px;">Todo el año '+anio+'</div>'
+          +'<div style="font-size:10px;color:#6b7280;margin-top:2px;">Carga el Excel anual</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+  modal.style.display = 'flex';
+  // Guardar contexto
+  window._f350CertContext = {empresa:c, anio:anio, mes:per, mesLabel:mesLabel};
+};
+
+window.f350_mostrarCertificados = function(tipo){
+  var ctx = window._f350CertContext;
+  if(!ctx) return;
+
+  function renderLista(terceros){
+    var lista = Object.values(terceros).sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+    window._f350TercerosList = lista;
+    if(!lista.length){
+      alert('No se encontraron terceros retenidos en el Excel.');
+      return;
+    }
+    var periodoLabel = tipo==='anual' ? 'Año '+ctx.anio : ctx.mesLabel+' '+ctx.anio;
+    var rows = lista.map(function(t,i){
+      var ret = t.retencion||Math.round(t.base*t.tarifa/100);
+      var fmtM=function(n){return '$'+Math.round(n||0).toLocaleString('es-CO');};
+      return '<tr style="border-bottom:1px solid #e5e7f0;">'
+        +'<td style="padding:8px 10px;font-size:11px;color:#374151;">'+t.nit+'</td>'
+        +'<td style="padding:8px 10px;font-size:11px;font-weight:600;color:#1a2580;">'+t.nombre+'</td>'
+        +'<td style="padding:8px 10px;font-size:11px;text-align:right;">'+fmtM(t.base)+'</td>'
+        +'<td style="padding:8px 10px;font-size:11px;text-align:center;">'+t.tarifa+'%</td>'
+        +'<td style="padding:8px 10px;font-size:11px;font-weight:700;text-align:right;color:#991b1b;">'+fmtM(ret)+'</td>'
+        +'<td style="padding:8px 10px;text-align:center;">'
+          +'<button class="cert-pdf-btn" data-idx="'+i+'" data-tipo="'+tipo+'" style="background:#1a2580;color:#fff;border:none;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;">📄 PDF</button>'
+          +'style="background:#1a2580;color:#fff;border:none;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;">📄 PDF</button>'
+        +'</td>'
+        +'</tr>';
+    }).join('');
+
+    var modal = document.getElementById('modal-f350-cert');
+    modal.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:800px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      +'<div style="background:linear-gradient(135deg,#1a2580,#2535a8);color:#fff;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;">'
+        +'<div>'
+          +'<div style="font-size:14px;font-weight:800;">📄 Certificados de Retención — '+periodoLabel+'</div>'
+          +'<div style="font-size:10px;opacity:.8;margin-top:2px;">'+lista.length+' tercero'+(lista.length!==1?'s':'')+' retenido'+(lista.length!==1?'s':'')+' · Haz clic en PDF para generar cada certificado</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;">'
+          +'<button onclick="f350_abrirCertificados()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:700;">← Volver</button>'
+          +'<button onclick="var m=document.getElementById(\'modal-f350-cert\');if(m)m.style.display=\'none\';" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;">✕</button>'
+        +'</div>'
+      +'</div>'
+      +'<div style="overflow-y:auto;flex:1;">'
+        +'<table style="width:100%;border-collapse:collapse;">'
+          +'<thead><tr style="background:#f8faff;border-bottom:2px solid #e5e7f0;">'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:left;">NIT</th>'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:left;">NOMBRE / RAZÓN SOCIAL</th>'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:right;">BASE</th>'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:center;">TARIFA</th>'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:right;">RETENCIÓN</th>'
+            +'<th style="padding:10px;font-size:10px;font-weight:700;color:#6b7280;text-align:center;">CERT.</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rows+'</tbody>'
+        +'</table>'
+      +'</div>'
+      +'<div style="padding:14px 22px;border-top:1px solid #e5e7f0;display:flex;justify-content:space-between;align-items:center;background:#f8faff;border-radius:0 0 16px 16px;">'
+        +'<span style="font-size:11px;color:#6b7280;">Total terceros: <strong>'+lista.length+'</strong></span>'
+        +'<button class="cert-todos-btn" data-tipo="'+tipo+'" style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">📄 Generar todos los certificados</button>'
+      +'</div>'
+    +'</div>';
+    // Event delegation para botones PDF
+    modal.addEventListener('click', function(e){
+      var btn = e.target.closest('.cert-pdf-btn');
+      if(btn){
+        var idx = parseInt(btn.getAttribute('data-idx'));
+        var t   = btn.getAttribute('data-tipo');
+        f350_generarCertificado(idx, t);
+      }
+      var btnTodos = e.target.closest('.cert-todos-btn');
+      if(btnTodos){
+        var t2 = btnTodos.getAttribute('data-tipo');
+        f350_generarTodosCertificados(t2);
+      }
+    }, {once:true});
+    modal.style.display = 'flex';
+  }
+
+  if(tipo==='mensual'){
+    // Usar terceros ya capturados del Excel cargado
+    var t = window._f350Terceros;
+    if(!t || !Object.keys(t).length){
+      alert('Primero carga el Excel del período para capturar los terceros.');
+      return;
+    }
+    renderLista(t);
+  } else {
+    // Pedir Excel anual
+    var inp = document.createElement('input');
+    inp.type='file'; inp.accept='.xlsx,.xls';
+    inp.onchange=function(){
+      if(!inp.files[0]) return;
+      var modal=document.getElementById('modal-f350-cert');
+      modal.innerHTML='<div style="background:#fff;border-radius:16px;padding:40px;text-align:center;color:#1a2580;font-weight:700;font-size:14px;">⏳ Leyendo Excel anual...</div>';
+      modal.style.display='flex';
+      f350_leerExcelAnual(inp.files[0], function(terceros, err){
+        if(err||!terceros){alert('Error leyendo Excel: '+(err||'desconocido'));return;}
+        window._f350TercerosAnual=terceros;
+        renderLista(terceros);
+      });
+    };
+    inp.click();
+  }
+};
+
+window.f350_generarCertificado = function(idx, tipo){
+  var lista  = window._f350TercerosList;
+  var ctx    = window._f350CertContext;
+  if(!lista || !ctx || idx >= lista.length) return;
+  var periodoLabel = (tipo==='anual') ? 'Año '+ctx.anio : ctx.mesLabel+' '+ctx.anio;
+  var t      = lista[idx];
+  var emp    = ctx.empresa;
+  var ret    = t.retencion || Math.round(t.base * t.tarifa / 100);
+  var fecha  = new Date();
+  var fmtFecha = fecha.getDate()+'/'+(fecha.getMonth()+1)+'/'+fecha.getFullYear();
+  var fmtM = function(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); };
+
+  var {jsPDF} = window.jspdf;
+  var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'letter'});
+  var W=216, H=279;
+  var blue=[26,37,128], gold=[201,162,39], red=[180,0,0];
+
+  // Encabezado azul
+  doc.setFillColor(blue[0],blue[1],blue[2]);
+  doc.rect(0,0,W,28,'F');
+  doc.setFillColor(gold[0],gold[1],gold[2]);
+  doc.rect(0,28,W,2,'F');
+
+  // Datos de la empresa retenedora
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text(emp.razon||'EMPRESA RETENEDORA', W/2, 11, {align:'center'});
+  doc.setFontSize(9);
+  doc.setFont('helvetica','normal');
+  doc.text('NIT: '+(emp.nit||''), W/2, 17, {align:'center'});
+  doc.text((emp.direccion||'')+(emp.ciudad?' — '+emp.ciudad:''), W/2, 22, {align:'center'});
+
+  // Título del certificado
+  doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(14);
+  doc.text('CERTIFICADO DE RETENCIÓN EN LA FUENTE', W/2, 42, {align:'center'});
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(80,80,80);
+  doc.text('Período: '+ctx.mesLabel+' '+ctx.anio, W/2, 50, {align:'center'});
+
+  // Línea divisoria
+  doc.setDrawColor(gold[0],gold[1],gold[2]);
+  doc.setLineWidth(0.5);
+  doc.line(15, 54, W-15, 54);
+
+  // Datos del retenido
+  var y = 64;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('DATOS DEL SUJETO RETENIDO', 15, y);
+  y += 8;
+
+  var camposR = [
+    ['Nombre / Razón Social:', t.nombre],
+    ['NIT / C.C.:', t.nit],
+    ['Tipo de contribuyente:', t.tp==='PJ'?'Persona Jurídica':'Persona Natural'],
+  ];
+  camposR.forEach(function(f){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(80,80,80);
+    doc.text(f[0], 15, y);
+    doc.setFont('helvetica','normal');
+    doc.text(String(f[1]||''), 75, y);
+    y += 7;
+  });
+
+  // Línea
+  y += 2;
+  doc.setDrawColor(220,220,220);
+  doc.line(15, y, W-15, y);
+  y += 8;
+
+  // Detalle de retención
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('DETALLE DE LA RETENCIÓN PRACTICADA', 15, y);
+  y += 8;
+
+  // Tabla de detalle
+  var colX = [15, 95, 140, 175];
+  var headers = ['Concepto','Base Gravable','Tarifa','Valor Retenido'];
+  doc.setFillColor(blue[0],blue[1],blue[2]);
+  doc.rect(15, y-4, W-30, 8, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  headers.forEach(function(h,i){ doc.text(h, colX[i]+2, y+1); });
+  y += 8;
+
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(40,40,40);
+  doc.setFontSize(9);
+  var concepto = t.tp==='PJ'
+    ? 'Ret. Fuente — Personas Jurídicas ('+t.tarifa+'%)'
+    : 'Ret. Fuente — Personas Naturales ('+t.tarifa+'%)';
+  doc.setFillColor(248,250,255);
+  doc.rect(15, y-4, W-30, 8, 'F');
+  doc.setDrawColor(220,220,220);
+  doc.rect(15, y-4, W-30, 8, 'S');
+  doc.text(concepto, colX[0]+2, y+1);
+  doc.text(fmtM(t.base), colX[1]+2, y+1);
+  doc.text(t.tarifa+'%', colX[2]+2, y+1);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(red[0],red[1],red[2]);
+  doc.text(fmtM(ret), colX[3]+2, y+1);
+  y += 12;
+
+  // Total
+  doc.setFillColor(blue[0],blue[1],blue[2]);
+  doc.rect(W-70, y-4, 55, 10, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text('TOTAL RETENIDO:', W-68, y+2);
+  doc.setFontSize(11);
+  doc.text(fmtM(ret), W-68, y+8);
+  y += 20;
+
+  // Declaración legal
+  doc.setDrawColor(gold[0],gold[1],gold[2]);
+  doc.setLineWidth(0.3);
+  doc.rect(15, y, W-30, 28);
+  doc.setTextColor(60,60,60);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8);
+  var legal = 'El suscrito Representante Legal de '+( emp.razon||'la empresa')+', NIT '+(emp.nit||'')+
+    ', certifica que durante el período de '+ctx.mesLabel+' de '+ctx.anio+
+    ' se practicó retención en la fuente a título de Renta e IVA al sujeto arriba indicado, '+
+    'de conformidad con las normas tributarias vigentes (Art. 381 y ss. E.T.).';
+  var legalLines = doc.splitTextToSize(legal, W-40);
+  doc.text(legalLines, 20, y+8);
+  y += 36;
+
+  // Firma
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80,80,80);
+  doc.text('Expedido en: '+(emp.ciudad||'Colombia')+', el '+fmtFecha, 15, y);
+  y += 18;
+  doc.line(15, y, 85, y);
+  doc.line(W-85, y, W-15, y);
+  y += 5;
+  doc.setFont('helvetica','bold');
+  doc.text('Representante Legal', 15, y);
+  doc.text('Firma del Agente Retenedor', W-85, y);
+  y += 5;
+  doc.setFont('helvetica','normal');
+  doc.text(emp.razon||'', 15, y);
+
+  // Pie de página
+  doc.setFillColor(blue[0],blue[1],blue[2]);
+  doc.rect(0, H-12, W, 12, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(7);
+  doc.setFont('helvetica','normal');
+  doc.text('Certificado generado por JNF App — Sistema de Gestión Contable — '+fmtFecha, W/2, H-5, {align:'center'});
+
+  doc.save('CertificadoRetencion_'+t.nit+'_'+ctx.mes+'_'+ctx.anio+'.pdf');
+};
+
+window.f350_generarTodosCertificados = function(tipo){
+  var lista = window._f350TercerosList;
+  if(!lista || !lista.length) return;
+  lista.forEach(function(t, i){
+    setTimeout(function(){ window.f350_generarCertificado(i, tipo||'mensual'); }, i*400);
+  });
+};
+
+
 // ── F350: Leer bases desde Excel ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+// MODO 3 — CERTIFICADOS DE RETENCIÓN
+// ══════════════════════════════════════════════════════════
+
+window._f350CertTipo = 'mensual';
+window._f350CertData = null;
+
+window.f350_cert_setTipo = function(tipo){
+  window._f350CertTipo = tipo;
+  // Actualizar UI de selección
+  var perCard = document.getElementById('f350-cert-tipo-per');
+  var anuCard = document.getElementById('f350-cert-tipo-anu');
+  if(perCard){
+    perCard.style.borderColor = tipo==='mensual'?'#1a2580':'var(--br)';
+    perCard.style.background  = tipo==='mensual'?'#f0f4ff':'var(--sf)';
+    var t = perCard.querySelector('div:nth-child(3)');
+    if(t) t.style.color = tipo==='mensual'?'#1a2580':'var(--t1)';
+  }
+  if(anuCard){
+    anuCard.style.borderColor = tipo==='anual'?'#065f46':'var(--br)';
+    anuCard.style.background  = tipo==='anual'?'#f0fdf4':'var(--sf)';
+  }
+  // Mostrar/ocultar área de carga Excel anual
+  var excelArea = document.getElementById('f350-cert-excel-area');
+  if(excelArea) excelArea.style.display = tipo==='anual'?'block':'none';
+  // Limpiar resultado anterior
+  f350_cert_limpiar();
+  // Actualizar label del período
+  var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+             '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var per = _f350Per||(document.getElementById('f350-periodo')?document.getElementById('f350-periodo').value:'01');
+  var anio = document.getElementById('f350-anio')?document.getElementById('f350-anio').value:(activeYear||new Date().getFullYear());
+  var lbl = document.getElementById('f350-cert-per-label');
+  if(lbl) lbl.textContent = (MESES[per]||per)+' '+anio;
+  var lblA = document.getElementById('f350-cert-anu-label');
+  if(lblA) lblA.textContent = 'Todo el año '+anio;
+};
+
+window.f350_cert_leerExcel = function(file){
+  if(!file) return;
+  var stEl = document.getElementById('f350-cert-excel-status');
+  function setSt(bg,col,msg){if(stEl){stEl.style.display='block';stEl.style.background=bg;stEl.style.color=col;stEl.textContent=msg;}}
+  setSt('#dbeafe','#1e40af','⏳ Leyendo Excel anual...');
+  f350_leerExcelAnual(file, function(terceros, err){
+    if(err||!terceros){ setSt('#fee2e2','#b91c1c','✗ Error: '+(err||'desconocido')); return; }
+    window._f350TercerosAnual = terceros;
+    var n = Object.keys(terceros).length;
+    setSt('#d1fae5','#065f46','✓ Excel leído — '+n+' tercero'+(n!==1?'s':'')+' retenido'+(n!==1?'s':''));
+  });
+};
+
+window.f350_cert_buscar = function(){
+  var nitInput = document.getElementById('f350-cert-nit');
+  var nit = (nitInput?nitInput.value:'').trim().replace(/[^0-9]/g,'');
+  var res  = document.getElementById('f350-cert-resultado');
+  var nf   = document.getElementById('f350-cert-notfound');
+  if(res) res.style.display='none';
+  if(nf)  nf.style.display='none';
+  if(!nit){ alert('Escribe el NIT del tercero.'); return; }
+
+  // Seleccionar fuente de datos según tipo
+  var tipo = window._f350CertTipo;
+  var terceros = tipo==='anual' ? window._f350TercerosAnual : window._f350Terceros;
+
+  if(!terceros || !Object.keys(terceros).length){
+    var msg = tipo==='anual'
+      ? 'No hay datos anuales. Carga el Excel anual arriba.'
+      : 'No hay datos del período. Ve al Modo 1, carga el Excel y liquida primero.';
+    var nfMsg = document.getElementById('f350-cert-notfound-msg');
+    if(nfMsg) nfMsg.textContent = msg;
+    if(nf) nf.style.display='block';
+    return;
+  }
+
+  // Buscar por NIT (puede haber varios con distinta tarifa)
+  var matches = Object.values(terceros).filter(function(t){ return t.nit===nit; });
+
+  if(!matches.length){
+    var nfMsg = document.getElementById('f350-cert-notfound-msg');
+    if(nfMsg) nfMsg.textContent = 'No se encontró el NIT '+nit+' en los datos del Excel '+
+      (tipo==='anual'?'anual.':'del período.');
+    if(nf) nf.style.display='block';
+    return;
+  }
+
+  // Consolidar si hay varios conceptos con el mismo NIT
+  var datos = {
+    nit: matches[0].nit,
+    nombre: matches[0].nombre,
+    tp: matches[0].tp,
+    conceptos: matches.map(function(m){
+      return {base:m.base, tarifa:m.tarifa, retencion:m.retencion||Math.round(m.base*m.tarifa/100)};
+    }),
+    totalBase: matches.reduce(function(s,m){return s+m.base;},0),
+    totalRet:  matches.reduce(function(s,m){return s+(m.retencion||Math.round(m.base*m.tarifa/100));},0)
+  };
+  window._f350CertData = datos;
+
+  // Mostrar resultado
+  var c = clients.find(function(x){return x.id===activeClientId;})||{};
+  var MESES={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+             '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var per  = _f350Per||(document.getElementById('f350-periodo')?document.getElementById('f350-periodo').value:'01');
+  var anio = document.getElementById('f350-anio')?document.getElementById('f350-anio').value:(activeYear||new Date().getFullYear());
+  var periodoLabel = tipo==='anual' ? 'Año '+anio : (MESES[per]||per)+' '+anio;
+  var fmtM = function(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); };
+
+  var titleEl = document.getElementById('f350-cert-res-title');
+  var subEl   = document.getElementById('f350-cert-res-sub');
+  var empN    = document.getElementById('f350-cert-emp-name');
+  var empNIT  = document.getElementById('f350-cert-emp-nit');
+  var campos  = document.getElementById('f350-cert-campos');
+  var totalV  = document.getElementById('f350-cert-total-val');
+
+  if(titleEl) titleEl.textContent = 'Certificado encontrado — '+periodoLabel;
+  if(subEl)   subEl.textContent   = 'NIT: '+datos.nit+' · '+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural');
+  if(empN)    empN.textContent    = c.razon||'EMPRESA RETENEDORA';
+  if(empNIT)  empNIT.textContent  = 'NIT: '+(c.nit||'')+' · Agente retenedor';
+  if(totalV)  totalV.textContent  = fmtM(datos.totalRet);
+
+  if(campos){
+    var html = '<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin-bottom:6px;">SUJETO RETENIDO</div>';
+    html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Nombre / Razón Social</span><span style="font-weight:700;color:#1a2580;">'+datos.nombre+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">NIT</span><span style="font-weight:700;color:#1a2580;">'+datos.nit+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Tipo</span><span style="font-weight:700;color:#1a2580;">'+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural')+'</span></div>';
+    html += '<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin:10px 0 6px;">DETALLE DE RETENCIÓN</div>';
+    datos.conceptos.forEach(function(con){
+      html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Base gravable ('+con.tarifa+'%)</span><span style="font-weight:700;color:#1a2580;">'+fmtM(con.base)+'</span></div>';
+      html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Retención ('+con.tarifa+'%)</span><span style="font-weight:700;color:#991b1b;">'+fmtM(con.retencion)+'</span></div>';
+    });
+    campos.innerHTML = html;
+  }
+
+  if(res) res.style.display='block';
+
+  // Guardar contexto para el PDF
+  window._f350CertContext = {empresa:c, anio:anio, mes:per, mesLabel:periodoLabel};
+  window._f350TercerosList = [datos];
+};
+
+window.f350_cert_limpiar = function(){
+  var res = document.getElementById('f350-cert-resultado');
+  var nf  = document.getElementById('f350-cert-notfound');
+  var nit = document.getElementById('f350-cert-nit');
+  if(res) res.style.display='none';
+  if(nf)  nf.style.display='none';
+  if(nit) nit.value='';
+  window._f350CertData = null;
+};
+
+window.f350_cert_generarPDF = function(){
+  if(!window._f350CertData || !window._f350TercerosList) return;
+  // Reusar el generador existente con el tercero consolidado
+  var datos = window._f350CertData;
+  var ctx   = window._f350CertContext||{};
+  var c     = ctx.empresa||{};
+  var ret   = datos.totalRet;
+  var fmtM  = function(n){return '$'+Math.round(n||0).toLocaleString('es-CO');};
+  var fecha = new Date();
+  var fmtF  = fecha.getDate()+'/'+(fecha.getMonth()+1)+'/'+fecha.getFullYear();
+  var blue=[26,37,128], gold=[201,162,39], red=[180,0,0];
+  var {jsPDF} = window.jspdf;
+  var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  var W=216,H=279;
+
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(0,0,W,30,'F');
+  doc.setFillColor(gold[0],gold[1],gold[2]); doc.rect(0,30,W,2,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(c.razon||'EMPRESA RETENEDORA', W/2, 12, {align:'center'});
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('NIT: '+(c.nit||''), W/2, 18, {align:'center'});
+  doc.text((c.direccion||'')+(c.ciudad?' — '+c.ciudad:''), W/2, 23, {align:'center'});
+
+  doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('CERTIFICADO DE RETENCIÓN EN LA FUENTE', W/2, 44, {align:'center'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+  doc.text('Expedido en cumplimiento del Art. 381 del Estatuto Tributario', W/2, 51, {align:'center'});
+  doc.text('Período: '+(ctx.mesLabel||''), W/2, 57, {align:'center'});
+
+  doc.setDrawColor(gold[0],gold[1],gold[2]); doc.setLineWidth(0.5);
+  doc.line(15,61,W-15,61);
+
+  var y=70;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(15,y-5,W-30,8,'F');
+  doc.text('AGENTE RETENEDOR', 18, y);
+  y+=10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+  doc.text('Razón Social:', 15, y); doc.setFont('helvetica','bold'); doc.text(c.razon||'', 55, y);
+  y+=6; doc.setFont('helvetica','normal');
+  doc.text('NIT:', 15, y); doc.text(c.nit||'', 55, y);
+  if(c.direccion){ y+=6; doc.text('Dirección:', 15, y); doc.text((c.direccion||'')+(c.ciudad?' — '+c.ciudad:''), 55, y); }
+
+  y+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(15,y-5,W-30,8,'F');
+  doc.text('SUJETO RETENIDO', 18, y);
+  y+=10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+  doc.text('Nombre / Razón Social:', 15, y); doc.setFont('helvetica','bold'); doc.text(datos.nombre, 75, y);
+  y+=6; doc.setFont('helvetica','normal');
+  doc.text('NIT / C.C.:', 15, y); doc.text(datos.nit, 75, y);
+  y+=6; doc.text('Tipo de contribuyente:', 15, y); doc.text(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural', 75, y);
+
+  y+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(15,y-5,W-30,8,'F');
+  doc.text('DETALLE DE RETENCIONES PRACTICADAS', 18, y);
+  y+=10;
+  // Cabecera tabla
+  var cols=[15,95,140,175];
+  doc.setFillColor(240,244,255); doc.rect(15,y-4,W-30,8,'F');
+  doc.setDrawColor(200,200,210); doc.rect(15,y-4,W-30,8,'S');
+  doc.setTextColor(26,37,128); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.text('Concepto',cols[0]+2,y); doc.text('Base Gravable',cols[1]+2,y);
+  doc.text('Tarifa',cols[2]+2,y); doc.text('Valor Retenido',cols[3]+2,y);
+  y+=8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  datos.conceptos.forEach(function(con,i){
+    doc.setFillColor(i%2===0?248:255,i%2===0?250:255,255);
+    doc.rect(15,y-4,W-30,8,'F');
+    doc.setDrawColor(220,220,220); doc.rect(15,y-4,W-30,8,'S');
+    doc.setTextColor(40,40,40);
+    doc.text('Ret. Fuente '+(datos.tp==='PJ'?'P. Jurídica':'P. Natural')+' ('+con.tarifa+'%)',cols[0]+2,y);
+    doc.text(fmtM(con.base),cols[1]+2,y);
+    doc.text(con.tarifa+'%',cols[2]+2,y);
+    doc.setFont('helvetica','bold'); doc.setTextColor(red[0],red[1],red[2]);
+    doc.text(fmtM(con.retencion),cols[3]+2,y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+    y+=8;
+  });
+  // Total
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(W-80,y-2,65,12,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('TOTAL RETENIDO:', W-78, y+4);
+  doc.setFontSize(11); doc.setTextColor(gold[0],gold[1],gold[2]);
+  doc.text(fmtM(ret), W-78, y+10);
+  y+=20;
+
+  // Declaración legal
+  doc.setDrawColor(gold[0],gold[1],gold[2]); doc.setLineWidth(0.3);
+  doc.rect(15,y,W-30,30);
+  doc.setTextColor(60,60,60); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.text('DECLARACIÓN DEL AGENTE RETENEDOR', 18, y+7);
+  doc.setFont('helvetica','normal');
+  var legal='El suscrito Representante Legal de '+(c.razon||'la empresa')+', NIT '+(c.nit||'')+
+    ', certifica que durante el período de '+(ctx.mesLabel||'')+' se practicó retención en la fuente '+
+    'a título de Renta e IVA al contribuyente arriba indicado, de conformidad con el Art. 381 y ss. del E.T. '+
+    'Los valores declarados corresponden a los registros contables y han sido consignados oportunamente.';
+  doc.text(doc.splitTextToSize(legal,W-40), 18, y+14);
+  y+=38;
+
+  // Firmas
+  doc.line(15,y,80,y); doc.line(W-80,y,W-15,y);
+  y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(blue[0],blue[1],blue[2]);
+  doc.text('Representante Legal', 15, y);
+  doc.text('Firma del Agente Retenedor', W-80, y);
+  y+=5; doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); doc.setFontSize(8);
+  doc.text(c.razon||'', 15, y);
+
+  // Pie
+  doc.setFillColor(blue[0],blue[1],blue[2]); doc.rect(0,H-12,W,12,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','normal');
+  var certNum='CERT-'+ctx.anio+'-'+(ctx.mes||'00')+'-'+datos.nit;
+  doc.text('No. '+certNum+' · Expedido: '+fmtF+' · JNF App — Sistema de Gestión Contable', W/2, H-5, {align:'center'});
+
+  doc.save('CertificadoRetencion_'+datos.nit+'_'+(ctx.mes||'00')+'_'+ctx.anio+'.pdf');
+  audRegistrar('Generar','CertificadoRetencion',activeClientId,(clients.find(function(x){return x.id===activeClientId;})||{}).razon||'','NIT '+datos.nit+' — '+(ctx.mesLabel||''));
+};
+
+function f350_leerExcelAnual(file, callback){
+  // Lee el Excel completo (todos los meses) para acumular terceros anualmente
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'binary',cellFormula:false});
+      function findSh(names){for(var n of names){for(var sn of Object.keys(wb.Sheets)){if(sn.trim().toUpperCase()===n.toUpperCase())return sn;}}return null;}
+      var shCostos=findSh(['COSTOS','COMPRAS']);
+      if(!shCostos){callback&&callback(null,'No se encontró la pestaña COSTOS');return;}
+      var ws=wb.Sheets[shCostos];
+      var range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+      // Encontrar fila de headers
+      var KWORDS=['MES','FECHA','BASE','IVA','NIT','TIPO','FOLIO','T.P','APLIC','TARIFA','NOMBRE','TOTAL'];
+      var hrow=range.s.r;
+      for(var r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
+        var hits=0;
+        for(var c=range.s.c;c<=range.e.c;c++){var cv=ws[XLSX.utils.encode_cell({r:r,c:c})];if(cv&&KWORDS.some(function(k){return String(cv.v||'').toUpperCase().indexOf(k)>=0;}))hits++;}
+        if(hits>=3){hrow=r;break;}
+      }
+      var headers=[];
+      for(var c=range.s.c;c<=range.e.c;c++){var cv=ws[XLSX.utils.encode_cell({r:hrow,c:c})];headers.push(cv?String(cv.v||''):'');}
+      function getN(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
+      var terceros={};
+      for(var r=hrow+1;r<=range.e.r;r++){
+        var obj={};
+        for(var c=range.s.c;c<=range.e.c;c++){var cv=ws[XLSX.utils.encode_cell({r:r,c:c})];obj[headers[c-range.s.c]]=cv?cv.v:'';}
+        if(String(obj['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') continue;
+        var aplic=String(obj['APLIC. RETEFUENTE']||obj['APLIC.RETEFUENTE']||obj['APLIC RETEFUENTE']||'').trim().toUpperCase();
+        if(aplic!=='S') continue;
+        var tp=String(obj['T.P.']||obj['TP']||obj['T.P']||'').trim().toUpperCase();
+        if(tp!=='PJ'&&tp!=='PN') continue;
+        var tarifa=getN(obj['TARIFA RETEFUENTE']||obj['TARIFA']||0);
+        if(tarifa<=0) continue;
+        var base=getN(obj['BASE 19']||obj['BASE19']||0)+getN(obj['BASE 5']||obj['BASE5']||0)
+                +getN(obj['EXENTO']||0)+getN(obj['EXCLUIDO']||0);
+        if(base<=0) continue;
+        var nit=String(obj['NIT']||obj['Nit']||obj['nit']||'').trim().replace(/[^0-9]/g,'');
+        var nombre=String(obj['NOMBRE']||obj['Nombre']||obj['RAZON SOCIAL']||obj['Razón Social']||'').trim();
+        if(!nit||!nombre) continue;
+        var tk=nit+'_'+tarifa;
+        if(!terceros[tk]) terceros[tk]={nit:nit,nombre:nombre,tarifa:tarifa,base:0,retencion:0,tp:tp};
+        terceros[tk].base+=base;
+        terceros[tk].retencion+=Math.round(base*tarifa/100);
+      }
+      callback&&callback(terceros,null);
+    }catch(ex){callback&&callback(null,ex.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+
 function f350_leerExcel(file){
   if(!file) return;
   var stEl=document.getElementById('f350-excel-status');
