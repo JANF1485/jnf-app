@@ -1136,17 +1136,34 @@ window.addEventListener('online', function(){
         <!-- Header -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:3px;">Certificados de Retención en la Fuente</div>
-          <div style="font-size:11px;color:var(--t2);">Sube el Excel con los datos del año, selecciona el mes y genera los certificados de ese período</div>
+          <div style="font-size:11px;color:var(--t2);">Selecciona el tipo, sube el Excel, elige el período y genera los certificados</div>
         </div>
 
-        <!-- Paso 1: Cargar Excel + seleccionar período -->
+        <!-- Selector tipo: Por Período / Acumulado Anual -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div id="f350-cert3-card-per" onclick="f350_cert3_setTipo('mensual')"
+            style="background:var(--sf);border:2px solid #1a2580;border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+            <div style="font-size:22px;margin-bottom:6px;">📅</div>
+            <div style="font-size:12px;font-weight:700;color:#1a2580;">Por Período</div>
+            <div style="font-size:10px;color:var(--t2);margin-top:3px;">Filtra por mes y año</div>
+            <div style="font-size:10px;color:var(--t2);">Ideal para un mes específico</div>
+          </div>
+          <div id="f350-cert3-card-anu" onclick="f350_cert3_setTipo('anual')"
+            style="background:var(--sf);border:2px solid var(--br);border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+            <div style="font-size:22px;margin-bottom:6px;">📊</div>
+            <div style="font-size:12px;font-weight:700;color:var(--t1);">Acumulado Anual</div>
+            <div style="font-size:10px;color:var(--t2);margin-top:3px;">Suma todos los meses del año</div>
+            <div style="font-size:10px;color:var(--t2);">Un certificado por todo el año</div>
+          </div>
+        </div>
+
+        <!-- Paso 1: Cargar Excel + selectores -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:12px;">
             <span style="background:#1a2580;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-right:6px;">1</span>
             Cargar Excel y seleccionar período
           </div>
 
-          <!-- Dropzone primero -->
           <div id="f350-cert3-dropzone"
             ondragover="event.preventDefault();this.style.borderColor='#1a2580';"
             ondragleave="this.style.borderColor='#cbd5e1';"
@@ -1155,13 +1172,13 @@ window.addEventListener('online', function(){
             style="border:2px dashed #cbd5e1;border-radius:8px;padding:16px;text-align:center;background:#f8faff;cursor:pointer;margin-bottom:10px;">
             <div style="font-size:20px;margin-bottom:4px;">📂</div>
             <div id="f350-cert3-dz-txt" style="font-size:11px;color:#6b7280;">Arrastra el Excel aquí o haz clic para seleccionar</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Puede contener varios meses — se filtra por Fecha de Emisión del mes seleccionado</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Puede contener varios meses — se filtra según el tipo seleccionado</div>
           </div>
           <input type="file" id="f350-cert3-file" accept=".xlsx,.xls" style="display:none;"
             onchange="f350_cert3_cargarArchivo(this.files[0])"/>
 
-          <!-- Selectores año y mes -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+          <!-- Selectores (visibles según tipo) -->
+          <div id="f350-cert3-sels-per" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
             <div>
               <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">AÑO</label>
               <select id="f350-cert3-anio" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
@@ -1189,10 +1206,28 @@ window.addEventListener('online', function(){
             </div>
           </div>
 
+          <!-- Selector solo anual -->
+          <div id="f350-cert3-sels-anu" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+              <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">AÑO</label>
+              <select id="f350-cert3-anio-anu" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
+                <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">TIPO</label>
+              <select id="f350-cert3-tipo-anu" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
+                <option value="todos">Todos (PJ y PN)</option>
+                <option value="PJ">Solo P. Jurídica</option>
+                <option value="PN">Solo P. Natural</option>
+              </select>
+            </div>
+          </div>
+
           <div id="f350-cert3-status" style="display:none;font-size:10px;font-weight:700;padding:7px 12px;border-radius:6px;"></div>
         </div>
 
-        <!-- Paso 2: Buscar NIT individual -->
+        <!-- Paso 2: Buscar NIT -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:12px;">
             <span style="background:#1a2580;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-right:6px;">2</span>
@@ -1203,9 +1238,7 @@ window.addEventListener('online', function(){
               onkeydown="if(event.key==='Enter') f350_cert3_buscar()"
               style="flex:1;border:1.5px solid #1a2580;border-radius:7px;padding:9px 12px;font-size:14px;font-weight:700;color:#1a2580;letter-spacing:1px;font-family:monospace;outline:none;"/>
             <button onclick="f350_cert3_buscar()"
-              style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
-              Buscar
-            </button>
+              style="background:#1a2580;color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Buscar</button>
           </div>
           <div style="font-size:9px;color:var(--t3);margin-top:5px;">Sin puntos ni dígito de verificación · Enter para buscar · Si no tuvo retenciones genera certificado de no retención</div>
         </div>
@@ -1214,7 +1247,7 @@ window.addEventListener('online', function(){
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
           <div>
             <div style="font-size:11px;font-weight:700;color:var(--t1);">Generar todos los certificados del período</div>
-            <div style="font-size:10px;color:var(--t2);margin-top:2px;">Un PDF por cada tercero retenido en el mes seleccionado</div>
+            <div style="font-size:10px;color:var(--t2);margin-top:2px;">Un PDF por cada tercero retenido según el filtro aplicado</div>
           </div>
           <button onclick="f350_cert3_generarTodos()"
             style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -1222,7 +1255,7 @@ window.addEventListener('online', function(){
           </button>
         </div>
 
-        <!-- Resultado certificado individual -->
+        <!-- Resultado -->
         <div id="f350-cert3-resultado" style="display:none;">
           <div style="background:#fff;border-radius:10px;border:1px solid #e5e7f0;overflow:hidden;">
             <div style="background:#1a2580;padding:12px 16px;">
@@ -5129,7 +5162,7 @@ function f350_setModo(modo){
   });
 
   // Si es modo 3, inicializar tipo por defecto
-  if(modo===3) f350_cert_setTipo('mensual');
+  if(modo===3){ window._f350Cert3TipoVista='mensual'; f350_cert3_setTipo('mensual'); }
 }
 
 // Liquidar F350 — calcula, muestra casilleros y guarda automáticamente
@@ -6379,6 +6412,29 @@ window.f350_cert_buscar = function(){
 // ══════════════════════════════════════════════════════════
 // MODO 3 — CERTIFICADOS CON EXCEL PROPIO Y FILTRO POR MES
 // ══════════════════════════════════════════════════════════
+window.f350_cert3_setTipo = function(tipo){
+  window._f350Cert3TipoVista = tipo; // 'mensual' o 'anual'
+  var cardPer = document.getElementById('f350-cert3-card-per');
+  var cardAnu = document.getElementById('f350-cert3-card-anu');
+  var selsPer = document.getElementById('f350-cert3-sels-per');
+  var selsAnu = document.getElementById('f350-cert3-sels-anu');
+  if(cardPer){
+    cardPer.style.borderColor = tipo==='mensual'?'#1a2580':'var(--br)';
+    cardPer.style.background  = tipo==='mensual'?'#f0f4ff':'var(--sf)';
+    cardPer.querySelector('div:nth-child(2)').style.color = tipo==='mensual'?'#1a2580':'var(--t1)';
+  }
+  if(cardAnu){
+    cardAnu.style.borderColor = tipo==='anual'?'#065f46':'var(--br)';
+    cardAnu.style.background  = tipo==='anual'?'#f0fdf4':'var(--sf)';
+    cardAnu.querySelector('div:nth-child(2)').style.color = tipo==='anual'?'#065f46':'var(--t1)';
+  }
+  if(selsPer) selsPer.style.display = tipo==='mensual'?'grid':'none';
+  if(selsAnu) selsAnu.style.display = tipo==='anual'?'grid':'none';
+  // Re-filtrar si hay datos
+  if((window._f350Cert3Raw||[]).length) f350_cert3_filtrar();
+  f350_cert3_limpiarRes();
+};
+
 window._f350Cert3Raw      = []; // todas las filas del Excel cargado
 window._f350Cert3Terceros = {}; // terceros filtrados por mes actual
 window._f350Cert3Data     = null;
@@ -6470,9 +6526,10 @@ window.f350_cert3_filtrar = function(){
   var stEl = document.getElementById('f350-cert3-status');
   function setSt(bg,col,msg){if(stEl){stEl.style.display='block';stEl.style.background=bg;stEl.style.color=col;stEl.textContent=msg;}}
 
+  var tipoVista = window._f350Cert3TipoVista||'mensual';
   var mesEl   = document.getElementById('f350-cert3-mes');
-  var anioEl  = document.getElementById('f350-cert3-anio');
-  var tipoEl  = document.getElementById('f350-cert3-tipo');
+  var anioEl  = tipoVista==='anual'?document.getElementById('f350-cert3-anio-anu'):document.getElementById('f350-cert3-anio');
+  var tipoEl  = tipoVista==='anual'?document.getElementById('f350-cert3-tipo-anu'):document.getElementById('f350-cert3-tipo');
   var mesCod  = mesEl?mesEl.value:'01';
   var anio    = anioEl?parseInt(anioEl.value):new Date().getFullYear();
   var tipoFil = tipoEl?tipoEl.value:'todos';
@@ -6481,7 +6538,8 @@ window.f350_cert3_filtrar = function(){
               '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE'};
   var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
                '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-  var mesNom = MNAMES[mesCod]||'';
+  // En modo anual no filtramos por mes
+  var mesNom = tipoVista==='anual'?'':( MNAMES[mesCod]||'');
 
   function getN(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
 
@@ -6518,10 +6576,11 @@ window.f350_cert3_filtrar = function(){
   var nNits=Object.keys(nits).length;
   var mesLabel=(MESES_L[mesCod]||mesCod)+' '+anio;
 
+  var mesLabel2 = tipoVista==='anual'?'Año '+anio:mesLabel;
   if(nNits===0){
-    setSt('#fef3c7','#92400e','⚠ No se encontraron retenciones en '+mesLabel+' — verifica el mes o el Excel');
+    setSt('#fef3c7','#92400e','⚠ No se encontraron retenciones en '+mesLabel2+' — verifica el período o el Excel');
   } else {
-    setSt('#d1fae5','#065f46','✓ '+mesLabel+' — '+nNits+' tercero'+(nNits!==1?'s':'')+' retenido'+(nNits!==1?'s':''));
+    setSt('#d1fae5','#065f46','✓ '+mesLabel2+' — '+nNits+' tercero'+(nNits!==1?'s':'')+' retenido'+(nNits!==1?'s':''));
   }
 };
 
@@ -6544,13 +6603,14 @@ window.f350_cert3_buscar = function(){
   }
 
   var matches=Object.values(terceros).filter(function(t){return t.nit===nit;});
-  var mesEl=document.getElementById('f350-cert3-mes');
-  var anioEl=document.getElementById('f350-cert3-anio');
-  var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
-               '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-  var mes=mesEl?mesEl.value:'01';
-  var anio=anioEl?anioEl.value:(activeYear||new Date().getFullYear());
-  var mesLabel=(MESES_L[mes]||mes)+' '+anio;
+  var tipoV=window._f350Cert3TipoVista||'mensual';
+  var mesElB=document.getElementById('f350-cert3-mes');
+  var anioElB=tipoV==='anual'?document.getElementById('f350-cert3-anio-anu'):document.getElementById('f350-cert3-anio');
+  var MESES_LB={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+                '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var mes=mesElB?mesElB.value:'01';
+  var anio=anioElB?anioElB.value:(activeYear||new Date().getFullYear());
+  var mesLabel=tipoV==='anual'?'Año '+anio:((MESES_LB[mes]||mes)+' '+anio);
   var c=clients.find(function(x){return x.id===activeClientId;})||{};
   window._f350Cert3Ctx={empresa:c,anio:anio,mes:mes,mesLabel:mesLabel};
 
