@@ -1136,25 +1136,41 @@ window.addEventListener('online', function(){
         <!-- Header -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:3px;">Certificados de Retención en la Fuente</div>
-          <div style="font-size:11px;color:var(--t2);">Carga el Excel, selecciona el mes y busca el tercero por NIT para generar el certificado</div>
+          <div style="font-size:11px;color:var(--t2);">Sube el Excel con los datos del año, selecciona el mes y genera los certificados de ese período</div>
         </div>
 
-        <!-- Paso 1: Cargar Excel + seleccionar mes -->
+        <!-- Paso 1: Cargar Excel + seleccionar período -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:12px;">
             <span style="background:#1a2580;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-right:6px;">1</span>
             Cargar Excel y seleccionar período
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+
+          <!-- Dropzone primero -->
+          <div id="f350-cert3-dropzone"
+            ondragover="event.preventDefault();this.style.borderColor='#1a2580';"
+            ondragleave="this.style.borderColor='#cbd5e1';"
+            ondrop="event.preventDefault();this.style.borderColor='#cbd5e1';f350_cert3_cargarArchivo(event.dataTransfer.files[0]);"
+            onclick="document.getElementById('f350-cert3-file').click()"
+            style="border:2px dashed #cbd5e1;border-radius:8px;padding:16px;text-align:center;background:#f8faff;cursor:pointer;margin-bottom:10px;">
+            <div style="font-size:20px;margin-bottom:4px;">📂</div>
+            <div id="f350-cert3-dz-txt" style="font-size:11px;color:#6b7280;">Arrastra el Excel aquí o haz clic para seleccionar</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Puede contener varios meses — se filtra por Fecha de Emisión del mes seleccionado</div>
+          </div>
+          <input type="file" id="f350-cert3-file" accept=".xlsx,.xls" style="display:none;"
+            onchange="f350_cert3_cargarArchivo(this.files[0])"/>
+
+          <!-- Selectores año y mes -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
             <div>
               <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">AÑO</label>
-              <select id="f350-cert3-anio" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
-                <option>2026</option><option>2025</option><option>2024</option>
+              <select id="f350-cert3-anio" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
+                <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
               </select>
             </div>
             <div>
               <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">MES</label>
-              <select id="f350-cert3-mes" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
+              <select id="f350-cert3-mes" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
                 <option value="01">Enero</option><option value="02">Febrero</option>
                 <option value="03">Marzo</option><option value="04">Abril</option>
                 <option value="05">Mayo</option><option value="06">Junio</option>
@@ -1163,28 +1179,24 @@ window.addEventListener('online', function(){
                 <option value="11">Noviembre</option><option value="12">Diciembre</option>
               </select>
             </div>
+            <div>
+              <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;letter-spacing:.3px;">TIPO</label>
+              <select id="f350-cert3-tipo" onchange="f350_cert3_filtrar()" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t1);background:var(--sf);">
+                <option value="todos">Todos (PJ y PN)</option>
+                <option value="PJ">Solo P. Jurídica</option>
+                <option value="PN">Solo P. Natural</option>
+              </select>
+            </div>
           </div>
-          <!-- Dropzone Excel -->
-          <div id="f350-cert3-dropzone"
-            ondragover="event.preventDefault();this.style.borderColor='#1a2580';"
-            ondragleave="this.style.borderColor='#cbd5e1';"
-            ondrop="event.preventDefault();this.style.borderColor='#cbd5e1';f350_cert3_leerExcel(event.dataTransfer.files[0]);"
-            onclick="document.getElementById('f350-cert3-file').click()"
-            style="border:2px dashed #cbd5e1;border-radius:8px;padding:16px;text-align:center;background:#f8faff;cursor:pointer;">
-            <div style="font-size:20px;margin-bottom:4px;">📂</div>
-            <div style="font-size:11px;color:#6b7280;">Arrastra el Excel o haz clic para seleccionar</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Formato .xlsx / .xls · Se filtra por Fecha de Emisión del mes seleccionado</div>
-          </div>
-          <input type="file" id="f350-cert3-file" accept=".xlsx,.xls" style="display:none;"
-            onchange="f350_cert3_leerExcel(this.files[0])"/>
-          <div id="f350-cert3-status" style="display:none;margin-top:8px;font-size:10px;font-weight:700;padding:7px 12px;border-radius:6px;"></div>
+
+          <div id="f350-cert3-status" style="display:none;font-size:10px;font-weight:700;padding:7px 12px;border-radius:6px;"></div>
         </div>
 
-        <!-- Paso 2: Buscar NIT -->
+        <!-- Paso 2: Buscar NIT individual -->
         <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px 18px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:12px;">
             <span style="background:#1a2580;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-right:6px;">2</span>
-            Buscar tercero por NIT
+            Buscar tercero por NIT y generar certificado individual
           </div>
           <div style="display:flex;gap:8px;">
             <input type="text" id="f350-cert3-nit" placeholder="Ej: 900123456"
@@ -1195,7 +1207,7 @@ window.addEventListener('online', function(){
               Buscar
             </button>
           </div>
-          <div style="font-size:9px;color:var(--t3);margin-top:5px;">Sin puntos ni dígito de verificación · Enter para buscar</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:5px;">Sin puntos ni dígito de verificación · Enter para buscar · Si no tuvo retenciones genera certificado de no retención</div>
         </div>
 
         <!-- Paso 3: Generar todos -->
@@ -1210,7 +1222,7 @@ window.addEventListener('online', function(){
           </button>
         </div>
 
-        <!-- Resultado certificado -->
+        <!-- Resultado certificado individual -->
         <div id="f350-cert3-resultado" style="display:none;">
           <div style="background:#fff;border-radius:10px;border:1px solid #e5e7f0;overflow:hidden;">
             <div style="background:#1a2580;padding:12px 16px;">
@@ -1229,13 +1241,9 @@ window.addEventListener('online', function(){
               </div>
               <div style="display:flex;gap:8px;">
                 <button onclick="f350_cert3_limpiarRes()"
-                  style="flex:1;background:#f1f5f9;color:#374151;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
-                  ← Buscar otro
-                </button>
+                  style="flex:1;background:#f1f5f9;color:#374151;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">← Buscar otro</button>
                 <button onclick="f350_cert3_generarPDF()"
-                  style="flex:2;background:#065f46;color:#fff;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
-                  📄 Generar PDF
-                </button>
+                  style="flex:2;background:#065f46;color:#fff;border:none;border-radius:7px;padding:9px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">📄 Generar PDF</button>
               </div>
             </div>
           </div>
@@ -6369,47 +6377,32 @@ window.f350_cert_buscar = function(){
 };
 
 // ══════════════════════════════════════════════════════════
-// MODO 3 NUEVO — CERTIFICADOS CON EXCEL PROPIO + SELECTOR MES
+// MODO 3 — CERTIFICADOS CON EXCEL PROPIO Y FILTRO POR MES
 // ══════════════════════════════════════════════════════════
-window._f350Cert3Terceros = {}; // datos del Excel del modo 3
+window._f350Cert3Raw      = []; // todas las filas del Excel cargado
+window._f350Cert3Terceros = {}; // terceros filtrados por mes actual
 window._f350Cert3Data     = null;
 window._f350Cert3NitSinRet = '';
 
-window.f350_cert3_leerExcel = function(file){
+// ── Cargar el archivo (solo almacena, no filtra aún) ──
+window.f350_cert3_cargarArchivo = function(file){
   if(!file) return;
   var stEl = document.getElementById('f350-cert3-status');
-  var dzEl = document.getElementById('f350-cert3-dropzone');
-  function setSt(bg,col,msg){
-    if(stEl){stEl.style.display='block';stEl.style.background=bg;stEl.style.color=col;stEl.textContent=msg;}
-  }
+  var dzTxt = document.getElementById('f350-cert3-dz-txt');
+  function setSt(bg,col,msg){if(stEl){stEl.style.display='block';stEl.style.background=bg;stEl.style.color=col;stEl.textContent=msg;}}
   setSt('#dbeafe','#1e40af','⏳ Leyendo Excel...');
-  if(dzEl) dzEl.querySelector('div').textContent='📂 '+file.name;
-
-  var mesEl  = document.getElementById('f350-cert3-mes');
-  var anioEl = document.getElementById('f350-cert3-anio');
-  var mesCod = mesEl ? mesEl.value : '01';
-  var anio   = anioEl ? parseInt(anioEl.value) : new Date().getFullYear();
-
-  var MNAMES = {
-    '01':'ENERO','02':'FEBRERO','03':'MARZO','04':'ABRIL','05':'MAYO','06':'JUNIO',
-    '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE'
-  };
-  var mesNom = MNAMES[mesCod]||'';
+  if(dzTxt) dzTxt.textContent='📂 '+file.name;
 
   var reader = new FileReader();
   reader.onload = function(e){
     try{
       var wb = XLSX.read(e.target.result,{type:'binary',cellFormula:false});
-      function findSh(names){
-        for(var n of names){for(var sn of Object.keys(wb.Sheets)){if(sn.trim().toUpperCase()===n.toUpperCase())return sn;}}
-        return null;
-      }
+      function findSh(names){for(var n of names){for(var sn of Object.keys(wb.Sheets)){if(sn.trim().toUpperCase()===n.toUpperCase())return sn;}}return null;}
       var shCostos = findSh(['COSTOS','COMPRAS']);
       if(!shCostos){ setSt('#fee2e2','#b91c1c','✗ No se encontró la pestaña COSTOS'); return; }
 
       var ws = wb.Sheets[shCostos];
       var range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
-      // Encontrar fila de headers
       var KWORDS = ['MES','FECHA','BASE','IVA','NIT','TIPO','FOLIO','T.P','APLIC','TARIFA','NOMBRE','TOTAL'];
       var hrow = range.s.r;
       for(var r=range.s.r;r<=Math.min(range.s.r+9,range.e.r);r++){
@@ -6425,168 +6418,178 @@ window.f350_cert3_leerExcel = function(file){
         var cv=ws[XLSX.utils.encode_cell({r:hrow,c:c})];
         headers.push(cv?String(cv.v||''):'');
       }
-
-      function getN(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
-      function getMes(v){
-        if(v===null||v===undefined||v==='') return '';
-        if(typeof v==='number'&&v>1000&&v<2958465){
-          var d=new Date(Math.round((v-25569)*86400*1000));
-          if(!isNaN(d.getTime())){
-            var MN=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
-                    'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-            return MN[d.getUTCMonth()+1]||'';
-          }
-        }
-        var s=String(v).trim().toUpperCase()
-          .replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E')
-          .replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U');
-        // Intentar parsear fecha dd/mm/yyyy o dd-mm-yyyy
-        var m=s.match(/^\d{1,2}[-\/](\d{1,2})[-\/]\d{4}/);
-        if(m){
-          var MN2=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
-                   'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-          return MN2[parseInt(m[1],10)]||'';
-        }
-        return s;
-      }
-
-      var terceros = {};
+      // Leer TODAS las filas sin filtrar
+      var rows=[];
       for(var r=hrow+1;r<=range.e.r;r++){
         var obj={};
         for(var c=range.s.c;c<=range.e.c;c++){
           var cv=ws[XLSX.utils.encode_cell({r:r,c:c})];
           obj[headers[c-range.s.c]]=cv?cv.v:'';
         }
-        // Filtrar por tipo TOTAL
-        if(String(obj['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') continue;
-        // Filtrar por mes según Fecha de Emisión
-        var fechaVal = obj['Fecha Emisión']||obj['FECHA EMISION']||obj['Fecha Emision']||obj['MES']||'';
-        var mesRow = getMes(fechaVal);
-        if(mesNom && mesRow !== mesNom) continue;
-        // Verificar que aplica retención
-        var aplic=String(obj['APLIC. RETEFUENTE']||obj['APLIC.RETEFUENTE']||obj['APLIC RETEFUENTE']||'').trim().toUpperCase();
-        if(aplic!=='S') continue;
-        var tp=String(obj['T.P.']||obj['TP']||obj['T.P']||'').trim().toUpperCase();
-        if(tp!=='PJ'&&tp!=='PN') continue;
-        var tarifa=getN(obj['TARIFA RETEFUENTE']||obj['TARIFA']||0);
-        if(tarifa<=0) continue;
-        var base=getN(obj['BASE 19']||obj['BASE19']||0)+getN(obj['BASE 5']||obj['BASE5']||0)
-                +getN(obj['EXENTO']||0)+getN(obj['EXCLUIDO']||0);
-        if(base<=0) continue;
-        var nit=String(obj['NIT']||obj['Nit']||obj['nit']||'').trim().replace(/[^0-9]/g,'');
-        var nombre=String(obj['NOMBRE']||obj['Nombre']||obj['RAZON SOCIAL']||obj['Razón Social']||'').trim();
-        if(!nit||!nombre) continue;
-        var tk=nit+'_'+tarifa;
-        if(!terceros[tk]) terceros[tk]={nit:nit,nombre:nombre,tarifa:tarifa,base:0,retencion:0,tp:tp};
-        terceros[tk].base+=base;
-        terceros[tk].retencion+=Math.round(base*tarifa/100);
+        rows.push(obj);
       }
-
-      window._f350Cert3Terceros = terceros;
-      var n = Object.keys(terceros).length;
-      // Contar NITs únicos
-      var nits = {};
-      Object.values(terceros).forEach(function(t){nits[t.nit]=1;});
-      var nNits = Object.keys(nits).length;
-
-      if(n===0){
-        setSt('#fef3c7','#92400e','⚠ No se encontraron retenciones para '+(MNAMES[mesCod]||mesCod)+' '+anio+'. Verifica el mes o el Excel.');
-      } else {
-        setSt('#d1fae5','#065f46','✓ '+(MNAMES[mesCod]||mesCod)+' '+anio+' — '+nNits+' tercero'+(nNits!==1?'s':'')+' retenido'+(nNits!==1?'s':'')+' · '+n+' concepto'+(n!==1?'s':''));
-      }
-      // Limpiar resultado previo
-      f350_cert3_limpiarRes();
+      window._f350Cert3Raw = rows;
+      setSt('#d1fae5','#065f46','✓ Excel cargado con '+rows.length+' filas — selecciona el mes para filtrar');
+      // Filtrar con el mes actual
+      f350_cert3_filtrar();
     }catch(ex){
-      setSt('#fee2e2','#b91c1c','✗ Error leyendo Excel: '+ex.message);
+      setSt('#fee2e2','#b91c1c','✗ Error: '+ex.message);
     }
   };
   reader.readAsBinaryString(file);
 };
 
+// ── Función para extraer mes de una celda ──
+function f350_cert3_getMes(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(typeof v==='number'&&v>1000&&v<2958465){
+    var d=new Date(Math.round((v-25569)*86400*1000));
+    if(!isNaN(d.getTime())){
+      var MN=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+      return MN[d.getUTCMonth()+1]||'';
+    }
+  }
+  var s=String(v).trim();
+  // dd/mm/yyyy o dd-mm-yyyy
+  var m=s.match(/^\d{1,2}[-\/](\d{1,2})[-\/]\d{4}/);
+  if(m){
+    var MN2=['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    return MN2[parseInt(m[1],10)]||'';
+  }
+  // Nombre del mes
+  var clean=s.toUpperCase().replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U');
+  var MNALL=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  for(var i=0;i<MNALL.length;i++){if(clean.indexOf(MNALL[i])>=0)return MNALL[i];}
+  return clean;
+}
+
+// ── Filtrar por mes/año/tipo cuando cambia cualquier selector ──
+window.f350_cert3_filtrar = function(){
+  var rows = window._f350Cert3Raw||[];
+  if(!rows.length) return; // aún no hay Excel cargado
+  var stEl = document.getElementById('f350-cert3-status');
+  function setSt(bg,col,msg){if(stEl){stEl.style.display='block';stEl.style.background=bg;stEl.style.color=col;stEl.textContent=msg;}}
+
+  var mesEl   = document.getElementById('f350-cert3-mes');
+  var anioEl  = document.getElementById('f350-cert3-anio');
+  var tipoEl  = document.getElementById('f350-cert3-tipo');
+  var mesCod  = mesEl?mesEl.value:'01';
+  var anio    = anioEl?parseInt(anioEl.value):new Date().getFullYear();
+  var tipoFil = tipoEl?tipoEl.value:'todos';
+
+  var MNAMES={'01':'ENERO','02':'FEBRERO','03':'MARZO','04':'ABRIL','05':'MAYO','06':'JUNIO',
+              '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE'};
+  var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+               '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var mesNom = MNAMES[mesCod]||'';
+
+  function getN(v){return parseFloat(String(v||0).replace(/[^0-9.-]/g,''))||0;}
+
+  var terceros={};
+  rows.forEach(function(obj){
+    if(String(obj['Tipo de documento']||'').trim().toUpperCase()==='TOTAL') return;
+    var fechaVal=obj['Fecha Emisión']||obj['FECHA EMISION']||obj['Fecha Emision']||obj['MES']||'';
+    var mesRow=f350_cert3_getMes(fechaVal);
+    if(mesNom && mesRow!==mesNom) return;
+    var aplic=String(obj['APLIC. RETEFUENTE']||obj['APLIC.RETEFUENTE']||obj['APLIC RETEFUENTE']||'').trim().toUpperCase();
+    if(aplic!=='S') return;
+    var tp=String(obj['T.P.']||obj['TP']||obj['T.P']||'').trim().toUpperCase();
+    if(tp!=='PJ'&&tp!=='PN') return;
+    if(tipoFil!=='todos'&&tp!==tipoFil) return;
+    var tarifa=getN(obj['TARIFA RETEFUENTE']||obj['TARIFA']||0);
+    if(tarifa<=0) return;
+    var base=getN(obj['BASE 19']||obj['BASE19']||0)+getN(obj['BASE 5']||obj['BASE5']||0)
+            +getN(obj['EXENTO']||0)+getN(obj['EXCLUIDO']||0);
+    if(base<=0) return;
+    var nit=String(obj['NIT']||obj['Nit']||obj['nit']||'').trim().replace(/[^0-9]/g,'');
+    var nombre=String(obj['NOMBRE']||obj['Nombre']||obj['RAZON SOCIAL']||obj['Razón Social']||'').trim();
+    if(!nit||!nombre) return;
+    var tk=nit+'_'+tarifa;
+    if(!terceros[tk]) terceros[tk]={nit:nit,nombre:nombre,tarifa:tarifa,base:0,retencion:0,tp:tp};
+    terceros[tk].base+=base;
+    terceros[tk].retencion+=Math.round(base*tarifa/100);
+  });
+
+  window._f350Cert3Terceros=terceros;
+  f350_cert3_limpiarRes();
+
+  var nits={};
+  Object.values(terceros).forEach(function(t){nits[t.nit]=1;});
+  var nNits=Object.keys(nits).length;
+  var mesLabel=(MESES_L[mesCod]||mesCod)+' '+anio;
+
+  if(nNits===0){
+    setSt('#fef3c7','#92400e','⚠ No se encontraron retenciones en '+mesLabel+' — verifica el mes o el Excel');
+  } else {
+    setSt('#d1fae5','#065f46','✓ '+mesLabel+' — '+nNits+' tercero'+(nNits!==1?'s':'')+' retenido'+(nNits!==1?'s':''));
+  }
+};
+
+// ── Buscar tercero por NIT ──
 window.f350_cert3_buscar = function(){
-  var nitInput = document.getElementById('f350-cert3-nit');
-  var nit = (nitInput?nitInput.value:'').trim().replace(/[^0-9]/g,'');
-  var res  = document.getElementById('f350-cert3-resultado');
-  var nf   = document.getElementById('f350-cert3-notfound');
+  var nitInput=document.getElementById('f350-cert3-nit');
+  var nit=(nitInput?nitInput.value:'').trim().replace(/[^0-9]/g,'');
+  var res=document.getElementById('f350-cert3-resultado');
+  var nf=document.getElementById('f350-cert3-notfound');
   if(res) res.style.display='none';
   if(nf)  nf.style.display='none';
-  if(!nit){ alert('Escribe el NIT del tercero.'); return; }
+  if(!nit){ document.getElementById('f350-cert3-status').textContent='Escribe el NIT del tercero.'; return; }
 
-  var terceros = window._f350Cert3Terceros;
-  if(!terceros||!Object.keys(terceros).length){
-    alert('Primero carga el Excel y selecciona el mes.');
+  var terceros=window._f350Cert3Terceros;
+  if(!Object.keys(terceros||{}).length){
+    var stEl=document.getElementById('f350-cert3-status');
+    if(stEl){stEl.style.display='block';stEl.style.background='#fef3c7';stEl.style.color='#92400e';
+      stEl.textContent='⚠ Primero carga el Excel y selecciona el mes para filtrar.';}
     return;
   }
 
-  var matches = Object.values(terceros).filter(function(t){return t.nit===nit;});
+  var matches=Object.values(terceros).filter(function(t){return t.nit===nit;});
+  var mesEl=document.getElementById('f350-cert3-mes');
+  var anioEl=document.getElementById('f350-cert3-anio');
+  var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+               '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+  var mes=mesEl?mesEl.value:'01';
+  var anio=anioEl?anioEl.value:(activeYear||new Date().getFullYear());
+  var mesLabel=(MESES_L[mes]||mes)+' '+anio;
+  var c=clients.find(function(x){return x.id===activeClientId;})||{};
+  window._f350Cert3Ctx={empresa:c,anio:anio,mes:mes,mesLabel:mesLabel};
+
   if(!matches.length){
-    var mesEl  = document.getElementById('f350-cert3-mes');
-    var anioEl = document.getElementById('f350-cert3-anio');
-    var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
-                 '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-    var mesLabel = MESES_L[mesEl?mesEl.value:'01']||'';
-    var anio = anioEl?anioEl.value:'';
-    var nfMsg = document.getElementById('f350-cert3-notfound-msg');
-    if(nfMsg) nfMsg.textContent = 'NIT '+nit+' no tuvo retenciones en '+mesLabel+' '+anio+'.';
-    var sinRetBtn = document.getElementById('f350-cert3-sinret-btn');
-    if(sinRetBtn){ sinRetBtn.style.display='inline-block'; window._f350Cert3NitSinRet=nit; }
+    var nfMsg=document.getElementById('f350-cert3-notfound-msg');
+    if(nfMsg) nfMsg.textContent='NIT '+nit+' no tuvo retenciones en '+mesLabel+'. Puedes generar el certificado de no retención.';
+    var sinRetBtn=document.getElementById('f350-cert3-sinret-btn');
+    if(sinRetBtn){sinRetBtn.style.display='inline-block'; window._f350Cert3NitSinRet=nit;}
     if(nf) nf.style.display='block';
     return;
   }
 
-  // Consolidar por NIT
-  var datos = {
-    nit: matches[0].nit,
-    nombre: matches[0].nombre,
-    tp: matches[0].tp,
-    conceptos: matches.map(function(m){return {base:m.base,tarifa:m.tarifa,retencion:m.retencion};}),
-    totalBase: matches.reduce(function(s,m){return s+m.base;},0),
-    totalRet:  matches.reduce(function(s,m){return s+m.retencion;},0)
-  };
-  window._f350Cert3Data = datos;
+  var datos={nit:matches[0].nit,nombre:matches[0].nombre,tp:matches[0].tp,
+    conceptos:matches.map(function(m){return {base:m.base,tarifa:m.tarifa,retencion:m.retencion};}),
+    totalBase:matches.reduce(function(s,m){return s+m.base;},0),
+    totalRet:matches.reduce(function(s,m){return s+m.retencion;},0)};
+  window._f350Cert3Data=datos;
 
-  var c = clients.find(function(x){return x.id===activeClientId;})||{};
-  var mesEl  = document.getElementById('f350-cert3-mes');
-  var anioEl = document.getElementById('f350-cert3-anio');
-  var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
-               '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-  var mes  = mesEl?mesEl.value:'01';
-  var anio = anioEl?anioEl.value:(activeYear||new Date().getFullYear());
-  var mesLabel = MESES_L[mes]||mes;
-  var fmtM = function(n){return '$'+Math.round(n||0).toLocaleString('es-CO');};
+  var fmtM=function(n){return '$'+Math.round(n||0).toLocaleString('es-CO');};
+  document.getElementById('f350-cert3-res-title').textContent='Certificado — '+mesLabel;
+  document.getElementById('f350-cert3-res-sub').textContent='NIT: '+datos.nit+' · '+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural');
+  document.getElementById('f350-cert3-emp-name').textContent=c.razon||'EMPRESA RETENEDORA';
+  document.getElementById('f350-cert3-emp-nit').textContent='NIT: '+(c.nit||'')+' · Agente retenedor';
+  document.getElementById('f350-cert3-total-val').textContent=fmtM(datos.totalRet);
 
-  window._f350Cert3Ctx = {empresa:c,anio:anio,mes:mes,mesLabel:mesLabel+' '+anio};
-
-  // Renderizar resultado
-  var titleEl=document.getElementById('f350-cert3-res-title');
-  var subEl=document.getElementById('f350-cert3-res-sub');
-  var empN=document.getElementById('f350-cert3-emp-name');
-  var empNIT=document.getElementById('f350-cert3-emp-nit');
-  var campos=document.getElementById('f350-cert3-campos');
-  var totalV=document.getElementById('f350-cert3-total-val');
-
-  if(titleEl) titleEl.textContent='Certificado — '+mesLabel+' '+anio;
-  if(subEl)   subEl.textContent='NIT: '+datos.nit+' · '+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural');
-  if(empN)    empN.textContent=c.razon||'EMPRESA RETENEDORA';
-  if(empNIT)  empNIT.textContent='NIT: '+(c.nit||'')+' · Agente retenedor';
-  if(totalV)  totalV.textContent=fmtM(datos.totalRet);
-
-  if(campos){
-    var html='<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin-bottom:6px;">SUJETO RETENIDO</div>';
-    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Nombre</span><span style="font-weight:700;color:#1a2580;">'+datos.nombre+'</span></div>';
-    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">NIT</span><span style="font-weight:700;color:#1a2580;">'+datos.nit+'</span></div>';
-    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Tipo</span><span style="font-weight:700;color:#1a2580;">'+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural')+'</span></div>';
-    html+='<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin:10px 0 6px;">DETALLE DE RETENCIÓN</div>';
-    datos.conceptos.forEach(function(con){
-      html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Base gravable ('+con.tarifa+'%)</span><span style="font-weight:700;color:#1a2580;">'+fmtM(con.base)+'</span></div>';
-      html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Valor retenido ('+con.tarifa+'%)</span><span style="font-weight:700;color:#991b1b;">'+fmtM(con.retencion)+'</span></div>';
-    });
-    campos.innerHTML=html;
-  }
+  var html='<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin-bottom:6px;">SUJETO RETENIDO</div>';
+  html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Nombre</span><span style="font-weight:700;color:#1a2580;">'+datos.nombre+'</span></div>';
+  html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">NIT</span><span style="font-weight:700;color:#1a2580;">'+datos.nit+'</span></div>';
+  html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Tipo</span><span style="font-weight:700;color:#1a2580;">'+(datos.tp==='PJ'?'Persona Jurídica':'Persona Natural')+'</span></div>';
+  html+='<div style="font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;margin:10px 0 6px;">DETALLE DE RETENCIÓN</div>';
+  datos.conceptos.forEach(function(con){
+    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Base gravable ('+con.tarifa+'%)</span><span style="font-weight:700;color:#1a2580;">'+fmtM(con.base)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;font-size:11px;"><span style="color:#6b7280;">Valor retenido</span><span style="font-weight:700;color:#991b1b;">'+fmtM(con.retencion)+'</span></div>';
+  });
+  document.getElementById('f350-cert3-campos').innerHTML=html;
   if(res) res.style.display='block';
 };
 
-window.f350_cert3_limpiarRes = function(){
+window.f350_cert3_limpiarRes=function(){
   var res=document.getElementById('f350-cert3-resultado');
   var nf=document.getElementById('f350-cert3-notfound');
   var nit=document.getElementById('f350-cert3-nit');
@@ -6596,64 +6599,48 @@ window.f350_cert3_limpiarRes = function(){
   window._f350Cert3Data=null;
 };
 
-window.f350_cert3_sinRetencion = function(){
-  var nit = window._f350Cert3NitSinRet||'';
+window.f350_cert3_sinRetencion=function(){
+  var nit=window._f350Cert3NitSinRet||'';
   if(!nit) return;
-  var ctx = window._f350Cert3Ctx||window._f350CertContext||{};
-  // Reusar la función existente con el contexto del modo 3
-  window._f350CertContext = ctx;
+  window._f350CertContext=window._f350Cert3Ctx||{};
   f350_cert_sinRetencion(nit);
 };
 
-window.f350_cert3_generarPDF = function(){
-  var datos = window._f350Cert3Data;
-  var ctx   = window._f350Cert3Ctx||{};
-  if(!datos||!ctx) return;
-  // Reusar el generador existente
-  window._f350CertData = datos;
-  window._f350TercerosList = [datos];
-  window._f350CertContext  = ctx;
+window.f350_cert3_generarPDF=function(){
+  var datos=window._f350Cert3Data; var ctx=window._f350Cert3Ctx||{};
+  if(!datos) return;
+  window._f350CertData=datos; window._f350TercerosList=[datos]; window._f350CertContext=ctx;
   f350_cert_generarPDF();
 };
 
-window.f350_cert3_generarTodos = function(){
-  var terceros = window._f350Cert3Terceros;
+window.f350_cert3_generarTodos=function(){
+  var terceros=window._f350Cert3Terceros;
   if(!terceros||!Object.keys(terceros).length){
-    alert('Primero carga el Excel y selecciona el mes.');
+    var stEl=document.getElementById('f350-cert3-status');
+    if(stEl){stEl.style.display='block';stEl.style.background='#fef3c7';stEl.style.color='#92400e';
+      stEl.textContent='⚠ Carga el Excel y selecciona el mes antes de generar.';}
     return;
   }
-  // Agrupar por NIT
   var byNit={};
   Object.values(terceros).forEach(function(t){
     if(!byNit[t.nit]) byNit[t.nit]={nit:t.nit,nombre:t.nombre,tp:t.tp,conceptos:[],totalBase:0,totalRet:0};
     byNit[t.nit].conceptos.push({base:t.base,tarifa:t.tarifa,retencion:t.retencion});
-    byNit[t.nit].totalBase+=t.base;
-    byNit[t.nit].totalRet+=t.retencion;
+    byNit[t.nit].totalBase+=t.base; byNit[t.nit].totalRet+=t.retencion;
   });
   var lista=Object.values(byNit);
-  var total=lista.length;
-  if(!confirm('Se generarán '+total+' certificado'+(total!==1?'s':'')+'. ¿Continuar?')) return;
-
-  var c=clients.find(function(x){return x.id===activeClientId;})||{};
-  var mesEl=document.getElementById('f350-cert3-mes');
-  var anioEl=document.getElementById('f350-cert3-anio');
-  var MESES_L={'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
-               '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-  var mes=mesEl?mesEl.value:'01';
-  var anio=anioEl?anioEl.value:(activeYear||new Date().getFullYear());
-  var ctx={empresa:c,anio:anio,mes:mes,mesLabel:(MESES_L[mes]||mes)+' '+anio};
-  window._f350Cert3Ctx=ctx;
+  if(!confirm('Se generarán '+lista.length+' certificado'+(lista.length!==1?'s':'')+'. ¿Continuar?')) return;
+  var ctx=window._f350Cert3Ctx||{};
   window._f350CertContext=ctx;
-
   lista.forEach(function(datos,i){
     setTimeout(function(){
-      window._f350CertData=datos;
-      window._f350TercerosList=[datos];
+      window._f350CertData=datos; window._f350TercerosList=[datos];
       f350_cert_generarPDF();
     },i*400);
   });
-  f350_st('Generando '+total+' certificados...','ok');
+  f350_st('Generando '+lista.length+' certificados...','ok');
 };
+
+
 
 window.f350_cert_sinRetencion = function(nit){
   var c   = clients.find(function(x){return x.id===activeClientId;})||{};
