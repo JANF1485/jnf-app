@@ -2682,13 +2682,14 @@ var FB_CONFIG = {
 window._splashEnter = window.splashEnter = function splashEnter(){
   sessionStorage.setItem('splashSeen','1');
   document.getElementById('screen-splash').style.display='none';
-  if(currentUser && currentPerfil){
-    // Already logged in - go straight to app
-    document.getElementById('screen-app').style.display='';
-    showScreen('clientes');
-  } else {
-    // Not logged in - show login
-    document.getElementById('screen-login').style.display='flex';
+  // Siempre mostrar el login — nunca entrar al app directamente desde el splash
+  document.getElementById('screen-login').style.display='flex';
+  // Pre-rellenar email si hay sesión activa de Firebase
+  if(currentUser){
+    var emailEl=document.getElementById('login-email');
+    if(emailEl && !emailEl.value) emailEl.value=currentUser.email;
+    var passEl=document.getElementById('login-pass');
+    if(passEl) setTimeout(function(){passEl.focus();},100);
   }
 }
 
@@ -2812,6 +2813,9 @@ window._doLogin = window.doLogin = function doLogin(){
 
 window.confirmarLogout = function(){
   document.getElementById('modal-logout').style.display='none';
+  // Limpiar contraseña de sesión
+  window._sessionPwd = null;
+  try{ sessionStorage.removeItem('_jnf_sp'); }catch(e){}
   auth.signOut().then(function(){
     currentUser=null; currentPerfil=null;
     activeClientId=null; activeYear=null;
@@ -2852,7 +2856,11 @@ window._doLogout = window.doLogout = function doLogout(){
   var roleEl = document.getElementById('logout-role');
   if(nameEl && currentPerfil) nameEl.textContent = currentPerfil.nombre || currentPerfil.email || '—';
   if(roleEl && currentPerfil) roleEl.textContent = '· ' + (currentPerfil.rol==='admin'?'Administrador':'Contador');
-  if(modal) modal.style.display = 'flex';
+  if(modal){
+    modal.style.display = 'flex';
+    // Enfocar el modal para asegurar que recibe eventos
+    modal.style.zIndex = '10099';
+  }
 };
 
 function showLoginError(msg){
