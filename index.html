@@ -5,6 +5,7 @@
 
 <meta charset="UTF-8"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta name="bfcache-opt-out" content="1"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -2878,6 +2879,13 @@ function showLoginScreen(){
 }
 
 function showApp(){
+  // Reset todos los screens antes de mostrar la app — evita estado del BF cache
+  var allScreens = ['clientes','anio','contabilidad','consolidador','f300','inc',
+                    'guardado','calendario','obligaciones','f350','auditoria'];
+  allScreens.forEach(function(s){
+    var el = document.getElementById('screen-'+s);
+    if(el) el.style.display = 'none';
+  });
   document.getElementById('screen-login').style.display='none';
   var lb=document.getElementById('login-btn');if(lb){lb.disabled=false;lb.textContent='Ingresar';}
   // Clear any leftover status messages
