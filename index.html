@@ -2023,6 +2023,11 @@ window._confirmarAnio = window.confirmarAnio = function confirmarAnio(){
 }
 
 window._showScreen = window.showScreen = function showScreen(name){
+  console.log('[JNF] showScreen:', name, 'SCREENS:', typeof SCREENS, Array.isArray(SCREENS)?SCREENS.length:'?');
+  if(!SCREENS || !SCREENS.length){
+    console.error('[JNF] SCREENS no definido!');
+    return;
+  }
   SCREENS.forEach(s=>{
     var el=document.getElementById('screen-'+s);
     if(el) el.style.display = s===name ? '' : 'none';
@@ -2891,7 +2896,22 @@ function showApp(){
       window._showCambiarPassword ? window._showCambiarPassword() : null;
     };
   }
-  showScreen('clientes');
+  // Mostrar screen-clientes directamente como fallback
+  try {
+    showScreen('clientes');
+  } catch(e) {
+    console.error('[JNF] showScreen error:', e);
+    var elC = document.getElementById('screen-clientes');
+    if(elC) elC.style.display = '';
+  }
+  // Asegurar que screen-clientes es visible
+  setTimeout(function(){
+    var elC = document.getElementById('screen-clientes');
+    if(elC && elC.style.display === 'none') {
+      console.warn('[JNF] screen-clientes aún oculto, forzando...');
+      elC.style.display = '';
+    }
+  }, 100);
   var nameEl = document.getElementById('hdr-user-name');
   if(nameEl) nameEl.textContent = currentPerfil.nombre||currentPerfil.email;
   var roleEl = document.getElementById('hdr-user-role');
