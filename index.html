@@ -2034,6 +2034,11 @@ window._showScreen = window.showScreen = function showScreen(name){
     var el=document.getElementById('screen-'+s);
     if(el) el.style.display = s===name ? '' : 'none';
   });
+  // Limpiar onclick del grid cuando screen-clientes se oculta
+  if(name !== 'clientes'){
+    var g = document.getElementById('clientsGrid');
+    if(g) g.onclick = null;
+  }
   // Inicializar el selector de período del F300 al abrirlo
   if(name==='f300' && typeof f300_updatePeriodos==='function'){
     var sel=document.getElementById('f300-periodicidad');
@@ -2110,6 +2115,9 @@ const MODULES = [
 window._openContabilidad = window.openContabilidad = function openContabilidad(id){
   var _trace2 = new Error().stack ? new Error().stack.split('\n').slice(1,4).join(' | ') : 'unknown';
   console.log('[JNF] openContabilidad('+id+') DESDE:', _trace2.substring(0,200));
+  // Solo permitir si screen-clientes está activo
+  var scC=document.getElementById('screen-clientes');
+  if(!scC||scC.style.display==='none'){console.warn('[JNF] openContabilidad bloqueado');return;}
   const c=clients.find(x=>x.id===id);
   if(!c)return;
   activeClientId=id;
