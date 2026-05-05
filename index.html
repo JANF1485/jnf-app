@@ -2024,7 +2024,8 @@ window._confirmarAnio = window.confirmarAnio = function confirmarAnio(){
 }
 
 window._showScreen = window.showScreen = function showScreen(name){
-  console.log('[JNF] showScreen:', name, 'SCREENS:', typeof SCREENS, Array.isArray(SCREENS)?SCREENS.length:'?');
+  var _trace = new Error().stack ? new Error().stack.split('\n')[2] : 'unknown';
+  console.log('[JNF] showScreen:', name, '| desde:', _trace.trim().substring(0,80));
   if(!SCREENS || !SCREENS.length){
     console.error('[JNF] SCREENS no definido!');
     return;
