@@ -2108,6 +2108,8 @@ const MODULES = [
 ];
 
 window._openContabilidad = window.openContabilidad = function openContabilidad(id){
+  var _trace2 = new Error().stack ? new Error().stack.split('\n').slice(1,4).join(' | ') : 'unknown';
+  console.log('[JNF] openContabilidad('+id+') DESDE:', _trace2.substring(0,200));
   const c=clients.find(x=>x.id===id);
   if(!c)return;
   activeClientId=id;
@@ -2188,6 +2190,7 @@ window._openContabilidad = window.openContabilidad = function openContabilidad(i
 }
 
 function openAnio(clientId, year){
+  console.trace('[JNF] openAnio llamado');
   activeClientId=clientId;
   activeYear=year;
   const c=clients.find(x=>x.id===clientId);
@@ -2398,6 +2401,7 @@ function downloadSaved(clientId,n){
 }
 
 window._openExogena = window.openExogena = function openExogena(){
+  console.trace('[JNF] openExogena llamado');
   const c=clients.find(x=>x.id===activeClientId);
   if(!c)return;
   const year=activeYear||new Date().getFullYear();
