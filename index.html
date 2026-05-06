@@ -2033,7 +2033,14 @@ window._showScreen = window.showScreen = function showScreen(name){
   }
   SCREENS.forEach(s=>{
     var el=document.getElementById('screen-'+s);
-    if(el) el.style.display = s===name ? '' : 'none';
+    if(!el) return;
+    if(s===name){
+      el.style.display = '';
+      // Forzar reflow para asegurar visibilidad
+      el.style.visibility = 'visible';
+    } else {
+      el.style.display = 'none';
+    }
   });
   // Limpiar onclick del grid cuando screen-clientes se oculta
   if(name !== 'clientes'){
@@ -2899,13 +2906,7 @@ function showLoginScreen(){
 }
 
 function showApp(){
-  // Reset todos los screens antes de mostrar la app — evita estado del BF cache
-  var allScreens = ['clientes','anio','contabilidad','consolidador','f300','inc',
-                    'guardado','calendario','obligaciones','f350','auditoria'];
-  allScreens.forEach(function(s){
-    var el = document.getElementById('screen-'+s);
-    if(el) el.style.display = 'none';
-  });
+  // Screens ya están en display:none por defecto en el HTML
   document.getElementById('screen-login').style.display='none';
   var lb=document.getElementById('login-btn');if(lb){lb.disabled=false;lb.textContent='Ingresar';}
   // Clear any leftover status messages
