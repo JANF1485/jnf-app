@@ -2761,8 +2761,12 @@ function initFirebase(){
               clientesAsignados:[], modulosPermitidos:['exogena','guardado','f300','inc']};
             db.collection('usuarios').doc(user.uid).set(currentPerfil);
           }
-          showApp();
-          loadClientesFromFirestore();
+          // Solo mostrar la app si no está ya visible
+          var appEl = document.getElementById('screen-app');
+          if(!appEl || appEl.style.display === 'none'){
+            showApp();
+            loadClientesFromFirestore();
+          }
           setTimeout(function(){ audRegistrar('Login','Sistema','','','Acceso al sistema · '+new Date().toLocaleString('es-CO')); }, 2000);
         }).catch(function(e){ showLoginError('Error perfil: '+e.message); });
       } else {
