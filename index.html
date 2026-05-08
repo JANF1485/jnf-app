@@ -1313,6 +1313,21 @@ window.addEventListener('online', function(){
     <span style="font-size:9px;font-weight:700;color:var(--gold);background:var(--bd);padding:2px 8px;border-radius:10px;margin-left:4px;">Solo Administrador</span>
   </div>
 
+  <!-- Pestañas -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--br);">
+    <button id="aud-tab-registro" onclick="audSetTab('registro')"
+      style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">
+      📋 Registro de acciones
+    </button>
+    <button id="aud-tab-dashboard" onclick="audSetTab('dashboard')"
+      style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">
+      📊 Dashboard contadores
+      <span style="background:#c9a227;color:#1a2580;font-size:9px;font-weight:700;padding:1px 7px;border-radius:8px;margin-left:6px;">nuevo</span>
+    </button>
+  </div>
+
+  <!-- Panel Registro -->
+  <div id="aud-panel-registro">
   <!-- Tarjetas resumen -->
   <div id="aud-resumen" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:22px;"></div>
 
@@ -1410,6 +1425,34 @@ window.addEventListener('online', function(){
       <div style="padding:18px 20px;" id="aud-det-timeline"></div>
     </div>
   </div>
+
+  </div><!-- /panel-registro -->
+
+  <!-- Panel Dashboard -->
+  <div id="aud-panel-dashboard" style="display:none;">
+
+    <!-- Métricas -->
+    <div id="dash-metricas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
+
+    <!-- Contadores + Actividad -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">👥 Contadores — actividad del mes</div>
+        <div id="dash-contadores" style="font-size:11px;color:var(--t2);">Cargando...</div>
+      </div>
+      <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">⚡ Actividad reciente</div>
+        <div id="dash-actividad" style="font-size:11px;color:var(--t2);">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- Módulos por contador -->
+    <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">📊 Uso de módulos por contador — mes actual</div>
+      <div id="dash-modulos" style="font-size:11px;color:var(--t2);">Cargando...</div>
+    </div>
+
+  </div><!-- /panel-dashboard -->
 
 </div>
 <!-- ═══ FIN PANTALLA AUDITORÍA ══════════════════════════════════════ -->
@@ -7241,7 +7284,131 @@ window._openAuditoria = window.openAuditoria = function openAuditoria(){
   showScreen('auditoria');
   audPoblarUsuarios();
   audCargar();
+  audSetTab('registro');
+}
+
+window.audSetTab = function(tab){
+  ['registro','dashboard'].forEach(function(t){
+    var btn = document.getElementById('aud-tab-'+t);
+    var panel = document.getElementById('aud-panel-'+t);
+    if(btn){
+      btn.style.borderBottomColor = t===tab ? '#1a2580' : 'transparent';
+      btn.style.color = t===tab ? '#1a2580' : 'var(--t2)';
+    }
+    if(panel) panel.style.display = t===tab ? '' : 'none';
+  });
+  if(tab==='dashboard') audCargarDashboard();
 };
+
+window.audCargarDashboard = function(){
+  if(!db) return;
+  var ahora = new Date();
+  var mes = ahora.getMonth();
+  var anio = ahora.getFullYear();
+  var fmtM = function(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); };
+
+  db.collection('auditoria').orderBy('fecha','desc').limit(300).get()
+  .then(function(snap){
+    var todos = [];
+    snap.forEach(function(d){ todos.push(d.data()); });
+
+    var delMes = todos.filter(function(r){
+      if(!r.fecha) return false;
+      var d = r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha);
+      return d.getMonth()===mes && d.getFullYear()===anio;
+    });
+
+    var byUser = {};
+    delMes.forEach(function(r){
+      var u = r.usuario || r.email || '—';
+      if(!byUser[u]) byUser[u]={nombre:u,acciones:[],mods:{}};
+      byUser[u].acciones.push(r);
+      var mod = r.modulo || r.accion || 'General';
+      byUser[u].mods[mod] = (byUser[u].mods[mod]||0)+1;
+    });
+
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var activosHoy = Object.values(byUser).filter(function(u){
+      return u.acciones.some(function(a){
+        var d = a.fecha&&a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha||0);
+        return d>=hoy;
+      });
+    }).length;
+
+    // Métricas
+    var metEl = document.getElementById('dash-metricas');
+    if(metEl) metEl.innerHTML = [
+      {l:'Acciones este mes', v:delMes.length, c:'#1a2580'},
+      {l:'Contadores activos', v:Object.keys(byUser).length, c:'#065f46'},
+      {l:'Activos hoy', v:activosHoy, c:'#c9a227'},
+      {l:'Registros totales', v:todos.length, c:'#374151'}
+    ].map(function(m){
+      return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:12px 14px;">'
+        +'<div style="font-size:10px;color:var(--t2);margin-bottom:4px;">'+m.l+'</div>'
+        +'<div style="font-size:22px;font-weight:700;color:'+m.c+';">'+m.v+'</div>'
+        +'</div>';
+    }).join('');
+
+    // Lista contadores
+    var contEl = document.getElementById('dash-contadores');
+    if(contEl){
+      var uList = Object.values(byUser);
+      if(!uList.length){ contEl.innerHTML='<div style="color:var(--t3);padding:16px;text-align:center;">Sin actividad este mes</div>'; }
+      else contEl.innerHTML = uList.map(function(u){
+        var ultima = u.acciones[0];
+        var fd = ultima&&ultima.fecha ? (ultima.fecha.toDate?ultima.fecha.toDate():new Date(ultima.fecha)) : null;
+        var fs = fd ? fd.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+        var ini = u.nombre.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--br);">'
+          +'<div style="width:34px;height:34px;border-radius:50%;background:#eef1ff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#1a2580;flex-shrink:0;">'+ini+'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:11px;font-weight:700;color:var(--tx);">'+u.nombre+'</div>'
+          +'<div style="font-size:10px;color:var(--t2);">'+u.acciones.length+' acciones · Última: '+fs+'</div>'
+          +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">'
+          +Object.keys(u.mods).slice(0,4).map(function(m){
+            return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:1px 6px;border-radius:8px;">'+m+'</span>';
+          }).join('')+'</div></div>'
+          +'<span style="font-size:9px;font-weight:700;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:8px;">'+u.acciones.length+'</span>'
+          +'</div>';
+      }).join('');
+    }
+
+    // Actividad reciente
+    var actEl = document.getElementById('dash-actividad');
+    if(actEl){
+      var cols = {'Login':'#10b981','Generar':'#3b82f6','Guardar':'#8b5cf6','Liquidar':'#f59e0b'};
+      actEl.innerHTML = todos.slice(0,10).map(function(r){
+        var d = r.fecha&&r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha||0);
+        var h = d.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var col = cols[r.accion]||'#6b7280';
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--br);">'
+          +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+';margin-top:3px;flex-shrink:0;"></div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:11px;font-weight:700;color:var(--tx);">'+(r.usuario||'—')+'</div>'
+          +'<div style="font-size:10px;color:var(--t2);">'+(r.accion||'')+(r.cliente?' · '+r.cliente:'')+(r.detalle?' — '+String(r.detalle).substring(0,40):'')+'</div>'
+          +'</div><div style="font-size:9px;color:var(--t3);white-space:nowrap;">'+h+'</div></div>';
+      }).join('') || '<div style="color:var(--t3);text-align:center;padding:16px;">Sin registros</div>';
+    }
+
+    // Módulos por contador
+    var modEl = document.getElementById('dash-modulos');
+    if(modEl){
+      var uList2 = Object.values(byUser);
+      if(!uList2.length){ modEl.innerHTML='<div style="color:var(--t3);padding:16px;text-align:center;">Sin datos</div>'; }
+      else modEl.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">'
+        +uList2.map(function(u){
+          var ini = u.nombre.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
+          return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:10px 12px;">'
+            +'<div style="font-size:11px;font-weight:700;color:var(--bd);margin-bottom:8px;">'+ini+' — '+u.nombre.split(' ')[0]+'</div>'
+            +Object.entries(u.mods).map(function(kv){
+              return '<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:0.5px solid #f1f5f9;">'
+                +'<span style="color:var(--t2);">'+kv[0]+'</span>'
+                +'<span style="font-weight:700;color:#1a2580;">'+kv[1]+'</span></div>';
+            }).join('')+'</div>';
+        }).join('')+'</div>';
+    }
+  }).catch(function(e){ console.error('[JNF] Dashboard error:',e); });
+};;
 
 // ── Poblar selector de usuarios ─────────────────────────
 function audPoblarUsuarios(){
