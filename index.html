@@ -7307,24 +7307,54 @@ window.audCargarDashboard = function(){
   var ahora = new Date();
   var mes = ahora.getMonth();
   var anio = ahora.getFullYear();
-  db.collection('auditoria').orderBy('fecha','desc').limit(300).get()
-  .then(function(snap){
+
+  // Cargar usuarios Y auditoría en paralelo
+  Promise.all([
+    db.collection('usuarios').get(),
+    db.collection('auditoria').orderBy('fecha','desc').limit(300).get()
+  ]).then(function(results){
+    var snapUsuarios = results[0];
+    var snapAuditoria = results[1];
+
+    // Todos los usuarios registrados (solo contadores)
+    var usuariosRegistrados = [];
+    snapUsuarios.forEach(function(d){
+      var u = d.data();
+      if(u.rol === 'contador') usuariosRegistrados.push(u);
+    });
+
+    // Registros de auditoría
     var todos = [];
-    snap.forEach(function(d){ todos.push(d.data()); });
+    snapAuditoria.forEach(function(d){ todos.push(d.data()); });
+
     var delMes = todos.filter(function(r){
       if(!r.fecha) return false;
       var d = r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha);
       return d.getMonth()===mes && d.getFullYear()===anio;
     });
+
+    // Agrupar auditoría por usuario
     var byUser = {};
     delMes.forEach(function(r){
       var u = r.usuario || r.email || '—';
-      if(!byUser[u]) byUser[u]={nombre:u, acciones:[], clientes:{}};
+      if(!byUser[u]) byUser[u] = {nombre:u, email:u, acciones:[], clientes:{}};
       byUser[u].acciones.push(r);
       var cli = r.cliente || r.clienteId || '—';
       if(!byUser[u].clientes[cli]) byUser[u].clientes[cli] = [];
       byUser[u].clientes[cli].push(r);
     });
+
+    // Agregar contadores sin actividad
+    usuariosRegistrados.forEach(function(u){
+      var nombre = u.nombre || u.email || '—';
+      if(!byUser[nombre]){
+        byUser[nombre] = {nombre:nombre, email:u.email||'—', acciones:[], clientes:{}, sinActividad:true};
+      } else {
+        byUser[nombre].email = u.email || byUser[nombre].email;
+      }
+    });
+
+    // Métricas
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var activosHoy = Object.values(byUser).filter(function(u){
       return u.acciones.some(function(a){
@@ -7332,66 +7362,75 @@ window.audCargarDashboard = function(){
         return d >= hoy;
       });
     }).length;
+
     var metEl = document.getElementById('dash-metricas');
     if(metEl) metEl.innerHTML = [
       {l:'Acciones este mes', v:delMes.length, c:'#1a2580'},
-      {l:'Contadores activos', v:Object.keys(byUser).length, c:'#065f46'},
+      {l:'Contadores activos', v:Object.values(byUser).filter(function(u){return u.acciones.length>0;}).length, c:'#065f46'},
       {l:'Activos hoy', v:activosHoy, c:'#c9a227'},
-      {l:'Registros totales', v:todos.length, c:'#374151'}
+      {l:'Sin actividad', v:Object.values(byUser).filter(function(u){return u.sinActividad;}).length, c:'#991b1b'}
     ].map(function(m){
       return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:12px 14px;">'
         +'<div style="font-size:10px;color:var(--t2);margin-bottom:4px;">'+m.l+'</div>'
         +'<div style="font-size:22px;font-weight:700;color:'+m.c+';">'+m.v+'</div></div>';
     }).join('');
+
+    // Lista contadores
     var contEl = document.getElementById('dash-contadores');
-    if(contEl){
-      var uList = Object.values(byUser);
-      if(!uList.length){
-        contEl.innerHTML = '<div style="color:var(--t3);padding:20px;text-align:center;">Sin actividad este mes</div>';
-      } else {
-        var colors = [['#eef1ff','#1a2580'],['#f0fdf4','#065f46'],['#fef3c7','#92400e'],['#fee2e2','#991b1b']];
-        contEl.innerHTML = uList.map(function(u, idx){
-          var ini = u.nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
-          var nCli = Object.keys(u.clientes).length;
-          var ultima = u.acciones[0];
-          var fd = ultima&&ultima.fecha ? (ultima.fecha.toDate?ultima.fecha.toDate():new Date(ultima.fecha)) : null;
-          var fs = fd ? fd.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-          var mods = {};
-          u.acciones.forEach(function(a){ var m=a.modulo||a.accion||'General'; mods[m]=1; });
-          var modTags = Object.keys(mods).slice(0,3).map(function(m){
-            return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:2px 6px;border-radius:7px;">'+m+'</span>';
-          }).join('');
-          var cl = colors[idx%4];
-          var el = document.createElement('div');
-          el.id = 'dashcont-'+idx;
-          el.setAttribute('data-nombre', u.nombre);
-          el.onclick = function(){ audVerContador(this); };
-          el.style.cssText = 'background:#fff;border-radius:10px;border:1.5px solid var(--br);padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:8px;';
-          el.innerHTML = '<div style="width:38px;height:38px;border-radius:50%;background:'+cl[0]+';color:'+cl[1]+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+ini+'</div>'
-            +'<div style="flex:1;min-width:0;">'
-            +'<div style="font-size:12px;font-weight:700;color:#1a2580;">'+u.nombre+'</div>'
-            +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+u.acciones.length+' acciones · '+nCli+' cliente'+(nCli!==1?'s':'')+' · '+fs+'</div>'
-            +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+modTags+'</div>'
-            +'</div>'
-            +'<div style="font-size:16px;color:#c9a227;">›</div>';
-          return el.outerHTML;
-        }).join('');
-      }
-      window._dashByUser = byUser;
+    if(!contEl) return;
+    window._dashByUser = byUser;
+
+    var uList = Object.values(byUser);
+    if(!uList.length){
+      contEl.innerHTML = '<div style="color:var(--t3);padding:20px;text-align:center;">Sin contadores registrados</div>';
+      return;
     }
+
+    contEl.innerHTML = '';
+    var colors = [['#eef1ff','#1a2580'],['#f0fdf4','#065f46'],['#fef3c7','#92400e'],['#fee2e2','#991b1b']];
+    uList.forEach(function(u, idx){
+      var ini = u.nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
+      var nCli = Object.keys(u.clientes).length;
+      var ultima = u.acciones[0];
+      var fd = ultima&&ultima.fecha ? (ultima.fecha.toDate?ultima.fecha.toDate():new Date(ultima.fecha)) : null;
+      var fs = fd ? fd.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin actividad';
+      var mods = {};
+      u.acciones.forEach(function(a){ var m=a.modulo||a.accion||'General'; mods[m]=1; });
+      var modTags = Object.keys(mods).length
+        ? Object.keys(mods).slice(0,3).map(function(m){
+            return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:2px 6px;border-radius:7px;">'+m+'</span>';
+          }).join('')
+        : '<span style="font-size:9px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:7px;">Sin actividad este mes</span>';
+
+      var cl = u.sinActividad ? ['#fee2e2','#991b1b'] : colors[idx%3];
+      var card = document.createElement('div');
+      card.id = 'dashcont-'+idx;
+      card.style.cssText = 'background:#fff;border-radius:10px;border:1.5px solid var(--br);padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:8px;';
+      card.innerHTML = '<div style="width:38px;height:38px;border-radius:50%;background:'+cl[0]+';color:'+cl[1]+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+ini+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12px;font-weight:700;color:#1a2580;">'+u.nombre+'</div>'
+        +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+(u.acciones.length?u.acciones.length+' acciones · '+nCli+' cliente'+(nCli!==1?'s':''):'Sin actividad este mes')+' · '+fs+'</div>'
+        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+modTags+'</div>'
+        +'</div>'
+        +'<div style="font-size:16px;color:#c9a227;">›</div>';
+      card.addEventListener('click', function(){ audVerContador(idx); });
+      contEl.appendChild(card);
+    });
+    window._dashUList = uList;
+
   }).catch(function(e){ console.error('[JNF] Dashboard error:',e); });
 };
 
-window.audVerContador = function(el){
-  var nombre = el ? el.getAttribute('data-nombre') : '';
-  if(!nombre) return;
-  var byUser = window._dashByUser||{};
-  var u = byUser[nombre];
+window.audVerContador = function(idx){
+  var uList = window._dashUList||[];
+  var u = uList[idx];
   if(!u) return;
+  var nombre = u.nombre;
   document.querySelectorAll('[id^="dashcont-"]').forEach(function(c){
     c.style.borderColor = 'var(--br)'; c.style.background = '#fff';
   });
-  el.style.borderColor = '#1a2580'; el.style.background = '#f0f4ff';
+  var card = document.getElementById('dashcont-'+idx);
+  if(card){ card.style.borderColor = '#1a2580'; card.style.background = '#f0f4ff'; }
   var ini = nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
   var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var ahora = new Date();
