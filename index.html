@@ -1431,6 +1431,27 @@ window.addEventListener('online', function(){
   <!-- Panel: Dashboard -->
   <div id="aud-panel-dashboard" style="display:none;">
 
+    <!-- Filtro de fechas -->
+    <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.3px;">PERÍODO:</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:10px;color:var(--t2);font-weight:600;">Desde</label>
+        <input type="date" id="dash-fecha-desde"
+          style="font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:6px 10px;color:var(--tx);background:var(--sf);outline:none;"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:10px;color:var(--t2);font-weight:600;">Hasta</label>
+        <input type="date" id="dash-fecha-hasta"
+          style="font-family:Montserrat,sans-serif;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:6px 10px;color:var(--tx);background:var(--sf);outline:none;"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--br)'"/>
+      </div>
+      <button onclick="audCargarDashboard()" class="btn btn-blue btn-sm">🔍 Aplicar</button>
+      <button onclick="dashFechasMesActual()" class="btn btn-ol btn-sm">📅 Mes actual</button>
+      <button onclick="dashFechasLimpiar()" class="btn btn-ol btn-sm">✕ Todo</button>
+      <span id="dash-periodo-label" style="margin-left:auto;font-size:10px;font-weight:700;color:var(--bd);background:var(--bl);padding:4px 12px;border-radius:20px;"></span>
+    </div>
+
     <!-- Métricas -->
     <div id="dash-metricas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
 
@@ -7305,18 +7326,34 @@ window.audSetTab = function(tab){
 window.audCargarDashboard = function(){
   if(!db) return;
 
-  // Helper para convertir fecha (Timestamp o string ISO) a Date
   function toDate(f){
     if(!f) return new Date(0);
     if(f.toDate) return f.toDate();
     return new Date(f);
   }
 
-  var ahora = new Date();
-  var mes  = ahora.getMonth();
-  var anio = ahora.getFullYear();
+  // Leer filtros de fecha
+  var desdeEl = document.getElementById('dash-fecha-desde');
+  var hastaEl = document.getElementById('dash-fecha-hasta');
+  var desde = desdeEl && desdeEl.value ? new Date(desdeEl.value+'T00:00:00') : null;
+  var hasta = hastaEl && hastaEl.value ? new Date(hastaEl.value+'T23:59:59') : null;
 
-  // Mostrar indicador de carga
+  // Label del período
+  var labelEl = document.getElementById('dash-periodo-label');
+  if(labelEl){
+    if(desde && hasta)
+      labelEl.textContent = desde.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})+' → '+hasta.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    else if(desde)
+      labelEl.textContent = 'Desde '+desde.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    else if(hasta)
+      labelEl.textContent = 'Hasta '+hasta.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    else {
+      var ahora2=new Date();
+      var MESES2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      labelEl.textContent = MESES2[ahora2.getMonth()]+' '+ahora2.getFullYear();
+    }
+  }
+
   var contEl = document.getElementById('dash-contadores');
   if(contEl) contEl.innerHTML = '<div style="color:var(--t3);padding:20px;text-align:center;">⏳ Cargando…</div>';
   var detEl = document.getElementById('dash-detalle');
@@ -7324,41 +7361,37 @@ window.audCargarDashboard = function(){
 
   Promise.all([
     db.collection('usuarios').get(),
-    db.collection('auditoria').orderBy('fecha','desc').limit(1000).get()
+    db.collection('auditoria').orderBy('fecha','desc').limit(2000).get()
   ]).then(function(results){
     var snapUsuarios  = results[0];
     var snapAuditoria = results[1];
 
-    // Usuarios registrados (todos los roles)
     var usuariosRegistrados = [];
-    snapUsuarios.forEach(function(d){
-      var u = d.data();
-      usuariosRegistrados.push(u);
-    });
+    snapUsuarios.forEach(function(d){ usuariosRegistrados.push(d.data()); });
 
-    // Todos los registros
     var todos = [];
     snapAuditoria.forEach(function(d){ todos.push(d.data()); });
 
-    // Filtrar mes actual
-    var delMes = todos.filter(function(r){
+    // Aplicar filtro de fechas
+    var ahora = new Date();
+    var filtrados = todos.filter(function(r){
       if(!r.fecha) return false;
       var d = toDate(r.fecha);
-      return d.getMonth()===mes && d.getFullYear()===anio;
+      if(desde && d < desde) return false;
+      if(hasta && d > hasta) return false;
+      // Si no hay filtro, usar mes actual
+      if(!desde && !hasta){
+        return d.getMonth()===ahora.getMonth() && d.getFullYear()===ahora.getFullYear();
+      }
+      return true;
     });
 
-    // Agrupar por usuario — usar nombre como clave
+    // Agrupar por usuario
     var byUser = {};
-    delMes.forEach(function(r){
+    filtrados.forEach(function(r){
       var uNombre = (r.usuario||'').trim() || '—';
-      if(!byUser[uNombre]) byUser[uNombre] = {
-        nombre: uNombre,
-        email:  r.email || '',
-        acciones: [],
-        clientes: {}
-      };
+      if(!byUser[uNombre]) byUser[uNombre] = {nombre:uNombre, email:r.email||'', acciones:[], clientes:{}};
       byUser[uNombre].acciones.push(r);
-      // Nombre del cliente: priorizar campo 'cliente', luego 'clienteId'
       var cliNom = (r.cliente && r.cliente !== '—' && r.cliente.trim())
         ? r.cliente.trim()
         : (r.clienteId && r.clienteId.trim() ? r.clienteId.trim() : '— Sin cliente —');
@@ -7366,7 +7399,6 @@ window.audCargarDashboard = function(){
       byUser[uNombre].clientes[cliNom].push(r);
     });
 
-    // Agregar usuarios registrados sin actividad este mes
     usuariosRegistrados.forEach(function(u){
       var nombre = (u.nombre||u.email||'').trim();
       if(!nombre) return;
@@ -7377,7 +7409,7 @@ window.audCargarDashboard = function(){
       }
     });
 
-    // ── Métricas ──────────────────────────────────────────
+    // Métricas
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var activosHoy = Object.values(byUser).filter(function(u){
       return u.acciones.some(function(a){ return toDate(a.fecha) >= hoy; });
@@ -7385,10 +7417,10 @@ window.audCargarDashboard = function(){
 
     var metEl = document.getElementById('dash-metricas');
     if(metEl) metEl.innerHTML = [
-      {l:'Acciones este mes',  v:delMes.length,                                                                      c:'#1a2580', s:'en todos los módulos'},
-      {l:'Contadores activos', v:Object.values(byUser).filter(function(u){return u.acciones.length>0;}).length,     c:'#065f46', s:'con actividad este mes'},
-      {l:'Activos hoy',        v:activosHoy,                                                                         c:'#c9a227', s:'con acciones hoy'},
-      {l:'Registros totales',  v:todos.length,                                                                       c:'#374151', s:'historial completo'}
+      {l:'Acciones en período',  v:filtrados.length, c:'#1a2580', s:'registros filtrados'},
+      {l:'Contadores activos',   v:Object.values(byUser).filter(function(u){return u.acciones.length>0;}).length, c:'#065f46', s:'con actividad'},
+      {l:'Activos hoy',          v:activosHoy, c:'#c9a227', s:'con acciones hoy'},
+      {l:'Total histórico',      v:todos.length, c:'#374151', s:'registros totales'}
     ].map(function(m){
       return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:14px 16px;">'
         +'<div style="font-size:10px;color:var(--t2);letter-spacing:.3px;margin-bottom:4px;">'+m.l+'</div>'
@@ -7396,11 +7428,9 @@ window.audCargarDashboard = function(){
         +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+m.s+'</div></div>';
     }).join('');
 
-    // ── Lista de contadores ───────────────────────────────
     if(!contEl) return;
     window._dashByUser = byUser;
 
-    // Ordenar: primero con actividad (desc por acciones), luego sin actividad
     var uList = Object.values(byUser).sort(function(a,b){
       if(a.sinActividad && !b.sinActividad) return 1;
       if(!a.sinActividad && b.sinActividad) return -1;
@@ -7428,8 +7458,7 @@ window.audCargarDashboard = function(){
         ? Object.keys(mods).slice(0,3).map(function(m){
             return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:2px 6px;border-radius:7px;">'+m+'</span>';
           }).join('')
-        : '<span style="font-size:9px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:7px;">Sin actividad este mes</span>';
-
+        : '<span style="font-size:9px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:7px;">Sin actividad</span>';
       var cl = u.sinActividad ? ['#fee2e2','#991b1b'] : colors[idx % colors.length];
       var card = document.createElement('div');
       card.id = 'dashcont-'+idx;
@@ -7439,7 +7468,7 @@ window.audCargarDashboard = function(){
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;color:#1a2580;">'+u.nombre+'</div>'
         +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'
-        +(u.acciones.length ? u.acciones.length+' acciones · '+nCli+' cliente'+(nCli!==1?'s':'') : 'Sin actividad este mes')
+        +(u.acciones.length ? u.acciones.length+' acciones · '+nCli+' cliente'+(nCli!==1?'s':'') : 'Sin actividad')
         +' · '+fs+'</div>'
         +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+modTags+'</div>'
         +'</div>'
@@ -7448,16 +7477,34 @@ window.audCargarDashboard = function(){
       contEl.appendChild(card);
     });
     window._dashUList = uList;
-
-    // Auto-seleccionar el primero con actividad
     if(uList.length && !uList[0].sinActividad) audVerContador(0);
 
   }).catch(function(e){
     console.error('[JNF] Dashboard error:',e);
-    var contEl2 = document.getElementById('dash-contadores');
-    if(contEl2) contEl2.innerHTML = '<div style="color:#b91c1c;padding:20px;text-align:center;font-size:11px;">Error cargando datos: '+e.message+'</div>';
+    var ce = document.getElementById('dash-contadores');
+    if(ce) ce.innerHTML = '<div style="color:#b91c1c;padding:20px;text-align:center;font-size:11px;">Error: '+e.message+'</div>';
   });
 };
+
+// Helpers filtro fechas
+window.dashFechasMesActual = function(){
+  var ahora = new Date();
+  var y = ahora.getFullYear(), m = String(ahora.getMonth()+1).padStart(2,'0');
+  var ultimo = new Date(ahora.getFullYear(), ahora.getMonth()+1, 0).getDate();
+  var desdeEl = document.getElementById('dash-fecha-desde');
+  var hastaEl = document.getElementById('dash-fecha-hasta');
+  if(desdeEl) desdeEl.value = y+'-'+m+'-01';
+  if(hastaEl) hastaEl.value = y+'-'+m+'-'+String(ultimo).padStart(2,'0');
+  audCargarDashboard();
+};
+window.dashFechasLimpiar = function(){
+  var desdeEl = document.getElementById('dash-fecha-desde');
+  var hastaEl = document.getElementById('dash-fecha-hasta');
+  if(desdeEl) desdeEl.value = '';
+  if(hastaEl) hastaEl.value = '';
+  audCargarDashboard();
+};
+
 
 window.audVerContador = function(idx){
   var uList = window._dashUList||[];
@@ -7478,9 +7525,19 @@ window.audVerContador = function(idx){
 
   var nombre = u.nombre;
   var ini = nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
-  var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var periodoLabel = MESES[new Date().getMonth()]+' '+new Date().getFullYear();
 
+  // Label período activo
+  var desdeEl = document.getElementById('dash-fecha-desde');
+  var hastaEl = document.getElementById('dash-fecha-hasta');
+  var periodoLabel = '';
+  if(desdeEl && desdeEl.value && hastaEl && hastaEl.value)
+    periodoLabel = desdeEl.value+' → '+hastaEl.value;
+  else {
+    var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    periodoLabel = MESES[new Date().getMonth()]+' '+new Date().getFullYear();
+  }
+
+  // Color por módulo
   var dotColor = function(modulo, accion){
     var m = ((modulo||'')+(accion||'')).toLowerCase();
     if(m.indexOf('exogen')>=0) return '#10b981';
@@ -7489,6 +7546,7 @@ window.audVerContador = function(idx){
     if(m.indexOf('f310')>=0||m.indexOf('inc')>=0) return '#0891b2';
     if(m.indexOf('oblig')>=0) return '#f59e0b';
     if(m.indexOf('cliente')>=0) return '#c9a227';
+    if(m.indexOf('login')>=0||m.indexOf('sistem')>=0) return '#9ca3af';
     return '#6b7280';
   };
 
@@ -7499,76 +7557,99 @@ window.audVerContador = function(idx){
 
   // Header
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'background:linear-gradient(135deg,#1a2580,#2535a8);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;';
+  hdr.style.cssText = 'background:linear-gradient(135deg,#1a2580,#2535a8);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;';
   hdr.innerHTML =
     '<div style="display:flex;align-items:center;gap:12px;">'
     +'<div style="width:42px;height:42px;border-radius:50%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a2580;flex-shrink:0;">'+ini+'</div>'
     +'<div>'
     +'<div style="font-size:14px;font-weight:700;color:#fff;">'+nombre+'</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;">'+(u.email||'')+'</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:1px;">'+u.acciones.length+' acciones · '+periodoLabel+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.65);margin-top:1px;">'+(u.email||'')+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:1px;">'+periodoLabel+' · '+u.acciones.length+' acciones</div>'
     +'</div></div>'
     +'<span style="background:rgba(201,162,39,.25);color:#c9a227;font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid rgba(201,162,39,.4);">'+u.acciones.length+' acciones</span>';
   detEl.appendChild(hdr);
 
   var body = document.createElement('div');
-  body.style.cssText = 'padding:16px 18px;max-height:560px;overflow-y:auto;';
+  body.style.cssText = 'padding:16px 18px;max-height:580px;overflow-y:auto;';
 
   if(!u.acciones.length){
-    body.innerHTML = '<div style="color:var(--t3);text-align:center;padding:30px;font-size:12px;">Sin actividad este mes</div>';
+    body.innerHTML = '<div style="color:var(--t3);text-align:center;padding:30px;font-size:12px;">Sin actividad en el período seleccionado</div>';
     detEl.appendChild(body);
     return;
   }
 
-  // Resumen módulos
-  var mods = {}; u.acciones.forEach(function(a){ var m=a.modulo||a.accion||'General'; if(!mods[m])mods[m]=0; mods[m]++; });
+  // Resumen de módulos usados
+  var mods = {};
+  u.acciones.forEach(function(a){ var m=a.modulo||a.accion||'General'; if(!mods[m])mods[m]=0; mods[m]++; });
   var modSummary = document.createElement('div');
   modSummary.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--br);';
-  Object.entries(mods).forEach(function(e){
+  var modLabel = document.createElement('span');
+  modLabel.style.cssText = 'font-size:10px;font-weight:700;color:var(--t2);align-self:center;margin-right:2px;';
+  modLabel.textContent = 'Módulos:';
+  modSummary.appendChild(modLabel);
+  Object.entries(mods).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
     var tag = document.createElement('span');
-    tag.style.cssText = 'font-size:10px;font-weight:700;background:#f0f4ff;color:#1a2580;padding:3px 10px;border-radius:8px;';
+    var col = dotColor(e[0],'');
+    tag.style.cssText = 'font-size:10px;font-weight:700;padding:3px 10px;border-radius:8px;border:1.5px solid '+col+';color:'+col+';background:#fff;';
     tag.textContent = e[0]+' ('+e[1]+')';
     modSummary.appendChild(tag);
   });
   body.appendChild(modSummary);
 
-  // Separar clientes reales vs acciones de sistema
-  var clientesReales = Object.entries(u.clientes).filter(function(e){ return e[0] !== '— Sin cliente —'; });
-  var sinCliente     = u.clientes['— Sin cliente —'] || [];
-  clientesReales.sort(function(a,b){ return b[1].length - a[1].length; });
-
+  // Helper fila de acción — muestra módulo + cliente claramente
   function buildAccionRow(a){
     var d   = toDate(a.fecha);
     var hora = d.getTime()>0 ? d.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-    var col = dotColor(a.modulo, a.accion);
-    var det = String(a.detalle||'').trim() || (a.accion||'—');
+    var col  = dotColor(a.modulo, a.accion);
+    var det  = String(a.detalle||'').trim() || (a.accion||'—');
+    var modNom  = a.modulo  || a.accion  || '—';
+    var cliShow = (a.cliente && a.cliente !== '—' && a.cliente.trim())
+      ? a.cliente.trim()
+      : (a.clienteId && a.clienteId.trim() ? a.clienteId.trim() : null);
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:6px;cursor:default;';
+    row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 8px;border-radius:6px;';
     row.onmouseenter = function(){ this.style.background='#f8faff'; };
     row.onmouseleave = function(){ this.style.background=''; };
     row.innerHTML =
-      '<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:3px;"></div>'
+      '<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:4px;"></div>'
       +'<div style="flex:1;">'
-      +'<div style="font-size:11px;font-weight:700;color:#374151;">'+(a.modulo||a.accion||'—')+'</div>'
-      +'<div style="font-size:10px;color:var(--t2);margin-top:1px;">'+det+'</div>'
-      +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+hora+'</div>'
+      // Línea 1: módulo (negrita) + cliente (badge)
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:11px;font-weight:700;color:#374151;">'+modNom+'</span>'
+      +(cliShow
+        ? '<span style="font-size:9px;font-weight:700;background:#f0f4ff;color:#1a2580;padding:1px 7px;border-radius:6px;border:1px solid #dde1f0;">📁 '+cliShow+'</span>'
+        : '<span style="font-size:9px;font-weight:600;background:#f3f4f6;color:#9ca3af;padding:1px 7px;border-radius:6px;">🔧 Sistema</span>')
+      +'</div>'
+      // Línea 2: detalle de la acción
+      +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+det+'</div>'
+      // Línea 3: hora
+      +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">🕐 '+hora+'</div>'
       +'</div>';
     return row;
   }
 
-  function buildClienteBlock(cliNom, acciones, ci, bgColor){
-    var icon = cliNom.match(/ltda|s\.a\.s|s\.a|corp|sas/i) ? '🏢' : '👤';
+  // Separar clientes reales vs sistema
+  var clientesReales = Object.entries(u.clientes).filter(function(e){ return e[0] !== '— Sin cliente —'; });
+  var sinCliente     = u.clientes['— Sin cliente —'] || [];
+  clientesReales.sort(function(a,b){ return b[1].length - a[1].length; });
+
+  function buildClienteBlock(cliNom, acciones, ci, isSistema){
+    var icon = isSistema ? '🔧' : (cliNom.match(/ltda|s\.a\.s|s\.a|corp|sas/i) ? '🏢' : '👤');
+    var bgHdr = isSistema ? '#fafafa' : '#f8faff';
     var block = document.createElement('div');
-    block.style.cssText = 'border:0.5px solid var(--br);border-radius:8px;margin-bottom:10px;overflow:hidden;';
+    block.style.cssText = 'border:0.5px solid '+(isSistema?'#e5e7eb':'var(--br)')+';border-radius:8px;margin-bottom:10px;overflow:hidden;';
     var arrowId = 'dashcli-arrow-'+idx+'-'+ci;
     var bodyId  = 'dashcli-body-'+idx+'-'+ci;
     var csHdr = document.createElement('div');
-    csHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+(bgColor||'#f8faff')+';cursor:pointer;user-select:none;';
+    csHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+bgHdr+';cursor:pointer;user-select:none;';
     csHdr.innerHTML =
-      '<span style="font-size:16px;flex-shrink:0;">'+icon+'</span>'
-      +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:#1a2580;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+cliNom+'</div></div>'
-      +'<span style="font-size:10px;font-weight:700;background:#eef1ff;color:#1a2580;padding:2px 10px;border-radius:8px;flex-shrink:0;">'+acciones.length+' acción'+(acciones.length!==1?'es':'')+'</span>'
-      +'<span id="'+arrowId+'" style="font-size:18px;font-weight:700;color:#1a2580;flex-shrink:0;line-height:1;transition:transform .2s;'+(ci===0?'transform:rotate(90deg)':'')+'">›</span>';
+      '<span style="font-size:15px;flex-shrink:0;">'+icon+'</span>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isSistema?'var(--t2)':'#1a2580')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+cliNom+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:1px;">'+acciones.length+' acción'+(acciones.length!==1?'es'  :'')+'</div>'
+      +'</div>'
+      +'<span style="font-size:10px;font-weight:700;background:'+(isSistema?'#f3f4f6':'#eef1ff')+';color:'+(isSistema?'var(--t2)':'#1a2580')+';padding:2px 10px;border-radius:8px;flex-shrink:0;">'+acciones.length+'</span>'
+      +'<span id="'+arrowId+'" style="font-size:18px;font-weight:700;color:'+(isSistema?'var(--t2)':'#1a2580')+';flex-shrink:0;line-height:1;transition:transform .2s;'+(ci===0?'transform:rotate(90deg)':'')+'">›</span>';
     csHdr.onclick = function(){
       var b = document.getElementById(bodyId);
       var a = document.getElementById(arrowId);
@@ -7579,7 +7660,7 @@ window.audVerContador = function(idx){
     };
     var csBody = document.createElement('div');
     csBody.id = bodyId;
-    csBody.style.cssText = 'padding:8px 14px 12px;border-top:0.5px solid var(--br);'+(ci===0?'':'display:none;');
+    csBody.style.cssText = 'padding:6px 10px 10px;border-top:0.5px solid var(--br);'+(ci===0?'':'display:none;');
     acciones.forEach(function(a){ csBody.appendChild(buildAccionRow(a)); });
     block.appendChild(csHdr);
     block.appendChild(csBody);
@@ -7587,15 +7668,13 @@ window.audVerContador = function(idx){
   }
 
   clientesReales.forEach(function(entry, ci){
-    body.appendChild(buildClienteBlock(entry[0], entry[1], ci, '#f8faff'));
+    body.appendChild(buildClienteBlock(entry[0], entry[1], ci, false));
   });
-
   if(sinCliente.length){
-    body.appendChild(buildClienteBlock('Sistema / sin cliente asignado', sinCliente, 'sc', '#fafafa'));
+    body.appendChild(buildClienteBlock('Sistema / Acciones generales', sinCliente, 'sc', true));
   }
-
   if(!clientesReales.length && !sinCliente.length){
-    body.innerHTML += '<div style="color:var(--t3);text-align:center;padding:20px;font-size:11px;">Sin registros de clientes</div>';
+    body.innerHTML += '<div style="color:var(--t3);text-align:center;padding:20px;font-size:11px;">Sin registros en el período</div>';
   }
 
   detEl.appendChild(body);
