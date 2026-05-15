@@ -1326,7 +1326,7 @@ window.addEventListener('online', function(){
     </button>
   </div>
 
-  <!-- Panel Registro -->
+  <!-- Panel: Registro -->
   <div id="aud-panel-registro">
   <!-- Tarjetas resumen -->
   <div id="aud-resumen" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:22px;"></div>
@@ -1428,30 +1428,30 @@ window.addEventListener('online', function(){
 
   </div><!-- /panel-registro -->
 
-  <!-- Panel Dashboard -->
+  <!-- Panel: Dashboard -->
   <div id="aud-panel-dashboard" style="display:none;">
 
     <!-- Métricas -->
     <div id="dash-metricas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
 
-    <!-- Contadores + Actividad -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-      <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
-        <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">👥 Contadores — actividad del mes</div>
-        <div id="dash-contadores" style="font-size:11px;color:var(--t2);">Cargando...</div>
-      </div>
-      <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
-        <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">⚡ Actividad reciente</div>
-        <div id="dash-actividad" style="font-size:11px;color:var(--t2);">Cargando...</div>
-      </div>
-    </div>
+    <!-- Layout: lista contadores + detalle -->
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;">
 
-    <!-- Módulos por contador -->
-    <div style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);padding:16px;">
-      <div style="font-size:12px;font-weight:700;color:var(--bd);margin-bottom:12px;">📊 Uso de módulos por contador — mes actual</div>
-      <div id="dash-modulos" style="font-size:11px;color:var(--t2);">Cargando...</div>
-    </div>
+      <!-- Lista contadores -->
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.4px;margin-bottom:10px;">SELECCIONA UN CONTADOR</div>
+        <div id="dash-contadores"></div>
+      </div>
 
+      <!-- Detalle contador -->
+      <div id="dash-detalle" style="background:var(--sf);border-radius:12px;border:0.5px solid var(--br);overflow:hidden;">
+        <div style="padding:40px;text-align:center;color:var(--t3);">
+          <div style="font-size:28px;margin-bottom:8px;">👆</div>
+          <div style="font-size:12px;">Selecciona un contador para ver su actividad</div>
+        </div>
+      </div>
+
+    </div>
   </div><!-- /panel-dashboard -->
 
 </div>
@@ -7287,9 +7287,10 @@ window._openAuditoria = window.openAuditoria = function openAuditoria(){
   audSetTab('registro');
 }
 
+// ── PESTAÑAS ──────────────────────────────────────────
 window.audSetTab = function(tab){
   ['registro','dashboard'].forEach(function(t){
-    var btn = document.getElementById('aud-tab-'+t);
+    var btn   = document.getElementById('aud-tab-'+t);
     var panel = document.getElementById('aud-panel-'+t);
     if(btn){
       btn.style.borderBottomColor = t===tab ? '#1a2580' : 'transparent';
@@ -7300,42 +7301,37 @@ window.audSetTab = function(tab){
   if(tab==='dashboard') audCargarDashboard();
 };
 
+// ── DASHBOARD ─────────────────────────────────────────
 window.audCargarDashboard = function(){
   if(!db) return;
   var ahora = new Date();
   var mes = ahora.getMonth();
   var anio = ahora.getFullYear();
-  var fmtM = function(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); };
-
   db.collection('auditoria').orderBy('fecha','desc').limit(300).get()
   .then(function(snap){
     var todos = [];
     snap.forEach(function(d){ todos.push(d.data()); });
-
     var delMes = todos.filter(function(r){
       if(!r.fecha) return false;
       var d = r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha);
       return d.getMonth()===mes && d.getFullYear()===anio;
     });
-
     var byUser = {};
     delMes.forEach(function(r){
       var u = r.usuario || r.email || '—';
-      if(!byUser[u]) byUser[u]={nombre:u,acciones:[],mods:{}};
+      if(!byUser[u]) byUser[u]={nombre:u, acciones:[], clientes:{}};
       byUser[u].acciones.push(r);
-      var mod = r.modulo || r.accion || 'General';
-      byUser[u].mods[mod] = (byUser[u].mods[mod]||0)+1;
+      var cli = r.cliente || r.clienteId || '—';
+      if(!byUser[u].clientes[cli]) byUser[u].clientes[cli] = [];
+      byUser[u].clientes[cli].push(r);
     });
-
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var activosHoy = Object.values(byUser).filter(function(u){
       return u.acciones.some(function(a){
         var d = a.fecha&&a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha||0);
-        return d>=hoy;
+        return d >= hoy;
       });
     }).length;
-
-    // Métricas
     var metEl = document.getElementById('dash-metricas');
     if(metEl) metEl.innerHTML = [
       {l:'Acciones este mes', v:delMes.length, c:'#1a2580'},
@@ -7345,69 +7341,140 @@ window.audCargarDashboard = function(){
     ].map(function(m){
       return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:12px 14px;">'
         +'<div style="font-size:10px;color:var(--t2);margin-bottom:4px;">'+m.l+'</div>'
-        +'<div style="font-size:22px;font-weight:700;color:'+m.c+';">'+m.v+'</div>'
-        +'</div>';
+        +'<div style="font-size:22px;font-weight:700;color:'+m.c+';">'+m.v+'</div></div>';
     }).join('');
-
-    // Lista contadores
     var contEl = document.getElementById('dash-contadores');
     if(contEl){
       var uList = Object.values(byUser);
-      if(!uList.length){ contEl.innerHTML='<div style="color:var(--t3);padding:16px;text-align:center;">Sin actividad este mes</div>'; }
-      else contEl.innerHTML = uList.map(function(u){
-        var ultima = u.acciones[0];
-        var fd = ultima&&ultima.fecha ? (ultima.fecha.toDate?ultima.fecha.toDate():new Date(ultima.fecha)) : null;
-        var fs = fd ? fd.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-        var ini = u.nombre.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--br);">'
-          +'<div style="width:34px;height:34px;border-radius:50%;background:#eef1ff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#1a2580;flex-shrink:0;">'+ini+'</div>'
-          +'<div style="flex:1;">'
-          +'<div style="font-size:11px;font-weight:700;color:var(--tx);">'+u.nombre+'</div>'
-          +'<div style="font-size:10px;color:var(--t2);">'+u.acciones.length+' acciones · Última: '+fs+'</div>'
-          +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">'
-          +Object.keys(u.mods).slice(0,4).map(function(m){
-            return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:1px 6px;border-radius:8px;">'+m+'</span>';
-          }).join('')+'</div></div>'
-          +'<span style="font-size:9px;font-weight:700;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:8px;">'+u.acciones.length+'</span>'
-          +'</div>';
-      }).join('');
-    }
-
-    // Actividad reciente
-    var actEl = document.getElementById('dash-actividad');
-    if(actEl){
-      var cols = {'Login':'#10b981','Generar':'#3b82f6','Guardar':'#8b5cf6','Liquidar':'#f59e0b'};
-      actEl.innerHTML = todos.slice(0,10).map(function(r){
-        var d = r.fecha&&r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha||0);
-        var h = d.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-        var col = cols[r.accion]||'#6b7280';
-        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--br);">'
-          +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+';margin-top:3px;flex-shrink:0;"></div>'
-          +'<div style="flex:1;">'
-          +'<div style="font-size:11px;font-weight:700;color:var(--tx);">'+(r.usuario||'—')+'</div>'
-          +'<div style="font-size:10px;color:var(--t2);">'+(r.accion||'')+(r.cliente?' · '+r.cliente:'')+(r.detalle?' — '+String(r.detalle).substring(0,40):'')+'</div>'
-          +'</div><div style="font-size:9px;color:var(--t3);white-space:nowrap;">'+h+'</div></div>';
-      }).join('') || '<div style="color:var(--t3);text-align:center;padding:16px;">Sin registros</div>';
-    }
-
-    // Módulos por contador
-    var modEl = document.getElementById('dash-modulos');
-    if(modEl){
-      var uList2 = Object.values(byUser);
-      if(!uList2.length){ modEl.innerHTML='<div style="color:var(--t3);padding:16px;text-align:center;">Sin datos</div>'; }
-      else modEl.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">'
-        +uList2.map(function(u){
-          var ini = u.nombre.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
-          return '<div style="background:#fff;border-radius:8px;border:0.5px solid var(--br);padding:10px 12px;">'
-            +'<div style="font-size:11px;font-weight:700;color:var(--bd);margin-bottom:8px;">'+ini+' — '+u.nombre.split(' ')[0]+'</div>'
-            +Object.entries(u.mods).map(function(kv){
-              return '<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:0.5px solid #f1f5f9;">'
-                +'<span style="color:var(--t2);">'+kv[0]+'</span>'
-                +'<span style="font-weight:700;color:#1a2580;">'+kv[1]+'</span></div>';
-            }).join('')+'</div>';
-        }).join('')+'</div>';
+      if(!uList.length){
+        contEl.innerHTML = '<div style="color:var(--t3);padding:20px;text-align:center;">Sin actividad este mes</div>';
+      } else {
+        var colors = [['#eef1ff','#1a2580'],['#f0fdf4','#065f46'],['#fef3c7','#92400e'],['#fee2e2','#991b1b']];
+        contEl.innerHTML = uList.map(function(u, idx){
+          var ini = u.nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
+          var nCli = Object.keys(u.clientes).length;
+          var ultima = u.acciones[0];
+          var fd = ultima&&ultima.fecha ? (ultima.fecha.toDate?ultima.fecha.toDate():new Date(ultima.fecha)) : null;
+          var fs = fd ? fd.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+          var mods = {};
+          u.acciones.forEach(function(a){ var m=a.modulo||a.accion||'General'; mods[m]=1; });
+          var modTags = Object.keys(mods).slice(0,3).map(function(m){
+            return '<span style="font-size:9px;background:#f0f4ff;color:#1a2580;padding:2px 6px;border-radius:7px;">'+m+'</span>';
+          }).join('');
+          var cl = colors[idx%4];
+          var el = document.createElement('div');
+          el.id = 'dashcont-'+idx;
+          el.setAttribute('data-nombre', u.nombre);
+          el.onclick = function(){ audVerContador(this); };
+          el.style.cssText = 'background:#fff;border-radius:10px;border:1.5px solid var(--br);padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:8px;';
+          el.innerHTML = '<div style="width:38px;height:38px;border-radius:50%;background:'+cl[0]+';color:'+cl[1]+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+ini+'</div>'
+            +'<div style="flex:1;min-width:0;">'
+            +'<div style="font-size:12px;font-weight:700;color:#1a2580;">'+u.nombre+'</div>'
+            +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+u.acciones.length+' acciones · '+nCli+' cliente'+(nCli!==1?'s':'')+' · '+fs+'</div>'
+            +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+modTags+'</div>'
+            +'</div>'
+            +'<div style="font-size:16px;color:#c9a227;">›</div>';
+          return el.outerHTML;
+        }).join('');
+      }
+      window._dashByUser = byUser;
     }
   }).catch(function(e){ console.error('[JNF] Dashboard error:',e); });
+};
+
+window.audVerContador = function(el){
+  var nombre = el ? el.getAttribute('data-nombre') : '';
+  if(!nombre) return;
+  var byUser = window._dashByUser||{};
+  var u = byUser[nombre];
+  if(!u) return;
+  document.querySelectorAll('[id^="dashcont-"]').forEach(function(c){
+    c.style.borderColor = 'var(--br)'; c.style.background = '#fff';
+  });
+  el.style.borderColor = '#1a2580'; el.style.background = '#f0f4ff';
+  var ini = nombre.split(' ').slice(0,2).map(function(p){return (p[0]||'').toUpperCase();}).join('');
+  var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var ahora = new Date();
+  var periodoLabel = MESES[ahora.getMonth()]+' '+ahora.getFullYear();
+  var dotColor = function(accion){
+    var m = (accion||'').toLowerCase();
+    if(m.indexOf('exogen')>=0||m.indexOf('guardar')>=0) return '#10b981';
+    if(m.indexOf('f350')>=0||m.indexOf('rete')>=0) return '#3b82f6';
+    if(m.indexOf('iva')>=0||m.indexOf('f300')>=0) return '#8b5cf6';
+    if(m.indexOf('liquid')>=0||m.indexOf('generar')>=0) return '#f59e0b';
+    return '#6b7280';
+  };
+  var detEl = document.getElementById('dash-detalle');
+  if(!detEl) return;
+  detEl.innerHTML = '';
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'background:linear-gradient(135deg,#1a2580,#2535a8);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;';
+  hdr.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'
+    +'<div style="width:42px;height:42px;border-radius:50%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a2580;flex-shrink:0;">'+ini+'</div>'
+    +'<div><div style="font-size:14px;font-weight:700;color:#fff;">'+nombre+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;">'+u.acciones.length+' acciones · '+periodoLabel+'</div></div></div>'
+    +'<span style="background:rgba(201,162,39,.25);color:#c9a227;font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid rgba(201,162,39,.4);">'+u.acciones.length+' acciones</span>';
+  detEl.appendChild(hdr);
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:16px 18px;max-height:540px;overflow-y:auto;';
+  if(!Object.keys(u.clientes).length){
+    body.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Sin clientes registrados</div>';
+  } else {
+    Object.entries(u.clientes).forEach(function(entry, ci){
+      var cliNom = entry[0];
+      var acciones = entry[1];
+      var icon = cliNom.match(/ltda|s\.a\.s|s\.a|corp/i) ? '🏢' : '👤';
+      var block = document.createElement('div');
+      block.style.cssText = 'border:0.5px solid var(--br);border-radius:8px;margin-bottom:10px;overflow:hidden;';
+      var csHdr = document.createElement('div');
+      csHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--sf);cursor:pointer;user-select:none;';
+      var arrowId = 'dashcli-arrow-'+ci;
+      var bodyId  = 'dashcli-body-'+ci;
+      csHdr.innerHTML = '<span style="font-size:16px;flex-shrink:0;">'+icon+'</span>'
+        +'<div style="flex:1;"><div style="font-size:11px;font-weight:700;color:#1a2580;">'+cliNom+'</div></div>'
+        +'<span style="font-size:10px;font-weight:700;background:#eef1ff;color:#1a2580;padding:2px 10px;border-radius:8px;flex-shrink:0;">'+acciones.length+' acción'+(acciones.length!==1?'es':'')+'</span>'
+        +'<span id="'+arrowId+'" style="font-size:18px;font-weight:700;color:#1a2580;flex-shrink:0;line-height:1;transition:transform .2s;'+(ci===0?'transform:rotate(90deg)':'')+'">›</span>';
+      csHdr.onclick = function(){
+        var b = document.getElementById(bodyId);
+        var a = document.getElementById(arrowId);
+        if(!b) return;
+        var isOpen = b.style.display !== 'none';
+        b.style.display = isOpen ? 'none' : '';
+        if(a) a.style.transform = isOpen ? '' : 'rotate(90deg)';
+      };
+      var csBody = document.createElement('div');
+      csBody.id = bodyId;
+      csBody.style.cssText = 'padding:8px 14px 12px;border-top:0.5px solid var(--br);'+(ci===0?'':'display:none;');
+      acciones.forEach(function(a){
+        var d = a.fecha&&a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha||0);
+        var hora = d.toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var col = dotColor(a.accion||'');
+        var det = String(a.detalle||a.accion||'').substring(0,60);
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:6px;';
+        row.innerHTML = '<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:3px;"></div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:11px;font-weight:700;color:#374151;">'+(a.modulo||a.accion||'—')+'</div>'
+          +'<div style="font-size:10px;color:var(--t2);margin-top:1px;">'+det+'</div>'
+          +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+hora+'</div>'
+          +'</div>';
+        csBody.appendChild(row);
+      });
+      block.appendChild(csHdr);
+      block.appendChild(csBody);
+      body.appendChild(block);
+    });
+  }
+  detEl.appendChild(body);
+};
+
+window.audToggleCli = function(id){
+  var body  = document.getElementById(id);
+  var arrow = document.getElementById(id+'-arrow');
+  if(!body) return;
+  var open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  if(arrow) arrow.style.transform = open ? 'rotate(90deg)' : '';
 };;
 
 // ── Poblar selector de usuarios ─────────────────────────
