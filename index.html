@@ -2076,12 +2076,14 @@ window._showScreen = window.showScreen = function showScreen(name){
     console.error('[JNF] SCREENS no definido!');
     return;
   }
+  // Si el screen está fuera de screen-app (ej: estados), asegurar que screen-app sea visible
+  var appEl = document.getElementById('screen-app');
+  if(appEl && appEl.style.display === 'none') appEl.style.display = '';
   SCREENS.forEach(s=>{
     var el=document.getElementById('screen-'+s);
     if(!el) return;
     if(s===name){
       el.style.display = '';
-      // Forzar reflow para asegurar visibilidad
       el.style.visibility = 'visible';
     } else {
       el.style.display = 'none';
