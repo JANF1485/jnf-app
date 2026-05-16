@@ -9732,11 +9732,37 @@ function poblarFiltroContador(){
         <div style="font-size:10px;color:rgba(255,255,255,.65);">Asesorías y Consultorías JNF S.A.S. · TP 216055-T</div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <button onclick="efDescargar('pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ PDF</button>
-      <button onclick="efDescargar('excel')" style="background:#065f46;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ Excel</button>
-      <button onclick="efDescargar('word')" style="background:#1e40af;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ Word</button>
-      <button onclick="efGuardar()" style="background:#fff;color:#1a2580;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">💾 Guardar</button>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <!-- Balance General -->
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">BALANCE</div>
+        <div style="display:flex;gap:3px;">
+          <button onclick="efDescIndividual('balance','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
+          <button onclick="efDescIndividual('balance','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
+          <button onclick="efDescIndividual('balance','excel')" style="background:#065f46;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Excel</button>
+        </div>
+      </div>
+      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
+      <!-- Estado de Resultados -->
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">RESULTADOS</div>
+        <div style="display:flex;gap:3px;">
+          <button onclick="efDescIndividual('resultados','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
+          <button onclick="efDescIndividual('resultados','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
+          <button onclick="efDescIndividual('resultados','excel')" style="background:#065f46;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Excel</button>
+        </div>
+      </div>
+      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
+      <!-- Notas Contables -->
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">NOTAS</div>
+        <div style="display:flex;gap:3px;">
+          <button onclick="efDescIndividual('notas','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
+          <button onclick="efDescIndividual('notas','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
+        </div>
+      </div>
+      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
+      <button onclick="efGuardar()" style="background:#fff;color:#1a2580;border:none;border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">💾 Guardar</button>
     </div>
   </div>
   <div style="background:#fff;border-bottom:2px solid #e5e7f0;padding:0 20px;display:flex;gap:0;">
@@ -10104,9 +10130,7 @@ function efFmtFecha(str){
 
 function efMembrete(tipoEstado, datos){
   var e=datos.encabezado;
-  var desde=efFmtFecha(e.desde), hasta=efFmtFecha(e.hasta);
   return '<div style="border-bottom:4px solid #c9a227;">'
-    // Banda azul JNF
     +'<div style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;gap:14px;">'
     +'<img src="https://janf1485.github.io/jnf-interno/logo.jpg" '
     +'style="width:52px;height:52px;border-radius:50%;border:2px solid #c9a227;flex-shrink:0;" alt="JNF"/>'
@@ -10115,15 +10139,12 @@ function efMembrete(tipoEstado, datos){
     +'<div style="font-size:10px;color:#c9a227;margin-top:2px;">NIT: 901.904.435-9 &nbsp;·&nbsp; Plato, Magdalena</div>'
     +'<div style="font-size:10px;color:rgba(255,255,255,.6);">Sistema de Gestión Contable</div>'
     +'</div></div>'
-    // Línea dorada
     +'<div style="height:4px;background:#c9a227;"></div>'
-    // Datos cliente centrados
     +'<div style="text-align:center;padding:14px 20px 10px;background:#fff;">'
     +'<div style="font-size:14px;font-weight:800;color:#1a2580;letter-spacing:.5px;">'+tipoEstado+'</div>'
     +'<div style="font-size:12px;font-weight:700;color:#374151;margin-top:6px;">'+(e.razon||'')+'</div>'
     +(e.nit?'<div style="font-size:10px;color:#6b7280;">NIT: '+e.nit+'</div>':'')
     +((e.dir||e.ciudad)?'<div style="font-size:10px;color:#6b7280;">'+(e.dir?e.dir+', ':'')+e.ciudad+'</div>':'')
-    +'<div style="font-size:11px;color:#6b7280;margin-top:3px;">'+desde+' a '+hasta+'</div>'
     +'</div>'
     +'</div>';
 }
@@ -10141,12 +10162,132 @@ function efFirmas(datos){
     +'</div>';
 }
 
-function efPie(pag, total){
-  return '<div style="background:#1a2580;padding:5px 20px;display:flex;justify-content:space-between;margin-top:20px;">'
+function efPie(pag, total, datos){
+  var desde = datos ? efFmtFecha(datos.encabezado.desde) : '';
+  var hasta  = datos ? efFmtFecha(datos.encabezado.hasta)  : '';
+  var periodo = (desde && hasta) ? desde+' a '+hasta : '';
+  return '<div style="background:#1a2580;padding:6px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:20px;">'
     +'<div style="font-size:9px;color:#c9a227;font-weight:600;">Asesorías y Consultorías JNF S.A.S. · NIT: 901.904.435-9 · Plato, Magdalena</div>'
+    +(periodo?'<div style="font-size:9px;color:rgba(255,255,255,.7);text-align:center;">'+periodo+'</div>':'')
     +'<div style="font-size:9px;color:rgba(255,255,255,.7);">Página '+pag+' de '+total+'</div>'
     +'</div>';
 }
+
+// Notas: todas en un solo documento continuo
+function efPaginasNotas(datos, totalPags){
+  var html = efMembrete('NOTAS A LOS ESTADOS FINANCIEROS', datos)
+    +'<div style="padding:14px 20px;">';
+  var notas = document.querySelectorAll('[id^="ef-nota-"]');
+  notas.forEach(function(ta){
+    var tit = ta.closest('.ef-nota-box').querySelector('.ef-nota-titulo').textContent;
+    html += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e5e7f0;">'
+      +'<div style="font-size:11px;font-weight:700;color:#1a2580;margin-bottom:6px;">'+tit+'</div>'
+      +'<pre style="font-size:10px;white-space:pre-wrap;font-family:Arial;line-height:1.7;color:#374151;">'+ta.value+'</pre>'
+      +'</div>';
+  });
+  html += '</div>'
+    + efFirmas(datos)
+    + efPie(totalPags, totalPags, datos);
+  return html;
+}
+
+// ── Función principal de descarga individual ──────────────────
+window.efDescIndividual = function(tipo, fmt){
+  efCalcBalance(); efCalcResultados(); efGenerarNotas();
+  setTimeout(function(){
+    var datos = efRecolectar();
+    var razon = (datos.encabezado.razon||'cliente').replace(/\s+/g,'_');
+    var anio  = (datos.encabezado.hasta||'').substring(0,4);
+    var totalPags = tipo==='notas' ? 1 : 1;
+
+    var cuerpo = '';
+    var titulo = '';
+    if(tipo==='balance'){
+      cuerpo = efMembrete('BALANCE GENERAL',datos)+efPaginaBalance(datos)+efFirmas(datos)+efPie(1,1,datos);
+      titulo = 'BalanceGeneral_'+razon+'_'+anio;
+    } else if(tipo==='resultados'){
+      cuerpo = efMembrete('ESTADO DE RESULTADOS',datos)+efPaginaResultados(datos)+efFirmas(datos)+efPie(1,1,datos);
+      titulo = 'EstadoResultados_'+razon+'_'+anio;
+    } else if(tipo==='notas'){
+      cuerpo = efPaginasNotas(datos,1);
+      titulo = 'NotasContables_'+razon+'_'+anio;
+    }
+
+    if(fmt==='pdf'){
+      var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+'</title>'+efCSS()+'<\/head><body>'+cuerpo+'<\\/body><\\/html>';
+      var win=window.open('','_blank');
+      win.document.write(html); win.document.close();
+      setTimeout(function(){win.print();},800);
+
+    } else if(fmt==='word'){
+      var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
+        +'<head><meta charset="utf-8">'+efCSS()+'<style>body{margin:2cm;}</style><\/head><body>'
+        +cuerpo+'<\\/body><\\/html>';
+      var blob=new Blob([html],{type:'application/msword'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=titulo+'.doc';
+      a.click();
+
+    } else if(fmt==='excel'){
+      // Excel solo para Balance y Resultados
+      var b=datos.balance, r=datos.resultados, rows=[];
+      if(tipo==='balance'){
+        rows=[
+          ['ASESORÍAS Y CONSULTORÍAS JNF S.A.S.','NIT: 901.904.435-9','Plato, Magdalena'],[''],
+          ['BALANCE GENERAL'],[datos.encabezado.razon],['NIT: '+datos.encabezado.nit],
+          [efFmtFecha(datos.encabezado.desde)+' a '+efFmtFecha(datos.encabezado.hasta)],[''],
+          ['ACTIVOS','VALOR'],
+          ['Disponible',b.disponible],['Inversiones Temporales',b.invTemp],
+          ['Deudores Comerciales',b.deudores],['Inventarios',b.inventarios],
+          ['Anticipos y Avances',b.anticipos],['Otros Activos C.P.',b.difCp+b.otrosAc],
+          ['TOTAL ACTIVOS CORRIENTES',b.disponible+b.invTemp+b.deudores+b.inventarios+b.anticipos+b.difCp+b.otrosAc],[''],
+          ['Terrenos y Edificios',b.terrenos],['Maquinaria y Equipo',b.maquinaria],
+          ['Depreciación Acumulada',-b.depreciacion],
+          ['TOTAL ACTIVOS FIJOS NETOS',b.terrenos+b.maquinaria-b.depreciacion],
+          ['Otros Activos L.P.',b.invPerm+b.intangibles+b.difLp+b.valoriz],
+          ['TOTAL ACTIVOS',_efDatos.totalActivos],[''],
+          ['PASIVOS','VALOR'],
+          ['Proveedores',b.proveedores],['Impuestos y Tasas',b.impuestos],
+          ['Obligaciones Laborales C.P.',b.labCp],['Otros Pasivos C.P.',b.estimCp+b.pdifCp+b.otrosPc],
+          ['TOTAL PASIVOS CORRIENTES',b.obligCp+b.proveedores+b.cxpVinc+b.impuestos+b.labCp+b.estimCp+b.pdifCp+b.otrosPc],
+          ['Obligaciones L.P.',b.obligLp+b.labLp+b.estimLp+b.pdifLp+b.otrosPlp],
+          ['TOTAL PASIVOS',_efDatos.totalPasivos],[''],
+          ['PATRIMONIO','VALOR'],
+          ['Capital Social',b.capital],['Reservas',b.reservas],
+          ['Resultado del Ejercicio',_efDatos.utilidadNeta||0],
+          ['Resultados Anteriores',b.resAnt],
+          ['TOTAL PATRIMONIO',_efDatos.totalPatrimonio],
+          ['TOTAL PASIVOS + PATRIMONIO',_efDatos.totalPasivos+_efDatos.totalPatrimonio]
+        ];
+      } else {
+        rows=[
+          ['ASESORÍAS Y CONSULTORÍAS JNF S.A.S.','NIT: 901.904.435-9','Plato, Magdalena'],[''],
+          ['ESTADO DE RESULTADOS'],[datos.encabezado.razon],['NIT: '+datos.encabezado.nit],
+          [efFmtFecha(datos.encabezado.desde)+' a '+efFmtFecha(datos.encabezado.hasta)],[''],
+          ['CONCEPTO','VALOR'],
+          ['Ingresos Operacionales',r.ingOper],['Otros Ingresos',r.ingOtros],
+          ['Costos de Servicios',-(r.costoServ+r.costoOtros)],
+          ['UTILIDAD BRUTA',_efDatos.utilidadBruta],
+          ['Gastos Administración',-r.gastoAdmon],['Gastos Servicios',-r.gastoServ],
+          ['Depreciaciones',-r.deprec],
+          ['UTILIDAD OPERACIONAL',_efDatos.utilidadOper],
+          ['Ingresos No Operacionales',r.otrosIng+r.intRecib],
+          ['Egresos No Operacionales',-(r.otrosEgr+r.intPag)],
+          ['UTILIDAD ANTES IMPUESTOS',_efDatos.utilidadAI],
+          ['Provisión Impuesto Renta',-r.provImp],
+          ['UTILIDAD (PÉRDIDA) NETA',_efDatos.utilidadNeta]
+        ];
+      }
+      var csv=rows.map(function(row){return row.map(function(c){return '"'+String(c===undefined?'':c).replace(/"/g,'""')+'"';}).join(',');}).join('\r\n');
+      var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=titulo+'.csv';
+      a.click();
+    }
+  },300);
+};
 
 function efCSS(){
   return '<style>'
@@ -10268,33 +10409,9 @@ function efPaginasNotas(datos, totalPags){
 }
 
 function efDescPDF(datos){
-  efGenerarNotas();
-  setTimeout(function(){
-    var totalNotas = document.querySelectorAll('[id^="ef-nota-"]').length;
-    var totalPags  = 2 + totalNotas;
-    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Estados Financieros</title>'
-      +efCSS()+'<\/head><body>'
-      // Hoja 1: Balance General
-      +efMembrete('BALANCE GENERAL',datos)
-      +efPaginaBalance(datos)
-      +efFirmas(datos)
-      +efPie(1, totalPags)
-      // Hoja 2: Estado de Resultados
-      +'<div class="pagebreak">'
-      +efMembrete('ESTADO DE RESULTADOS',datos)
-      +efPaginaResultados(datos)
-      +efFirmas(datos)
-      +efPie(2, totalPags)
-      +'</div>'
-      // Hojas 3+: Notas (una por hoja)
-      +'<div class="pagebreak">'
-      +efPaginasNotas(datos, totalPags)
-      +'</div>'
-      +'<\\/body><\\/html>';
-    var win=window.open('','_blank');
-    win.document.write(html); win.document.close();
-    setTimeout(function(){win.print();},800);
-  },300);
+  efDescIndividual('balance','pdf');
+  setTimeout(function(){ efDescIndividual('resultados','pdf'); },1200);
+  setTimeout(function(){ efDescIndividual('notas','pdf'); },2400);
 }
 
 function efDescExcel(datos){
@@ -10333,35 +10450,9 @@ function efDescExcel(datos){
 }
 
 function efDescWord(datos){
-  efGenerarNotas();
-  setTimeout(function(){
-    var totalNotas = document.querySelectorAll('[id^="ef-nota-"]').length;
-    var totalPags  = 2 + totalNotas;
-    var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
-      +'<head><meta charset="utf-8"><title>Estados Financieros</title>'
-      +efCSS()
-      +'<style>body{margin:2cm;} .pagebreak{page-break-before:always;}</style>'
-      +'<\/head><body>'
-      +efMembrete('BALANCE GENERAL',datos)
-      +efPaginaBalance(datos)
-      +efFirmas(datos)
-      +efPie(1, totalPags)
-      +'<div class="pagebreak">'
-      +efMembrete('ESTADO DE RESULTADOS',datos)
-      +efPaginaResultados(datos)
-      +efFirmas(datos)
-      +efPie(2, totalPags)
-      +'</div>'
-      +'<div class="pagebreak">'
-      +efPaginasNotas(datos, totalPags)
-      +'</div>'
-      +'<\/body><\/html>';
-    var blob=new Blob([html],{type:'application/msword'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='EstadosFinancieros_'+(datos.encabezado.razon||'cliente').replace(/\s+/g,'_')+'_'+(datos.encabezado.hasta||'').substring(0,4)+'.doc';
-    a.click();
-  },300);
+  efDescIndividual('balance','word');
+  setTimeout(function(){ efDescIndividual('resultados','word'); },800);
+  setTimeout(function(){ efDescIndividual('notas','word'); },1600);
 }
 </script>
 
