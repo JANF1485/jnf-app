@@ -7609,6 +7609,25 @@ window.audVerContador = function(idx){
     var cliShow = (a.cliente && a.cliente !== '—' && a.cliente.trim())
       ? a.cliente.trim()
       : (a.clienteId && a.clienteId.trim() ? a.clienteId.trim() : null);
+
+    // Limpiar detalle: quitar fechas embebidas (ej: "Acceso al sistema · 15/5/2026, 10:00 a. m.")
+    var detLimpio = det.replace(/·?\s*\d{1,2}\/\d{1,2}\/\d{2,4}[,\s]+\d{1,2}:\d{2}[^\s]*/g,'').replace(/·?\s*\d{1,2}\/\d{1,2}\/\d{4}/g,'').trim().replace(/·\s*$/,'').trim();
+    if(!detLimpio) detLimpio = a.accion || '—';
+
+    // Badge según tipo de acción
+    var accionLow = (a.accion||'').toLowerCase();
+    var modLow    = (a.modulo||'').toLowerCase();
+    var badge = '';
+    if(cliShow){
+      badge = '<span style="font-size:9px;font-weight:700;background:#f0f4ff;color:#1a2580;padding:1px 7px;border-radius:6px;border:1px solid #dde1f0;">📁 '+cliShow+'</span>';
+    } else if(accionLow==='login' || modLow==='sistema'){
+      badge = '<span style="font-size:9px;font-weight:600;background:#f0fdf4;color:#065f46;padding:1px 7px;border-radius:6px;border:1px solid #bbf7d0;">🔐 Ingreso al sistema</span>';
+    } else if(accionLow.indexOf('elimin')>=0){
+      badge = '<span style="font-size:9px;font-weight:600;background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:6px;border:1px solid #fca5a5;">🗑 Acción general</span>';
+    } else {
+      badge = '<span style="font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;padding:1px 7px;border-radius:6px;">⚙️ Acción general</span>';
+    }
+
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 8px;border-radius:6px;';
     row.onmouseenter = function(){ this.style.background='#f8faff'; };
@@ -7616,16 +7635,13 @@ window.audVerContador = function(idx){
     row.innerHTML =
       '<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:4px;"></div>'
       +'<div style="flex:1;">'
-      // Línea 1: módulo (negrita) + cliente (badge)
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
       +'<span style="font-size:11px;font-weight:700;color:#374151;">'+modNom+'</span>'
-      +(cliShow
-        ? '<span style="font-size:9px;font-weight:700;background:#f0f4ff;color:#1a2580;padding:1px 7px;border-radius:6px;border:1px solid #dde1f0;">📁 '+cliShow+'</span>'
-        : '<span style="font-size:9px;font-weight:600;background:#f3f4f6;color:#9ca3af;padding:1px 7px;border-radius:6px;">🔧 Sistema</span>')
+      +badge
       +'</div>'
-      // Línea 2: detalle de la acción
-      +'<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+det+'</div>'
-      // Línea 3: hora
+      +(detLimpio && detLimpio !== modNom && detLimpio !== (a.accion||'')
+        ? '<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+detLimpio+'</div>'
+        : '')
       +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">🕐 '+hora+'</div>'
       +'</div>';
     return row;
@@ -7674,7 +7690,7 @@ window.audVerContador = function(idx){
     body.appendChild(buildClienteBlock(entry[0], entry[1], ci, false));
   });
   if(sinCliente.length){
-    body.appendChild(buildClienteBlock('Sistema / Acciones generales', sinCliente, 'sc', true));
+    body.appendChild(buildClienteBlock('Acciones del sistema (login, configuración)', sinCliente, 'sc', true));
   }
   if(!clientesReales.length && !sinCliente.length){
     body.innerHTML += '<div style="color:var(--t3);text-align:center;padding:20px;font-size:11px;">Sin registros en el período</div>';
