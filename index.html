@@ -10130,21 +10130,25 @@ function efFmtFecha(str){
 
 function efMembrete(tipoEstado, datos){
   var e=datos.encabezado;
-  return '<div style="border-bottom:4px solid #c9a227;">'
-    +'<div style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;gap:14px;">'
-    +'<img src="https://janf1485.github.io/jnf-interno/logo.jpg" '
-    +'style="width:52px;height:52px;border-radius:50%;border:2px solid #c9a227;flex-shrink:0;" alt="JNF"/>'
+  var desde=efFmtFecha(e.desde), hasta=efFmtFecha(e.hasta);
+  return '<div>'
+    // Membrete JNF — fondo azul
+    +'<div style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;gap:12px;">'
+    +'<img src="https://janf1485.github.io/jnf-interno/logo.jpg" alt="JNF" '
+    +'style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #c9a227;flex-shrink:0;"/>'
     +'<div>'
-    +'<div style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.3px;">ASESORÍAS Y CONSULTORÍAS JNF S.A.S.</div>'
-    +'<div style="font-size:10px;color:#c9a227;margin-top:2px;">NIT: 901.904.435-9 &nbsp;·&nbsp; Plato, Magdalena</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,.6);">Sistema de Gestión Contable</div>'
+    +'<div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:.3px;">ASESORÍAS Y CONSULTORÍAS JNF S.A.S.</div>'
+    +'<div style="font-size:9px;color:#c9a227;margin-top:2px;">NIT: 901.904.435-9 &nbsp;·&nbsp; Plato, Magdalena</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.6);">Sistema de Gestión Contable</div>'
     +'</div></div>'
+    // Línea dorada
     +'<div style="height:4px;background:#c9a227;"></div>'
-    +'<div style="text-align:center;padding:14px 20px 10px;background:#fff;">'
-    +'<div style="font-size:14px;font-weight:800;color:#1a2580;letter-spacing:.5px;">'+tipoEstado+'</div>'
-    +'<div style="font-size:12px;font-weight:700;color:#374151;margin-top:6px;">'+(e.razon||'')+'</div>'
+    // Datos del cliente centrados debajo
+    +'<div style="text-align:center;padding:14px 20px 10px;border-bottom:1px solid #e5e7f0;">'
+    +'<div style="font-size:13px;font-weight:700;color:#1a2580;letter-spacing:.5px;">'+tipoEstado+'</div>'
+    +'<div style="font-size:11px;font-weight:700;color:#374151;margin-top:5px;">'+(e.razon||'')+'</div>'
     +(e.nit?'<div style="font-size:10px;color:#6b7280;">NIT: '+e.nit+'</div>':'')
-    +((e.dir||e.ciudad)?'<div style="font-size:10px;color:#6b7280;">'+(e.dir?e.dir+', ':'')+e.ciudad+'</div>':'')
+    +((desde&&hasta)?'<div style="font-size:10px;color:#6b7280;margin-top:2px;">'+desde+' a '+hasta+'</div>':'')
     +'</div>'
     +'</div>';
 }
@@ -10152,24 +10156,22 @@ function efMembrete(tipoEstado, datos){
 function efFirmas(datos){
   var e=datos.encabezado;
   var cargo=e.rlCargo||'Representante Legal';
-  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:50px;text-align:center;font-size:10px;padding:0 20px;">'
-    +'<div><div style="border-top:1.5px solid #000;padding-top:6px;margin-top:30px;">'
-    +(e.rlNombre||'_________________________')+'<br>C.C. No. '+(e.rlCc||'______________')+'<br>'+cargo
-    +'</div></div>'
-    +'<div><div style="border-top:1.5px solid #000;padding-top:6px;margin-top:30px;">'
-    +'JAVIER ALBERTO NIEBLES FERREIRA<br>Contador Público T.P. 216055-T<br>C.C. No. 12.695.546 de Plato'
-    +'</div></div>'
+  return '<div style="border-top:1px solid #e5e7f0;padding:8px 20px;display:grid;grid-template-columns:1fr 1fr;gap:40px;text-align:center;">'
+    +'<div style="border-top:1px solid #374151;padding-top:5px;margin-top:16px;">'
+    +'<div style="font-size:8px;font-weight:700;color:#111;">'+(e.rlNombre||'_________________________')+'</div>'
+    +'<div style="font-size:8px;color:#6b7280;">C.C. No. '+(e.rlCc||'_____________')+'  ·  '+cargo+'</div>'
+    +'</div>'
+    +'<div style="border-top:1px solid #374151;padding-top:5px;margin-top:16px;">'
+    +'<div style="font-size:8px;font-weight:700;color:#111;">JAVIER ALBERTO NIEBLES FERREIRA</div>'
+    +'<div style="font-size:8px;color:#6b7280;">Contador Público T.P. 216055-T · C.C. 12.695.546</div>'
+    +'</div>'
     +'</div>';
 }
 
 function efPie(pag, total, datos){
-  var desde = datos ? efFmtFecha(datos.encabezado.desde) : '';
-  var hasta  = datos ? efFmtFecha(datos.encabezado.hasta)  : '';
-  var periodo = (desde && hasta) ? desde+' a '+hasta : '';
-  return '<div style="background:#1a2580;padding:6px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:20px;">'
-    +'<div style="font-size:9px;color:#c9a227;font-weight:600;">Asesorías y Consultorías JNF S.A.S. · NIT: 901.904.435-9 · Plato, Magdalena</div>'
-    +(periodo?'<div style="font-size:9px;color:rgba(255,255,255,.7);text-align:center;">'+periodo+'</div>':'')
-    +'<div style="font-size:9px;color:rgba(255,255,255,.7);">Página '+pag+' de '+total+'</div>'
+  return '<div style="background:#1a2580;padding:5px 20px;display:flex;justify-content:space-between;margin-top:4px;">'
+    +'<div style="font-size:8px;color:#c9a227;font-weight:600;">Asesorías y Consultorías JNF S.A.S. · NIT: 901.904.435-9 · Plato, Magdalena</div>'
+    +'<div style="font-size:8px;color:rgba(255,255,255,.6);">Página '+pag+' de '+total+'</div>'
     +'</div>';
 }
 
