@@ -2064,7 +2064,7 @@ window._editClient = window.editClient = function editClient(id){
 // ═══════════════════════════════════════════════════════
 // NAVEGACIÓN DE PANTALLAS
 // ═══════════════════════════════════════════════════════
-const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria'];
+const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria','estados'];
 let activeClientId = null;
 let activeYear = null;
 let _currentAnios = [];
@@ -2395,13 +2395,12 @@ function loadSavedResults(clientId, year){
 }
 
 window._goBack = window.goBack = function goBack(){
-  const screens=['obligaciones','consolidador','f300','inc','contabilidad','anio','clientes'];
+  const screens=['obligaciones','consolidador','f300','inc','estados','contabilidad','anio','clientes'];
   for(const s of screens){
     const el=document.getElementById('screen-'+s);
     if(el && el.style.display!=='none'){
-      if(s==='consolidador'||s==='f300'||s==='inc'||s==='f350'){
+      if(s==='consolidador'||s==='f300'||s==='inc'||s==='f350'||s==='estados'){
         showScreen('contabilidad');
-        // Refresh saved results panel after returning from consolidador
         setTimeout(()=>loadSavedResults(activeClientId, activeYear), 100);
       }
       else if(s==='obligaciones'){
@@ -10090,7 +10089,11 @@ function poblarFiltroContador(){
   <!-- PANEL ESTADO DE RESULTADOS -->
   <div class="ef-panel" id="ef-panel-resultados">
     <div class="ef-card" style="max-width:700px;margin:0 auto;">
-      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:16px;">ESTADO DE RESULTADOS</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:800;color:#1a2580;">ESTADO DE RESULTADOS</div>
+        <button onclick="efImportarDeclaraciones()" style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">📥 Importar desde F300 / F350</button>
+      </div>
+      <div id="ef-import-status" style="display:none;margin-bottom:12px;font-size:11px;padding:10px 14px;border-radius:8px;"></div>
       <div class="ef-section">Ingresos</div>
       <div class="ef-row"><span class="ef-lbl">Ingresos Operacionales</span><input class="ef-inp ef-er" id="er-ing-oper" value="0" oninput="efCalcResultados()"/></div>
       <div class="ef-row"><span class="ef-lbl">Otros Ingresos Operacionales</span><input class="ef-inp ef-er" id="er-ing-otros" value="0" oninput="efCalcResultados()"/></div>
@@ -10308,6 +10311,171 @@ function efCargarDatos(d){
 }
 
 // ── Guardar en Firestore ──────────────────────────────────────
+
+// ── Importar desde F300 + F350 ────────────────────────────────
+window.efImportarDeclaraciones = function(){
+  if(!db || !activeClientId){
+    alert('Sin conexión a la base de datos'); return;
+  }
+  var anio = String(activeYear || new Date().getFullYear());
+  var statusEl = document.getElementById('ef-import-status');
+  if(statusEl){
+    statusEl.style.display='block';
+    statusEl.style.background='#f0f4ff';
+    statusEl.style.border='1px solid #c7d0f0';
+    statusEl.style.color='#1a2580';
+    statusEl.textContent='⏳ Buscando declaraciones del año '+anio+'…';
+  }
+
+  // Acumuladores
+  var totF300 = {
+    ingresosGravados: 0,   // c27(5%) + c28(19%) — bases de ventas gravadas
+    ingresosExentos:  0,   // c35 — ventas exentas
+    ingresosExcluidos:0,   // c39 — ventas excluidas
+    ivaGenerado:      0,   // c67 — total IVA generado
+    ivaDescontable:   0,   // c75 — total IVA descontable
+    costos:           0,   // c57 — total compras netas (base costos)
+    retsFavor:        0,   // c84/c85 — saldo a favor
+    periodos:         []
+  };
+  var totF350 = {
+    baseTotal:  0,   // suma de todas las bases de retención
+    retTotal:   0,   // suma de todas las retenciones practicadas
+    periodos:   []
+  };
+
+  // Consultar resultados_historico por clienteId + anio + tipo
+  Promise.all([
+    db.collection('resultados_historico')
+      .where('clienteId','==',activeClientId)
+      .where('anio','==',anio)
+      .where('tipo','==','f300')
+      .get(),
+    db.collection('resultados_historico')
+      .where('clienteId','==',activeClientId)
+      .where('anio','==',anio)
+      .where('tipo','==','f350')
+      .get(),
+    // También buscar en resultados (guardado viejo)
+    db.collection('resultados')
+      .where('clienteId','==',activeClientId)
+      .where('anio','==',anio)
+      .where('tipo','==','f350')
+      .get()
+  ]).then(function(snaps){
+    var snapF300 = snaps[0], snapF350a = snaps[1], snapF350b = snaps[2];
+
+    // ── Procesar F300 ──────────────────────────────────────
+    // Puede haber múltiples períodos — agrupar por pCod, tomar el más reciente
+    var f300Periodos = {};
+    snapF300.forEach(function(doc){
+      var raw = doc.data();
+      var d = null;
+      try{ d = typeof raw.data==='string' ? JSON.parse(raw.data) : raw.data; }catch(e){}
+      if(!d) return;
+      var pCod = raw.pCod || d.pCod || 'x';
+      // Si ya tenemos este período, quedarnos con el más reciente
+      if(!f300Periodos[pCod] || (raw.fechaLiquidacion > (f300Periodos[pCod].fecha||'')))
+        f300Periodos[pCod] = {d:d, fecha:raw.fechaLiquidacion, label:d.pLabel||pCod};
+    });
+    Object.values(f300Periodos).forEach(function(entry){
+      var d = entry.d;
+      totF300.ingresosGravados  += (d.c27||0)+(d.c28||0);
+      totF300.ingresosExentos   += (d.c35||0);
+      totF300.ingresosExcluidos += (d.c39||0);
+      totF300.ivaGenerado       += (d.c67||0);
+      totF300.ivaDescontable    += (d.c75||0);
+      totF300.costos            += (d.c57||0);
+      totF300.periodos.push(entry.label);
+    });
+
+    // ── Procesar F350 ──────────────────────────────────────
+    var f350Periodos = {};
+    function procF350(doc){
+      var raw = doc.data();
+      var d = null;
+      try{ d = typeof raw.data==='string' ? JSON.parse(raw.data) : raw.data; }catch(e){}
+      if(!d) return;
+      var pCod = raw.pCod || raw.periodo || d.periodo || 'x';
+      if(!f350Periodos[pCod] || (raw.fechaLiquidacion||raw.fechaGuardado||'') > (f350Periodos[pCod].fecha||''))
+        f350Periodos[pCod] = {d:d, fecha:raw.fechaLiquidacion||raw.fechaGuardado||'', label:d.periodoLabel||d.pLabel||pCod};
+    }
+    snapF350a.forEach(procF350);
+    snapF350b.forEach(procF350);
+    Object.values(f350Periodos).forEach(function(entry){
+      var d = entry.d;
+      // Sumar todas las bases (b_XXX) y retenciones (r_XXX)
+      Object.keys(d).forEach(function(k){
+        if(k.startsWith('b_')) totF350.baseTotal += (parseFloat(d[k])||0);
+        if(k.startsWith('r_')) totF350.retTotal  += (parseFloat(d[k])||0);
+      });
+      // También puede venir como totalBase / totalRet
+      if(d.totalBase) totF350.baseTotal = Math.max(totF350.baseTotal, d.totalBase);
+      if(d.totalRet)  totF350.retTotal  = Math.max(totF350.retTotal,  d.totalRet);
+      totF350.periodos.push(entry.label);
+    });
+
+    // ── Verificar si encontró datos ────────────────────────
+    var totalEncontrado = totF300.periodos.length + totF350.periodos.length;
+    if(!totalEncontrado){
+      if(statusEl){
+        statusEl.style.background='#fee2e2'; statusEl.style.border='1px solid #fca5a5'; statusEl.style.color='#991b1b';
+        statusEl.textContent='⚠ No se encontraron declaraciones F300 ni F350 para el año '+anio+' de este cliente.';
+      }
+      return;
+    }
+
+    // ── Llenar campos del Estado de Resultados ─────────────
+    // Ingresos = bases gravadas + exentas + excluidas del F300
+    var ingresosOper = totF300.ingresosGravados + totF300.ingresosExentos;
+    var ingresosOtros = totF300.ingresosExcluidos;
+    // Costos = compras netas del F300
+    var costos = totF300.costos;
+    // Provisión renta = retenciones F350 (retenciones practicadas a clientes = ingreso por servicios)
+    var provRenta = totF350.retTotal;
+
+    function setInput(id, val){
+      var el = document.getElementById(id);
+      if(el){ el.value = Math.round(val); }
+    }
+
+    setInput('er-ing-oper',   ingresosOper);
+    setInput('er-ing-otros',  ingresosOtros);
+    setInput('er-costo-serv', costos);
+    setInput('er-prov-imp',   provRenta > 0 ? provRenta : 0);
+    efCalcResultados();
+
+    // ── También llenar impuestos en el Balance ─────────────
+    if(totF300.ivaGenerado - totF300.ivaDescontable > 0){
+      setInput('bg-impuestos', Math.round(totF300.ivaGenerado - totF300.ivaDescontable));
+      efCalcBalance();
+    }
+
+    // ── Mostrar resumen ────────────────────────────────────
+    var resumen = [];
+    if(totF300.periodos.length)
+      resumen.push('✅ F300 ('+totF300.periodos.length+' período'+(totF300.periodos.length>1?'s':'')+': '+totF300.periodos.join(', ')+'): Ingresos '+efFmt(ingresosOper)+', Costos '+efFmt(costos));
+    if(totF350.periodos.length)
+      resumen.push('✅ F350 ('+totF350.periodos.length+' período'+(totF350.periodos.length>1?'s':'')+': '+totF350.periodos.join(', ')+'): Base '+efFmt(totF350.baseTotal)+', Retención '+efFmt(totF350.retTotal));
+    resumen.push('💡 Revisa y ajusta los valores antes de guardar.');
+
+    if(statusEl){
+      statusEl.style.background='#f0fdf4'; statusEl.style.border='1px solid #bbf7d0'; statusEl.style.color='#065f46';
+      statusEl.innerHTML = resumen.join('<br>');
+    }
+    audRegistrar('Importar','Estados Financieros',activeClientId,
+      (clients.find(function(x){return x.id===activeClientId;})||{}).razon||'',
+      'Datos importados desde F300/F350 · Año '+anio);
+
+  }).catch(function(e){
+    console.error('[EF Importar]',e);
+    if(statusEl){
+      statusEl.style.background='#fee2e2'; statusEl.style.border='1px solid #fca5a5'; statusEl.style.color='#991b1b';
+      statusEl.textContent='❌ Error al consultar declaraciones: '+e.message;
+    }
+  });
+};
+
 window.efGuardar = function(){
   if(!db||!activeClientId){ alert('Sin conexión'); return; }
   var datos = efRecolectar();
