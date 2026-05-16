@@ -6836,7 +6836,7 @@ function efDescPDF(datos){
     +'<tr class="tot"><td>UTILIDAD (PÉRDIDA) NETA</td><td style="text-align:right;">'+efFmt(uN)+'</td></tr></table>'
     +'<h3>NOTAS A LOS ESTADOS FINANCIEROS</h3>'+notas
     +efFirmasHTML(datos)
-    +'</body></html>';
+    +'<\/body><\/html>';
   var win=window.open('','_blank');
   win.document.write(html); win.document.close();
   setTimeout(function(){ win.print(); },600);
@@ -6933,7 +6933,7 @@ function efDescWord(datos){
     +(e.rlNombre||'_____________________________')+'<br>C.C. No. '+(e.rlCc||'______________')+'<br>Representante Legal</div>'
     +'<div style="display:table-cell;width:50%;text-align:center;padding-top:30pt;border-top:1px solid #000;">'
     +'JAVIER ALBERTO NIEBLES FERREIRA<br>Contador Público T.P. 216055-T<br>C.C. No. 12.695.546</div></div>'
-    +'</body></html>';
+    +'<\/body><\/html>';
   var blob=new Blob([html],{type:'application/msword'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -6950,7 +6950,7 @@ window.goBack = function(){
 };
 </script>
 
-</body></html>';
+<\/body><\/html>';
   var blob=new Blob([html],{type:'text/html'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -12210,4 +12210,11 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div style="text-align:center;font-size:10px;color:#9ca3af;">
         Versión 1.0.0 · Marzo 2026 · Contacto:
-        <a href="/cdn-cgi/l/email-protection#54352731273b263d35272d373b3a272138203b263d35273e3a32273527143339353d387a373b39" style="color:#1a2580;font-weight:700;"><span class="__cf_email__" data-cfemail="c3a2b0a
+        <a href="/cdn-cgi/l/email-protection#54352731273b263d35272d373b3a272138203b263d35273e3a32273527143339353d387a373b39" style="color:#1a2580;font-weight:700;"><span class="__cf_email__" data-cfemail="c3a2b0a">asesoriasjnf@gmail.com</a>
+      </div>
+    </div>
+  </div>
+</div><!-- /modal-derechos -->
+
+</body>
+</html>
