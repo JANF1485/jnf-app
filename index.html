@@ -9848,7 +9848,10 @@ function poblarFiltroContador(){
         <div class="ef-row"><span class="ef-lbl">Reservas</span><input class="ef-inp ef-bg" id="bg-reservas" value="0" oninput="efCalcBalance()"/></div>
         <div class="ef-row"><span class="ef-lbl">Revalorización del Patrimonio</span><input class="ef-inp ef-bg" id="bg-revalor" value="0" oninput="efCalcBalance()"/></div>
         <div class="ef-row"><span class="ef-lbl">Otras Cuentas Patrimoniales</span><input class="ef-inp ef-bg" id="bg-otras-pat" value="0" oninput="efCalcBalance()"/></div>
-        <div class="ef-row"><span class="ef-lbl">Resultado del Ejercicio</span><input class="ef-inp ef-bg" id="bg-resultado" value="0" oninput="efCalcBalance()"/></div>
+        <div class="ef-row" style="background:#fff8e1;border-radius:6px;padding:6px 8px;margin:3px 0;">
+          <span class="ef-lbl" style="color:#92400e;font-weight:700;">Resultado del Ejercicio <span style="font-size:9px;background:#c9a227;color:#1a2580;padding:1px 6px;border-radius:8px;margin-left:4px;">Auto</span></span>
+          <span class="ef-calc" id="bg-resultado-display" style="color:#92400e;font-weight:800;">$0</span>
+        </div>
         <div class="ef-row"><span class="ef-lbl">Resultados Ejercicios Anteriores</span><input class="ef-inp ef-bg" id="bg-res-ant" value="0" oninput="efCalcBalance()"/></div>
         <div class="ef-row"><span class="ef-lbl">Superávit por Valorizaciones</span><input class="ef-inp ef-bg" id="bg-sup-valor" value="0" oninput="efCalcBalance()"/></div>
         <div class="ef-row subtotal"><span class="ef-lbl subtotal">TOTAL PATRIMONIO</span><span class="ef-calc" id="bg-total-pat">$0</span></div>
@@ -9957,10 +9960,15 @@ window.efCalcBalance = function(){
   var pc=efVal('bg-oblig-cp')+efVal('bg-proveedores')+efVal('bg-cxp-vinc')+efVal('bg-impuestos')+efVal('bg-lab-cp')+efVal('bg-estim-cp')+efVal('bg-pdif-cp')+efVal('bg-otros-pc');
   var plp=efVal('bg-oblig-lp')+efVal('bg-lab-lp')+efVal('bg-estim-lp')+efVal('bg-pdif-lp')+efVal('bg-otros-plp');
   var totalP=pc+plp;
-  var pat=efVal('bg-capital')+efVal('bg-superavit')+efVal('bg-reservas')+efVal('bg-revalor')+efVal('bg-otras-pat')+efVal('bg-resultado')+efVal('bg-res-ant')+efVal('bg-sup-valor');
+  // Resultado del ejercicio = Utilidad Neta calculada automáticamente
+  var utilNeta = _efDatos.utilidadNeta||0;
+  var pat=efVal('bg-capital')+efVal('bg-superavit')+efVal('bg-reservas')+efVal('bg-revalor')+efVal('bg-otras-pat')+utilNeta+efVal('bg-res-ant')+efVal('bg-sup-valor');
   var pp=totalP+pat;
   efSet('bg-total-ac',ac); efSet('bg-total-fijos',fijos); efSet('bg-total-activos',totalA);
   efSet('bg-total-pc',pc); efSet('bg-total-pasivos',totalP); efSet('bg-total-pat',pat); efSet('bg-total-pp',pp);
+  // Mostrar resultado automático en el campo de patrimonio
+  var rdEl=document.getElementById('bg-resultado-display');
+  if(rdEl) rdEl.textContent=efFmt(utilNeta);
   var dif=Math.abs(totalA-pp);
   var cuEl=document.getElementById('bg-cuadre');
   if(cuEl){ cuEl.innerHTML=dif<1?'<span class="ef-cuadre-ok">✓ Balance cuadra correctamente</span>':'<span class="ef-cuadre-err">⚠ Diferencia: '+efFmt(dif)+'</span>'; }
@@ -9978,6 +9986,8 @@ window.efCalcResultados = function(){
   var uN=uAI+efVal('er-corr-mon')-efVal('er-prov-imp');
   efSet('er-util-bruta',uB); efSet('er-util-oper',uO); efSet('er-util-ai',uAI); efSet('er-util-neta',uN);
   _efDatos.utilidadBruta=uB; _efDatos.utilidadOper=uO; _efDatos.utilidadAI=uAI; _efDatos.utilidadNeta=uN;
+  // Actualizar patrimonio automáticamente cuando cambia el resultado
+  efCalcBalance();
 };
 
 function efRecolectar(){
