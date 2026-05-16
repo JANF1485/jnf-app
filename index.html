@@ -10132,8 +10132,7 @@ function efMembrete(tipoEstado, datos){
   var e=datos.encabezado;
   var desde=efFmtFecha(e.desde), hasta=efFmtFecha(e.hasta);
   return '<div>'
-    // Membrete JNF — fondo azul
-    +'<div style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;gap:12px;">'
+    +'<div class="membrete-jnf" style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;gap:12px;">'
     +'<img src="https://janf1485.github.io/jnf-interno/logo.jpg" alt="JNF" '
     +'style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #c9a227;flex-shrink:0;"/>'
     +'<div>'
@@ -10141,9 +10140,7 @@ function efMembrete(tipoEstado, datos){
     +'<div style="font-size:9px;color:#c9a227;margin-top:2px;">NIT: 901.904.435-9 &nbsp;·&nbsp; Plato, Magdalena</div>'
     +'<div style="font-size:9px;color:rgba(255,255,255,.6);">Sistema de Gestión Contable</div>'
     +'</div></div>'
-    // Línea dorada
-    +'<div style="height:4px;background:#c9a227;"></div>'
-    // Datos del cliente centrados debajo
+    +'<div class="linea-dorada" style="height:4px;background:#c9a227;"></div>'
     +'<div style="text-align:center;padding:14px 20px 10px;border-bottom:1px solid #e5e7f0;">'
     +'<div style="font-size:13px;font-weight:700;color:#1a2580;letter-spacing:.5px;">'+tipoEstado+'</div>'
     +'<div style="font-size:11px;font-weight:700;color:#374151;margin-top:5px;">'+(e.razon||'')+'</div>'
@@ -10169,9 +10166,9 @@ function efFirmas(datos){
 }
 
 function efPie(pag, total, datos){
-  return '<div style="background:#1a2580;padding:5px 20px;display:flex;justify-content:space-between;margin-top:4px;">'
+  return '<div class="pie-jnf" style="background:#1a2580;padding:5px 20px;display:flex;justify-content:space-between;margin-top:4px;">'
     +'<div style="font-size:8px;color:#c9a227;font-weight:600;">Asesorías y Consultorías JNF S.A.S. · NIT: 901.904.435-9 · Plato, Magdalena</div>'
-    +'<div style="font-size:8px;color:rgba(255,255,255,.6);">Página '+pag+' de '+total+'</div>'
+    +'<div style="font-size:8px;color:rgba(255,255,255,.7);">Página '+pag+' de '+total+'</div>'
     +'</div>';
 }
 
@@ -10216,15 +10213,20 @@ window.efDescIndividual = function(tipo, fmt){
     }
 
     if(fmt==='pdf'){
-      var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+'</title>'+efCSS()+'<\/head><body>'+cuerpo+'<\\/body><\\/html>';
+      var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+'</title>'+efCSS()+'<\/head><body>'+cuerpo+'<\/body><\/html>';
       var win=window.open('','_blank');
       win.document.write(html); win.document.close();
-      setTimeout(function(){win.print();},800);
+      // Instrucción para el usuario al imprimir
+      setTimeout(function(){
+        win.print();
+        // Nota: para ocultar la fecha y nombre del archivo, en el diálogo de impresión
+        // desactiva "Encabezados y pies de página" en las opciones del browser
+      },800);
 
     } else if(fmt==='word'){
       var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
         +'<head><meta charset="utf-8">'+efCSS()+'<style>body{margin:2cm;}</style><\/head><body>'
-        +cuerpo+'<\\/body><\\/html>';
+        +cuerpo+'<\/body><\/html>';
       var blob=new Blob([html],{type:'application/msword'});
       var a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
@@ -10295,13 +10297,27 @@ function efCSS(){
   return '<style>'
     +'*{box-sizing:border-box;margin:0;padding:0;}'
     +'body{font-family:Arial,sans-serif;font-size:10px;color:#222;}'
+    // Forzar colores de fondo al imprimir
+    +'*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}'
+    // Ocultar headers/footers del browser al imprimir
+    +'@page{margin:1cm;size:A4;}'
     +'.sec{font-size:9px;font-weight:700;color:#1a2580;border-bottom:2px solid #1a2580;padding:5px 0 3px;margin:10px 0 5px;letter-spacing:.3px;}'
     +'.row{display:flex;justify-content:space-between;padding:3px 8px;border-bottom:1px solid #f0f0f0;}'
-    +'.row-sub{display:flex;justify-content:space-between;padding:4px 8px;background:#eef1ff;font-weight:700;color:#1a2580;border-radius:3px;margin:3px 0;}'
-    +'.row-tot{display:flex;justify-content:space-between;padding:5px 8px;background:#1a2580;color:#c9a227;font-weight:700;border-radius:3px;margin:4px 0;}'
+    +'.row-sub{display:flex;justify-content:space-between;padding:4px 8px;background:#eef1ff!important;font-weight:700;color:#1a2580;border-radius:3px;margin:3px 0;}'
+    +'.row-tot{display:flex;justify-content:space-between;padding:5px 8px;background:#1a2580!important;color:#c9a227!important;font-weight:700;border-radius:3px;margin:4px 0;}'
     +'.row-grp{font-size:8px;font-weight:700;color:#6b7280;padding:4px 0 2px;}'
+    +'.membrete-jnf{background:#1a2580!important;}'
+    +'.pie-jnf{background:#1a2580!important;}'
+    +'.linea-dorada{background:#c9a227!important;height:4px;}'
     +'.pagebreak{page-break-before:always;}'
-    +'@media print{.pagebreak{page-break-before:always;}}'
+    +'@media print{'
+    +'.pagebreak{page-break-before:always;}'
+    +'.membrete-jnf{background:#1a2580!important;-webkit-print-color-adjust:exact!important;}'
+    +'.pie-jnf{background:#1a2580!important;-webkit-print-color-adjust:exact!important;}'
+    +'.row-tot{background:#1a2580!important;color:#c9a227!important;-webkit-print-color-adjust:exact!important;}'
+    +'.row-sub{background:#eef1ff!important;-webkit-print-color-adjust:exact!important;}'
+    +'.linea-dorada{background:#c9a227!important;-webkit-print-color-adjust:exact!important;}'
+    +'}'
     +'</style>';
 }
 
