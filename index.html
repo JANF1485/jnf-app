@@ -2290,6 +2290,8 @@ function openAnio(clientId, year){
     if(isAdmin) return true;
     if(!m.active) return false;
     if(!modPerms || modPerms.length===0) return false;
+    // estados financieros visible para todos
+    if(m.id==='estados') return true;
     return modPerms.indexOf(m.id) >= 0;
   });
   return visible.map(function(m){
