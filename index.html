@@ -9732,36 +9732,28 @@ function poblarFiltroContador(){
         <div style="font-size:10px;color:rgba(255,255,255,.65);">Asesorías y Consultorías JNF S.A.S. · TP 216055-T</div>
       </div>
     </div>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <!-- Balance General -->
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
-        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">BALANCE</div>
-        <div style="display:flex;gap:3px;">
-          <button onclick="efDescIndividual('balance','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
-          <button onclick="efDescIndividual('balance','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
-          <button onclick="efDescIndividual('balance','excel')" style="background:#065f46;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Excel</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <!-- Botón desplegable de descarga según pestaña activa -->
+      <div style="position:relative;" id="ef-dl-wrapper">
+        <button onclick="efToggleMenu()" id="ef-dl-btn"
+          style="background:#c9a227;color:#1a2580;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;display:flex;align-items:center;gap:6px;">
+          ⬇ Descargar <span style="font-size:9px;">▼</span>
+        </button>
+        <div id="ef-dl-menu" style="display:none;position:absolute;right:0;top:110%;background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);min-width:160px;z-index:999;overflow:hidden;">
+          <div style="padding:8px 12px;font-size:9px;font-weight:700;color:#6b7280;letter-spacing:.4px;border-bottom:1px solid #f0f0f0;" id="ef-dl-menu-label">BALANCE GENERAL</div>
+          <button onclick="efDlOpcion('pdf')" style="width:100%;text-align:left;padding:10px 14px;border:none;background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;color:#1a2580;display:flex;align-items:center;gap:8px;" onmouseenter="this.style.background='#f8faff'" onmouseleave="this.style.background='#fff'">
+            <span style="background:#c9a227;color:#1a2580;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;">PDF</span> Descargar PDF
+          </button>
+          <button onclick="efDlOpcion('word')" style="width:100%;text-align:left;padding:10px 14px;border:none;background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;color:#1a2580;display:flex;align-items:center;gap:8px;" onmouseenter="this.style.background='#f8faff'" onmouseleave="this.style.background='#fff'">
+            <span style="background:#1e40af;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;">Word</span> Descargar Word
+          </button>
+          <div id="ef-dl-excel-btn">
+            <button onclick="efDlOpcion('excel')" style="width:100%;text-align:left;padding:10px 14px;border:none;background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;color:#1a2580;display:flex;align-items:center;gap:8px;" onmouseenter="this.style.background='#f8faff'" onmouseleave="this.style.background='#fff'">
+              <span style="background:#065f46;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;">Excel</span> Descargar Excel
+            </button>
+          </div>
         </div>
       </div>
-      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
-      <!-- Estado de Resultados -->
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
-        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">RESULTADOS</div>
-        <div style="display:flex;gap:3px;">
-          <button onclick="efDescIndividual('resultados','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
-          <button onclick="efDescIndividual('resultados','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
-          <button onclick="efDescIndividual('resultados','excel')" style="background:#065f46;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Excel</button>
-        </div>
-      </div>
-      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
-      <!-- Notas Contables -->
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
-        <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;">NOTAS</div>
-        <div style="display:flex;gap:3px;">
-          <button onclick="efDescIndividual('notas','pdf')" style="background:#c9a227;color:#1a2580;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">PDF</button>
-          <button onclick="efDescIndividual('notas','word')" style="background:#1e40af;color:#fff;border:none;border-radius:5px;padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">Word</button>
-        </div>
-      </div>
-      <div style="width:1px;height:36px;background:rgba(255,255,255,.2);"></div>
       <button onclick="efGuardar()" style="background:#fff;color:#1a2580;border:none;border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">💾 Guardar</button>
     </div>
   </div>
@@ -9972,7 +9964,39 @@ window.efTab = function(tab){
     document.getElementById('ef-tab-'+t).classList.toggle('active',t===tab);
     document.getElementById('ef-panel-'+t).classList.toggle('active',t===tab);
   });
+  // Actualizar label del menú desplegable y mostrar/ocultar Excel
+  var labels = {encabezado:'ENCABEZADO',balance:'BALANCE GENERAL',resultados:'ESTADO DE RESULTADOS',notas:'NOTAS CONTABLES'};
+  var lbl = document.getElementById('ef-dl-menu-label');
+  if(lbl) lbl.textContent = labels[tab]||tab.toUpperCase();
+  var xlsBtn = document.getElementById('ef-dl-excel-btn');
+  if(xlsBtn) xlsBtn.style.display = (tab==='notas'||tab==='encabezado') ? 'none' : '';
+  window._efTabActivo = tab;
+  if(tab==='balance') efCalcResultados();
   if(tab==='notas') efGenerarNotas();
+};
+
+window.efToggleMenu = function(){
+  var m = document.getElementById('ef-dl-menu');
+  if(!m) return;
+  m.style.display = m.style.display==='none' ? 'block' : 'none';
+  // Cerrar al hacer clic fuera
+  if(m.style.display==='block'){
+    setTimeout(function(){
+      document.addEventListener('click', function fn(e){
+        if(!document.getElementById('ef-dl-wrapper').contains(e.target)){
+          m.style.display='none';
+          document.removeEventListener('click',fn);
+        }
+      });
+    },10);
+  }
+};
+
+window.efDlOpcion = function(fmt){
+  var tab = window._efTabActivo || 'balance';
+  var tipo = tab==='resultados' ? 'resultados' : tab==='notas' ? 'notas' : 'balance';
+  document.getElementById('ef-dl-menu').style.display='none';
+  efDescIndividual(tipo, fmt);
 };
 
 function efVal(id){ return parseFloat((document.getElementById(id)||{value:'0'}).value.replace(/[^0-9.\-]/g,''))||0; }
@@ -9986,18 +10010,39 @@ window.efCalcBalance = function(){
   var pc=efVal('bg-oblig-cp')+efVal('bg-proveedores')+efVal('bg-cxp-vinc')+efVal('bg-impuestos')+efVal('bg-lab-cp')+efVal('bg-estim-cp')+efVal('bg-pdif-cp')+efVal('bg-otros-pc');
   var plp=efVal('bg-oblig-lp')+efVal('bg-lab-lp')+efVal('bg-estim-lp')+efVal('bg-pdif-lp')+efVal('bg-otros-plp');
   var totalP=pc+plp;
-  // Resultado del ejercicio = Utilidad Neta calculada automáticamente
+
+  // Patrimonio: los campos editables SIN el resultado del ejercicio
+  var patBase=efVal('bg-capital')+efVal('bg-superavit')+efVal('bg-reservas')+efVal('bg-revalor')+efVal('bg-otras-pat')+efVal('bg-res-ant')+efVal('bg-sup-valor');
+
+  // Resultado del Ejercicio = Activos - Pasivos - Patrimonio base
+  // Primero usar la utilidad neta calculada del Estado de Resultados si existe
   var utilNeta = _efDatos.utilidadNeta||0;
-  var pat=efVal('bg-capital')+efVal('bg-superavit')+efVal('bg-reservas')+efVal('bg-revalor')+efVal('bg-otras-pat')+utilNeta+efVal('bg-res-ant')+efVal('bg-sup-valor');
-  var pp=totalP+pat;
+  // Si no hay datos de resultados, calcular por diferencia contable
+  var diferencia = totalA - totalP - patBase;
+  // Usar utilidadNeta si fue calculada, sino usar diferencia
+  var resultado = (_efDatos.utilidadNeta !== undefined && _efDatos.utilidadNeta !== null)
+    ? utilNeta : diferencia;
+
+  var pat = patBase + resultado;
+  var pp  = totalP + pat;
+
   efSet('bg-total-ac',ac); efSet('bg-total-fijos',fijos); efSet('bg-total-activos',totalA);
   efSet('bg-total-pc',pc); efSet('bg-total-pasivos',totalP); efSet('bg-total-pat',pat); efSet('bg-total-pp',pp);
-  // Mostrar resultado automático en el campo de patrimonio
+
+  // Mostrar resultado automático
   var rdEl=document.getElementById('bg-resultado-display');
-  if(rdEl) rdEl.textContent=efFmt(utilNeta);
+  if(rdEl){
+    rdEl.textContent = efFmt(resultado);
+    rdEl.style.color = resultado >= 0 ? '#065f46' : '#991b1b';
+  }
+
+  // Indicador de cuadre
   var dif=Math.abs(totalA-pp);
   var cuEl=document.getElementById('bg-cuadre');
-  if(cuEl){ cuEl.innerHTML=dif<1?'<span class="ef-cuadre-ok">✓ Balance cuadra correctamente</span>':'<span class="ef-cuadre-err">⚠ Diferencia: '+efFmt(dif)+'</span>'; }
+  if(cuEl) cuEl.innerHTML=dif<1
+    ?'<span class="ef-cuadre-ok">✓ Balance cuadra correctamente</span>'
+    :'<span class="ef-cuadre-err">⚠ Diferencia: '+efFmt(dif)+'</span>';
+
   _efDatos.totalActivos=totalA; _efDatos.totalPasivos=totalP; _efDatos.totalPatrimonio=pat;
 };
 
