@@ -12,6 +12,100 @@
 <title>JNF — Sistema de Gestión Contable v2</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
+
+// ── TABLA DIVIPOLA (DIAN) ──────────────────────────────────
+var DIAN_DPTOS = {
+  'AMAZONAS':'91','ANTIOQUIA':'05','ARAUCA':'81','ATLANTICO':'08',
+  'BOGOTA':'11','BOGOTA D.C.':'11','BOGOTA D.C':'11','BOLIVAR':'13',
+  'BOYACA':'15','CALDAS':'17','CAQUETA':'18','CASANARE':'85',
+  'CAUCA':'19','CESAR':'20','CHOCO':'27','CORDOBA':'23',
+  'CUNDINAMARCA':'25','GUAINIA':'94','GUAVIARE':'95','HUILA':'41',
+  'LA GUAJIRA':'44','MAGDALENA':'47','META':'50','NARINO':'52',
+  'NORTE DE SANTANDER':'54','PUTUMAYO':'86','QUINDIO':'63',
+  'RISARALDA':'66','SAN ANDRES':'88','SANTANDER':'68','SUCRE':'70',
+  'TOLIMA':'73','VALLE DEL CAUCA':'76','VALLE':'76','VAUPES':'97','VICHADA':'99'
+};
+
+var DIAN_MPIOS = {
+  // Atlantico
+  '08001':'001','08078':'078','08137':'137','08141':'141','08296':'296',
+  '08372':'372','08421':'421','08433':'433','08436':'436','08520':'520',
+  '08549':'549','08558':'558','08573':'573','08606':'606','08634':'634',
+  '08675':'675','08685':'685','08758':'758','08770':'770','08832':'832',
+  '08849':'849','08879':'879','08894':'894',
+  // Bogota
+  '11001':'001',
+  // Magdalena
+  '47001':'001','47030':'030','47053':'053','47058':'058','47161':'161',
+  '47170':'170','47189':'189','47205':'205','47245':'245','47258':'258',
+  '47268':'268','47288':'288','47318':'318','47339':'339','47395':'395',
+  '47460':'460','47541':'541','47545':'545','47551':'551','47555':'555',
+  '47570':'570','47605':'605','47660':'660','47675':'675','47692':'692',
+  '47703':'703','47707':'707','47720':'720','47745':'745','47798':'798',
+  '47960':'960','47980':'980',
+  // Bolivar
+  '13001':'001','13006':'006','13030':'030','13042':'042','13052':'052',
+  '13062':'062','13074':'074','13140':'140','13160':'160','13188':'188',
+  '13212':'212','13222':'222','13244':'244','13248':'248','13268':'268',
+  '13300':'300','13620':'620','13647':'647','13650':'650','13654':'654',
+  '13655':'655','13657':'657','13667':'667','13670':'670','13673':'673',
+  '13683':'683','13688':'688','13744':'744','13760':'760','13780':'780',
+  '13810':'810','13836':'836','13838':'838','13873':'873','13894':'894',
+  '13894':'894',
+  // Antioquia
+  '05001':'001','05002':'002','05004':'004','05021':'021','05030':'030',
+  // Cundinamarca
+  '25001':'001','25019':'019','25035':'035','25040':'040',
+  // Santander
+  '68001':'001','68013':'013','68020':'020','68051':'051',
+  // Valle
+  '76001':'001','76020':'020','76036':'036','76041':'041',
+  // Cordoba
+  '23001':'001','23068':'068','23079':'079','23090':'090',
+  // Cesar
+  '20001':'001','20011':'011','20013':'013','20032':'032',
+  // Sucre
+  '70001':'001','70110':'110','70124':'124','70204':'204'
+};
+
+function cufeGetDpto(nombre){
+  if(!nombre) return '';
+  var n=String(nombre).toUpperCase().trim()
+    .replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E')
+    .replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O')
+    .replace(/[ÚÙÛÜ]/g,'U').replace(/Ñ/g,'N');
+  return DIAN_DPTOS[n]||DIAN_DPTOS[n.split(' ')[0]]||'';
+}
+
+// Calcular dígito de verificación del NIT
+function calcDV(nit){
+  var n=String(nit).replace(/[^0-9]/g,'');
+  if(!n) return '';
+  var primos=[3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
+  var sum=0;
+  var j=0;
+  for(var i=n.length-1;i>=0;i--){
+    sum+=parseInt(n[i])*primos[j++];
+  }
+  var residuo=sum%11;
+  return String(residuo>=2?11-residuo:residuo);
+}
+
+
+function cufeGetMpio(codDepto, nombreMpio){
+  if(!codDepto||!nombreMpio) return '';
+  // Buscar en la tabla por código completo
+  // Si no está, retornar solo el nombre
+  // El Excel de la DIAN trae el nombre -- intentar match
+  var prefix=codDepto;
+  for(var key in DIAN_MPIOS){
+    if(key.startsWith(prefix)){
+      // match aproximado por nombre no disponible aqui
+    }
+  }
+  return nombreMpio; // fallback: nombre
+}
+
 console.log('[CUFE] modulo v5 cargando...');
 
 var _cufeState = {
@@ -210,6 +304,11 @@ function cufeCiclo(){
       cufeCalcular(item);
       cufeLog('info','['+item.sh+'] Calculado: '+(item.nomEmisor||item.nitEmisor));
     }
+    // Calcular DV del NIT
+    if(!item.dv){
+      var nitParaDV=item.nitEmisor||item.nitReceptor||'';
+      item.dv=calcDV(nitParaDV);
+    }
     item.procesado=true;
     _cufeState.ok++;
     var co=cge('cufe-cnt-ok'); if(co) co.textContent=String(_cufeState.ok);
@@ -226,15 +325,66 @@ function cufeFetch(item,callback){
     cufeLog('err','Ventana DIAN cerrada. Reabrir y confirmar sesion.');
     callback({ok:false}); return;
   }
+  // Navegar la ventana DIAN al documento del CUFE
   var url='https://catalogo-vpfe.dian.gov.co/Document/FindDocument?documentKey='+encodeURIComponent(item.cufe);
-  fetch(url,{credentials:'include',headers:{'Accept':'application/json,text/html,*/*','X-Requested-With':'XMLHttpRequest'}})
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      var ct=r.headers.get('content-type')||'';
-      if(ct.indexOf('json')>=0) return r.json().then(function(d){cufeParseJSON(d,callback);});
-      return r.text().then(function(t){cufeParseHTML(t,callback);});
-    })
-    .catch(function(){callback({ok:false});});
+  try {
+    dianWin.location.href = url;
+  } catch(e) {
+    callback({ok:false}); return;
+  }
+  // Esperar que cargue y leer el DOM
+  var intentos = 0;
+  var maxIntentos = 20; // 10 segundos max
+  var checker = setInterval(function(){
+    intentos++;
+    if(intentos > maxIntentos){
+      clearInterval(checker);
+      cufeLog('info','Timeout - calculando desde Excel');
+      callback({ok:false});
+      return;
+    }
+    try {
+      var doc = dianWin.document;
+      var readyState = doc.readyState;
+      var url2 = dianWin.location.href;
+      // Esperar que haya navegado y cargado
+      if(readyState !== 'complete') return;
+      if(url2.indexOf('FindDocument') >= 0 || url2.indexOf('SearchDocument') >= 0) return;
+      // Pagina cargada - leer contenido
+      clearInterval(checker);
+      var body = doc.body ? (doc.body.innerText || doc.body.textContent || '') : '';
+      if(body.length < 100){ callback({ok:false}); return; }
+      cufeParseTexto(body, callback);
+    } catch(corsErr) {
+      // CORS bloqueado - no podemos leer el DOM
+      clearInterval(checker);
+      callback({ok:false});
+    }
+  }, 500);
+}
+
+function cufeParseTexto(text, callback){
+  function ex(p){var m=text.match(p);return m?parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0:0;}
+  function exStr(p){var m=text.match(p);return m?m[1].trim():'';}
+  var sub  = ex(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
+  var iva  = ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
+  var rF   = ex(/Rete\s*fuente[\s\S]{0,30}?([\d.,]+)/i);
+  var rI   = ex(/Rete\s*IVA[\s\S]{0,30}?([\d.,]+)/i);
+  var tot  = ex(/Total\s*factura[\s\S]{0,30}?([\d.,]+)/i);
+  var dir  = exStr(/Direcci[oó]n[:\s]+([^\n\r]+)/i);
+  var mun  = exStr(/Municipio\s*\/\s*Ciudad[:\s]+([^\n\r]+)/i);
+  var dptoNom = exStr(/Departamento[:\s]+([^\n\r]+)/i);
+  var dptoCod = cufeGetDpto(dptoNom);
+  if(sub > 0){
+    var res={ok:true, dir:dir, ciudad:mun, dpto:dptoCod||dptoNom, reteRenta:rF, reteIVA:rI, total:tot||sub+iva};
+    if(iva > 0){
+      var p = iva/sub;
+      if(Math.abs(p-0.19)<0.01){res.b19=sub;res.iv19=iva;}
+      else if(Math.abs(p-0.05)<0.01){res.b5=sub;res.iv5=iva;}
+      else{res.b19=sub;res.iv19=iva;}
+    } else {res.ex=sub;}
+    callback(res);
+  } else {callback({ok:false});}
 }
 
 function cufeParseJSON(d,cb){
@@ -249,7 +399,7 @@ function cufeParseJSON(d,cb){
       ipo:t.taxAmountINC||0, ipo8:t.taxAmountINC8||0,
       dir:addr.street||addr.line||'',
       ciudad:addr.city||addr.cityName||'',
-      dpto:addr.department||addr.departmentName||''
+      dpto:cufeGetDpto(addr.department||addr.departmentName)||addr.department||''
     });
   }catch(e){cb({ok:false});}
 }
@@ -263,9 +413,10 @@ function cufeParseHTML(html,cb){
   var iva=ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
   var dir=exStr(/Direcci[oó]n[:\s]+([^\n\r]+)/i);
   var mun=exStr(/Municipio\s*\/\s*Ciudad[:\s]+([^\n\r]+)/i);
-  var dpto=exStr(/Departamento[:\s]+([^\n\r]+)/i);
+  var dptoNom=exStr(/Departamento[:\s]+([^\n\r]+)/i);
+  var dptoCod=cufeGetDpto(dptoNom);
   if(sub>0){
-    var res={ok:true,dir:dir,ciudad:mun,dpto:dpto};
+    var res={ok:true,dir:dir,ciudad:mun,dpto:dptoCod||dptoNom};
     if(iva>0){
       var p=iva/sub;
       if(Math.abs(p-0.19)<0.01){res.b19=sub;res.iv19=iva;}
