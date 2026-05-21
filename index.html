@@ -12,553 +12,341 @@
 <title>JNF — Sistema de Gestión Contable v2</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-console.log('[CUFE] script10 cargando...');
+console.log('[CUFE] modulo v3 cargando...');
 
-// MODULO DESCARGA MASIVA CUFE - JNF SAS
 var _cufeState = {
-  excelDian: null,
-  formatoWb: null,
-  formatoData: null,
-  cufeList: [],
-  resultados: [],
-  pestanasSelec: [],
+  dianData: [],        // filas del Excel DIAN
+  cufeList: [],        // lista procesada
   dianWindow: null,
   procesando: false,
   pausado: false,
-  idxActual: 0,
-  ok: 0,
-  err: 0,
-  pestanasConfig: {
-    'COSTOS':        { tipo: 'compra',    formato: '1001' },
-    'DV COSTOS':     { tipo: 'devcompra', formato: '1001' },
-    'VENTAS':        { tipo: 'venta',     formato: '1007' },
-    'DEV EN VENTAS': { tipo: 'devventa',  formato: '1007' },
-    'SERV PUBLICOS': { tipo: 'compra',    formato: '1001' },
-    'DOC. SOPORTE':  { tipo: 'compra',    formato: '1001' }
-  }
+  idx: 0, ok: 0, err: 0
 };
 
-window._openCufe = window.openCufe = function() {
-  console.log('[CUFE] openCufe llamado, activeClientId='+activeClientId);
-  var cl = clients ? clients.find(function(x) { return x.id === activeClientId; }) : null;
-  var year = activeYear || new Date().getFullYear();
-  var el = document.getElementById('cufe-subtitulo');
-  if (el) el.textContent = cl ? (cl.razon || cl.nit) + ' - ' + year : 'Descarga Masiva CUFE - ' + year;
-  console.log('[CUFE] antes de cufeResetUI');
-  _cufeState.excelDian = null;
-  _cufeState.formatoData = null;
-  _cufeState.cufeList = [];
-  _cufeState.resultados = [];
-  _cufeState.procesando = false;
-  _cufeState.pausado = false;
-  _cufeState.idxActual = 0;
-  _cufeState.ok = 0;
-  _cufeState.err = 0;
-  console.log('[CUFE] antes de cufeResetUI');
-  cufeResetUI();
-  console.log('[CUFE] antes de showScreen');
+function cge(id){ return document.getElementById(id); }
+
+window._openCufe = window.openCufe = function(){
+  console.log('[CUFE] openCufe v3 ejecutado');
+  var cl = (typeof clients!=='undefined') ? clients.find(function(x){return x.id===activeClientId;}) : null;
+  var year = (typeof activeYear!=='undefined'?activeYear:null)||new Date().getFullYear();
+  var sub = cge('cufe-subtitulo');
+  if(sub) sub.textContent = cl?(cl.razon||cl.nit)+' - '+year:'Descarga Masiva CUFE - '+year;
+  _cufeState.dianData=[];
+  _cufeState.cufeList=[];
+  _cufeState.procesando=false;
+  _cufeState.pausado=false;
+  _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
+  // Reset UI
+  ['cufe-info-dian','cufe-progreso-card','cufe-resultados-card'].forEach(function(id){
+    var el=cge(id); if(el) el.style.display='none';
+  });
+  var ba=cge('cufe-btn-abrir-dian'); if(ba) ba.disabled=true;
+  var bi=cge('cufe-btn-iniciar');    if(bi) bi.disabled=true;
+  var bs=cge('cufe-btn-sesion-ok');  if(bs) bs.style.display='none';
+  var an=cge('cufe-archivo-nombre'); if(an) an.textContent='';
+  var log=cge('cufe-log');           if(log) log.innerHTML='';
   showScreen('cufe');
-  console.log('[CUFE] showScreen ejecutado');
 };
 
-function ge(id) { return document.getElementById(id); }
-
-function cufeResetUI() {
-  var pasos = ['cufe-paso1','cufe-paso2','cufe-paso3','cufe-paso4','cufe-paso5'];
-  pasos.forEach(function(id, i) {
-    var el = ge(id);
-    if (el) el.className = 'cufe-paso' + (i === 0 ? ' activo' : '');
-    var n = ge('cufe-n' + (i + 1));
-    if (n) { n.className = 'cufe-num' + (i === 0 ? ' activo' : ''); n.textContent = String(i + 1); }
-  });
-  var hideIds = ['cufe-paso1-info','cufe-paso2-info','cufe-progreso-card','cufe-resultados-card'];
-  hideIds.forEach(function(id) { var el = ge(id); if (el) el.style.display = 'none'; });
-  var bd = ge('cufe-btn-abrir-dian'); if (bd) bd.disabled = true;
-  var bi = ge('cufe-btn-iniciar');    if (bi) bi.disabled = true;
-  var bs = ge('cufe-btn-sesion-ok');  if (bs) bs.style.display = 'none';
-  var an = ge('cufe-archivo-nombre'); if (an) an.textContent = '';
-  var fn = ge('cufe-formato-nombre'); if (fn) fn.textContent = '';
-  var bl = ge('cufe-btn-formato');
-  if (bl) { bl.style.background = '#e5e7f0'; bl.style.color = '#9ca3af'; bl.style.pointerEvents = 'none'; }
-  var pc = ge('cufe-pestanas-check'); if (pc) pc.innerHTML = '';
+function cufeLog(tipo, msg){
+  var card=cge('cufe-progreso-card'); if(card) card.style.display='block';
+  var log=cge('cufe-log'); if(!log) return;
+  var div=document.createElement('div'); div.className=tipo;
+  div.textContent='['+new Date().toLocaleTimeString('es-CO')+'] '+msg;
+  log.appendChild(div); log.scrollTop=log.scrollHeight;
 }
 
-function cufePasoActivo(n) {
-  for (var i = 1; i <= 5; i++) {
-    var el  = ge('cufe-paso' + i);
-    var num = ge('cufe-n' + i);
-    if (!el || !num) continue;
-    if (i < n)      { el.className = 'cufe-paso completado'; num.className = 'cufe-num completado'; num.textContent = String.fromCharCode(10003); }
-    else if (i === n){ el.className = 'cufe-paso activo';    num.className = 'cufe-num activo';    num.textContent = String(i); }
-    else             { el.className = 'cufe-paso';            num.className = 'cufe-num';           num.textContent = String(i); }
-  }
-}
-
-function cufeLog(tipo, msg) {
-  var card = ge('cufe-progreso-card');
-  if (card) card.style.display = 'block';
-  var log = ge('cufe-log');
-  if (!log) return;
-  var div = document.createElement('div');
-  div.className = tipo;
-  var ts = new Date().toLocaleTimeString('es-CO');
-  div.textContent = '[' + ts + '] ' + msg;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-window.cufeCargarExcel = function(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var an = ge('cufe-archivo-nombre');
-  if (an) an.textContent = 'Leyendo...';
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb = XLSX.read(e.target.result, { type: 'binary' });
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      if (rows.length < 2) { alert('El archivo no tiene datos.'); return; }
-      var headers = rows[0].map(function(h) { return String(h).trim(); });
-      var iCufe   = headers.findIndex(function(h) { return /CUFE|UUID/i.test(h); });
-      var iNitE   = headers.findIndex(function(h) { return /NIT\s*Emisor/i.test(h); });
-      var iNitR   = headers.findIndex(function(h) { return /NIT\s*Receptor/i.test(h); });
-      var iNit    = headers.findIndex(function(h) { return /^NIT$/i.test(h); });
-      var iNombre = headers.findIndex(function(h) { return /Nombre\s*(Emisor|Receptor)/i.test(h); });
-      var iIVA    = headers.findIndex(function(h) { return h === 'IVA'; });
-      var iTotal  = headers.findIndex(function(h) { return h === 'Total'; });
-      var iReteR  = headers.findIndex(function(h) { return /Rete\s*Renta/i.test(h); });
-      var iReteI  = headers.findIndex(function(h) { return /Rete\s*IVA/i.test(h); });
-      var iTipo   = headers.findIndex(function(h) { return /Tipo\s*de\s*documento/i.test(h); });
-      if (iCufe < 0) { alert('No se encontro la columna CUFE/UUID.'); return; }
-      var tipos = {};
-      var datos = [];
-      rows.slice(1).forEach(function(row) {
-        var cufe = String(row[iCufe] || '').trim();
-        if (!cufe) return;
-        var tipo = String(row[iTipo] || '').trim();
-        tipos[tipo] = (tipos[tipo] || 0) + 1;
-        var nitIdx = iNitE >= 0 ? iNitE : (iNit >= 0 ? iNit : iNitR);
+// PASO 1: Cargar Excel de la DIAN
+window.cufeCargarExcel = function(input){
+  var file=input.files[0]; if(!file) return;
+  var an=cge('cufe-archivo-nombre'); if(an) an.textContent='Leyendo...';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'binary'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){alert('El archivo no tiene datos.');return;}
+      var h=rows[0].map(function(v){return String(v).trim();});
+      var iCufe  = h.findIndex(function(v){return /CUFE/i.test(v);});
+      var iNitE  = h.findIndex(function(v){return /NIT\s*Emisor/i.test(v);});
+      var iNomE  = h.findIndex(function(v){return /Nombre\s*Emisor/i.test(v);});
+      var iNitR  = h.findIndex(function(v){return /NIT\s*Receptor/i.test(v);});
+      var iNomR  = h.findIndex(function(v){return /Nombre\s*Receptor/i.test(v);});
+      var iIVA   = h.findIndex(function(v){return v==='IVA';});
+      var iTotal = h.findIndex(function(v){return v==='Total';});
+      var iReteR = h.findIndex(function(v){return /Rete\s*Renta/i.test(v);});
+      var iReteI = h.findIndex(function(v){return /Rete\s*IVA/i.test(v);});
+      var iTipo  = h.findIndex(function(v){return /Tipo\s*de\s*documento/i.test(v);});
+      var iGrupo = h.findIndex(function(v){return v==='Grupo';});
+      if(iCufe<0){alert('No se encontro la columna CUFE/CUDE.');return;}
+      var tipos={}, grupos={}, datos=[];
+      rows.slice(1).forEach(function(row){
+        var cufe=String(row[iCufe]||'').trim();
+        if(!cufe) return;
+        var tipo=String(row[iTipo]||'').trim();
+        var grupo=String(row[iGrupo]||'').trim();
+        tipos[tipo]=(tipos[tipo]||0)+1;
+        grupos[grupo]=(grupos[grupo]||0)+1;
         datos.push({
-          cufe: cufe, tipo: tipo,
-          nit: String(row[nitIdx] || '').trim(),
-          nombre: String(row[iNombre >= 0 ? iNombre : 0] || '').trim(),
-          iva: parseFloat(row[iIVA]) || 0,
-          total: parseFloat(row[iTotal]) || 0,
-          reteRenta: parseFloat(row[iReteR]) || 0,
-          reteIVA: parseFloat(row[iReteI]) || 0,
-          estado: 'pendiente', base19: 0, base5: 0, exento: 0, excluido: 0, iva19: 0, iva5: 0
+          cufe:cufe, tipo:tipo, grupo:grupo,
+          nitEmisor:  String(row[iNitE>=0?iNitE:0]||'').trim(),
+          nomEmisor:  String(row[iNomE>=0?iNomE:0]||'').trim(),
+          nitReceptor:String(row[iNitR>=0?iNitR:0]||'').trim(),
+          nomReceptor:String(row[iNomR>=0?iNomR:0]||'').trim(),
+          iva:   parseFloat(row[iIVA])||0,
+          total: parseFloat(row[iTotal])||0,
+          reteRenta: parseFloat(row[iReteR])||0,
+          reteIVA:   parseFloat(row[iReteI])||0,
+          // campos a llenar desde portal DIAN
+          b19:0, b5:0, ex:0, exc:0, iv19:0, iv5:0,
+          estado:'pendiente', error:''
         });
       });
-      _cufeState.excelDian = datos;
-      if (an) an.textContent = String.fromCharCode(10003) + ' ' + file.name;
-      var tf = ge('cufe-total-facturas');
-      if (tf) tf.textContent = datos.length + ' facturas encontradas';
-      var td = ge('cufe-tipos-doc');
-      if (td) td.textContent = Object.entries(tipos).map(function(e) { return e[1] + ' ' + e[0]; }).join(' - ');
-      var pi = ge('cufe-paso1-info');
-      if (pi) pi.style.display = 'block';
-      cufePasoActivo(2);
-      var btnF = ge('cufe-btn-formato');
-      if (btnF) { btnF.style.background = '#1a2580'; btnF.style.color = '#fff'; btnF.style.pointerEvents = 'auto'; }
-    } catch(err) {
-      alert('Error leyendo el archivo: ' + err.message);
-      if (an) an.textContent = 'Error';
-    }
-  };
-  reader.readAsBinaryString(file);
-};
-
-window.cufeCargarFormato = function(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var fn = ge('cufe-formato-nombre');
-  if (fn) fn.textContent = 'Leyendo...';
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb = XLSX.read(e.target.result, { type: 'binary' });
-      _cufeState.formatoWb = wb;
-      _cufeState.formatoData = {};
-      var conf = _cufeState.pestanasConfig;
-      var conCufe = [];
-      wb.SheetNames.forEach(function(shName) {
-        if (!conf[shName]) return;
-        var ws = wb.Sheets[shName];
-        var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        var hrow = -1;
-        for (var i = 0; i < Math.min(rows.length, 8); i++) {
-          var r = rows[i].map(function(v) { return String(v).toUpperCase().trim(); });
-          if (r.some(function(v) { return v === 'CUFE/CUDE' || v === 'CUFE'; })) { hrow = i; break; }
+      _cufeState.dianData=datos;
+      if(an) an.textContent=String.fromCharCode(10003)+' '+file.name;
+      var info=cge('cufe-info-dian');
+      if(info){
+        info.style.display='block';
+        var tf=cge('cufe-total-fact'); if(tf) tf.textContent=datos.length+' facturas';
+        var tt=cge('cufe-tipos-fact');
+        if(tt){
+          var tArr=Object.entries(tipos).map(function(e){return e[1]+' '+e[0];});
+          var gArr=Object.entries(grupos).map(function(e){return e[1]+' '+e[0];});
+          tt.textContent='Tipos: '+tArr.join(' | ')+' — Grupos: '+gArr.join(' | ');
         }
-        if (hrow < 0) return;
-        var headers = rows[hrow].map(function(v) { return String(v).trim(); });
-        var iCufe = headers.findIndex(function(h) { return /CUFE/i.test(h); });
-        if (iCufe < 0) return;
-        var cufeFilas = [];
-        rows.forEach(function(row, ri) {
-          if (ri <= hrow) return;
-          var cufe = String(row[iCufe] || '').trim();
-          if (cufe && cufe.length > 20) cufeFilas.push({ fila: ri, cufe: cufe, row: row });
-        });
-        if (cufeFilas.length > 0) {
-          _cufeState.formatoData[shName] = { headers: headers, hrow: hrow, rows: rows, iCufe: iCufe, cufeFilas: cufeFilas, config: conf[shName] };
-          conCufe.push(shName + '(' + cufeFilas.length + ')');
-        }
-      });
-      if (fn) fn.textContent = String.fromCharCode(10003) + ' ' + file.name;
-      var fp = ge('cufe-formato-pestanas');
-      if (fp) fp.textContent = 'Con CUFE: ' + conCufe.join(', ');
-      var pi2 = ge('cufe-paso2-info');
-      if (pi2) pi2.style.display = 'block';
-      cufePasoActivo(3);
-      var cont = ge('cufe-pestanas-check');
-      if (cont) {
-        cont.innerHTML = '';
-        cont.style.display = 'flex';
-        Object.keys(_cufeState.formatoData).forEach(function(shName) {
-          var dat = _cufeState.formatoData[shName];
-          var lbl = document.createElement('label');
-          lbl.style.cssText = 'display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #e5e7f0;border-radius:20px;cursor:pointer;font-size:11px;font-weight:700;color:#1a2580;font-family:Montserrat,sans-serif;';
-          var chk = document.createElement('input');
-          chk.type = 'checkbox';
-          chk.checked = true;
-          chk.dataset.sh = shName;
-          chk.style.accentColor = '#1a2580';
-          chk.onchange = cufeActualizarSeleccion;
-          lbl.appendChild(chk);
-          lbl.appendChild(document.createTextNode(' ' + shName + ' (' + dat.cufeFilas.length + ')'));
-          cont.appendChild(lbl);
-        });
-        cufeActualizarSeleccion();
       }
-    } catch(err) {
-      alert('Error leyendo el formato: ' + err.message);
-      if (fn) fn.textContent = 'Error';
+      var ba=cge('cufe-btn-abrir-dian'); if(ba) ba.disabled=false;
+    }catch(err){
+      alert('Error: '+err.message);
+      if(an) an.textContent='Error';
     }
   };
   reader.readAsBinaryString(file);
 };
 
-function cufeActualizarSeleccion() {
-  var checks = document.querySelectorAll('#cufe-pestanas-check input[type=checkbox]');
-  _cufeState.pestanasSelec = [];
-  checks.forEach(function(cb) { if (cb.checked) _cufeState.pestanasSelec.push(cb.dataset.sh); });
-  if (_cufeState.pestanasSelec.length > 0) {
-    cufePasoActivo(4);
-    var bd = ge('cufe-btn-abrir-dian');
-    if (bd) bd.disabled = false;
-  }
-}
-
-window.cufeAbrirDian = function() {
-  _cufeState.dianWindow = window.open('https://catalogo-vpfe.dian.gov.co/User/SearchDocument', 'dian_portal', 'width=1100,height=750,resizable=yes,scrollbars=yes');
-  var bs = ge('cufe-btn-sesion-ok');
-  if (bs) bs.style.display = 'inline-block';
-  cufeLog('info', 'Portal DIAN abierto. Inicia sesion y regresa aqui.');
+// PASO 2: Abrir portal DIAN
+window.cufeAbrirDian = function(){
+  _cufeState.dianWindow=window.open(
+    'https://catalogo-vpfe.dian.gov.co/User/SearchDocument',
+    'dian_portal','width=1100,height=750,resizable=yes,scrollbars=yes'
+  );
+  var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
+  cufeLog('info','Portal DIAN abierto. Inicia sesion y regresa aqui.');
 };
 
-window.cufeSesionOk = function() {
-  cufePasoActivo(5);
-  var bi = ge('cufe-btn-iniciar');
-  if (bi) bi.disabled = false;
-  cufeLog('ok', 'Sesion confirmada. Listo para iniciar.');
+window.cufeSesionOk = function(){
+  var bi=cge('cufe-btn-iniciar'); if(bi) bi.disabled=false;
+  cufeLog('ok','Sesion confirmada. Haz clic en Iniciar proceso.');
 };
 
-window.cufeIniciarProceso = function() {
-  _cufeState.cufeList = [];
-  _cufeState.pestanasSelec.forEach(function(shName) {
-    var dat = _cufeState.formatoData[shName];
-    if (!dat) return;
-    dat.cufeFilas.forEach(function(cf) {
-      _cufeState.cufeList.push({
-        cufe: cf.cufe, sh: shName, fila: cf.fila,
-        config: dat.config, estado: 'pendiente',
-        base19: 0, base5: 0, exento: 0, excluido: 0,
-        iva19: 0, iva5: 0, reteRenta: 0, reteIVA: 0,
-        total: 0, nit: '', nombre: '', error: ''
-      });
-    });
-  });
-  if (_cufeState.cufeList.length === 0) { alert('No hay CUFEs para procesar.'); return; }
-  _cufeState.procesando = true;
-  _cufeState.pausado = false;
-  _cufeState.idxActual = 0;
-  _cufeState.ok = 0;
-  _cufeState.err = 0;
-  var card = ge('cufe-progreso-card');
-  if (card) card.style.display = 'block';
-  var ct = ge('cufe-cnt-total'); if (ct) ct.textContent = _cufeState.cufeList.length;
-  var cp = ge('cufe-cnt-pend');  if (cp) cp.textContent = _cufeState.cufeList.length;
-  var co = ge('cufe-cnt-ok');    if (co) co.textContent = '0';
-  var ce = ge('cufe-cnt-err');   if (ce) ce.textContent = '0';
-  var bi = ge('cufe-btn-iniciar'); if (bi) bi.disabled = true;
-  cufeLog('info', 'Iniciando ' + _cufeState.cufeList.length + ' facturas...');
-  cufeProcesamientoCiclo();
+// PASO 3: Iniciar proceso
+window.cufeIniciarProceso = function(){
+  _cufeState.cufeList=_cufeState.dianData.slice();
+  if(_cufeState.cufeList.length===0){alert('Carga primero el Excel de la DIAN.');return;}
+  _cufeState.procesando=true; _cufeState.pausado=false;
+  _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
+  var card=cge('cufe-progreso-card'); if(card) card.style.display='block';
+  var ct=cge('cufe-cnt-total'); if(ct) ct.textContent=_cufeState.cufeList.length;
+  var cp=cge('cufe-cnt-pend');  if(cp) cp.textContent=_cufeState.cufeList.length;
+  var co=cge('cufe-cnt-ok');    if(co) co.textContent='0';
+  var ce=cge('cufe-cnt-err');   if(ce) ce.textContent='0';
+  var bi=cge('cufe-btn-iniciar'); if(bi) bi.disabled=true;
+  cufeLog('info','Iniciando '+_cufeState.cufeList.length+' facturas...');
+  cufeCiclo();
 };
 
-function cufeProcesamientoCiclo() {
-  if (!_cufeState.procesando || _cufeState.pausado) return;
-  var idx = _cufeState.idxActual;
-  var lista = _cufeState.cufeList;
-  if (idx >= lista.length) { cufeFinalizarProceso(); return; }
-  var item = lista[idx];
-  var total = lista.length;
-  var pct = Math.round((idx / total) * 100);
-  var bar = ge('cufe-barra'); if (bar) bar.style.width = pct + '%';
-  var txt = ge('cufe-progreso-txt');
-  if (txt) txt.textContent = 'Procesando ' + (idx + 1) + ' de ' + total + ' - ' + item.sh + ': ' + item.cufe.substring(0, 20) + '...';
-  var cp = ge('cufe-cnt-pend'); if (cp) cp.textContent = String(total - idx);
-  cufeLog('info', '[' + (idx + 1) + '/' + total + '] ' + item.sh + ': ' + item.cufe.substring(0, 30) + '...');
-  cufeBuscarCufe(item, function(resultado) {
-    if (resultado.ok) {
-      item.estado   = 'ok';
-      item.base19   = resultado.base19   || 0;
-      item.base5    = resultado.base5    || 0;
-      item.exento   = resultado.exento   || 0;
-      item.excluido = resultado.excluido || 0;
-      item.iva19    = resultado.iva19    || 0;
-      item.iva5     = resultado.iva5     || 0;
-      item.reteRenta= resultado.reteRenta|| 0;
-      item.reteIVA  = resultado.reteIVA  || 0;
-      item.total    = resultado.total    || 0;
-      item.nit      = resultado.nit      || item.nit || '';
-      item.nombre   = resultado.nombre   || item.nombre || '';
+function cufeCiclo(){
+  if(!_cufeState.procesando||_cufeState.pausado) return;
+  var idx=_cufeState.idx, lista=_cufeState.cufeList, total=lista.length;
+  if(idx>=total){cufeTerminar();return;}
+  var item=lista[idx];
+  var pct=Math.round((idx/total)*100);
+  var bar=cge('cufe-barra'); if(bar) bar.style.width=pct+'%';
+  var txt=cge('cufe-progreso-txt');
+  if(txt) txt.textContent=(idx+1)+' de '+total+' - '+(item.nomEmisor||item.nitEmisor)+': '+item.cufe.substring(0,25)+'...';
+  var cp=cge('cufe-cnt-pend'); if(cp) cp.textContent=String(total-idx);
+  cufeBuscar(item, function(r){
+    if(r.ok){
+      item.b19=r.b19||0; item.b5=r.b5||0; item.ex=r.ex||0; item.exc=r.exc||0;
+      item.iv19=r.iv19||0; item.iv5=r.iv5||0; item.estado='ok';
       _cufeState.ok++;
-      var co = ge('cufe-cnt-ok'); if (co) co.textContent = String(_cufeState.ok);
-      cufeLog('ok', 'OK - Base19: $' + Math.round(item.base19).toLocaleString('es-CO') + ' | Exento: $' + Math.round(item.exento).toLocaleString('es-CO'));
+      var co=cge('cufe-cnt-ok'); if(co) co.textContent=String(_cufeState.ok);
+      cufeLog('ok','OK - '+item.nomEmisor+' | B19:$'+Math.round(item.b19).toLocaleString('es-CO'));
     } else {
-      item.estado = 'error';
-      item.error  = resultado.error || 'Error desconocido';
-      _cufeState.err++;
-      var ce = ge('cufe-cnt-err'); if (ce) ce.textContent = String(_cufeState.err);
-      cufeLog('err', 'Error: ' + item.error);
+      // Calcular desde IVA/Total del Excel
+      cufeCalcular(item);
+      item.estado='calculado';
+      _cufeState.ok++;
+      var co=cge('cufe-cnt-ok'); if(co) co.textContent=String(_cufeState.ok);
+      cufeLog('info','Calculado - '+item.nomEmisor+' | B19:$'+Math.round(item.b19).toLocaleString('es-CO'));
     }
-    _cufeState.idxActual++;
-    setTimeout(cufeProcesamientoCiclo, 1500);
+    _cufeState.idx++;
+    setTimeout(cufeCiclo, 800);
   });
 }
 
-function cufeBuscarCufe(item, callback) {
-  var dianWin = _cufeState.dianWindow;
-  if (!dianWin || dianWin.closed) {
-    _cufeState.pausado = true;
-    var bs = ge('cufe-btn-sesion-ok'); if (bs) bs.style.display = 'inline-block';
-    var bp = ge('cufe-btn-pausar'); if (bp) bp.textContent = 'Reanudar';
-    cufeLog('err', 'Ventana DIAN cerrada. Reabrir y hacer clic en Sesion OK.');
-    callback({ ok: false, error: 'Ventana DIAN cerrada' });
+function cufeBuscar(item, callback){
+  var dianWin=_cufeState.dianWindow;
+  if(!dianWin||dianWin.closed){
+    _cufeState.pausado=true;
+    var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
+    cufeLog('err','Ventana DIAN cerrada. Reabrir y confirmar sesion.');
+    callback({ok:false,error:'Ventana cerrada'});
     return;
   }
-  // Intentar fetch con credenciales de sesion
-  var url = 'https://catalogo-vpfe.dian.gov.co/Document/FindDocument?documentKey=' + encodeURIComponent(item.cufe);
-  fetch(url, { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json,text/html,*/*', 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      var ct = r.headers.get('content-type') || '';
-      if (ct.indexOf('json') >= 0) return r.json().then(function(d) { cufeParsearJSON(d, item, callback); });
-      return r.text().then(function(t) { cufeParsearTexto(t, item, callback); });
+  var url='https://catalogo-vpfe.dian.gov.co/Document/FindDocument?documentKey='+encodeURIComponent(item.cufe);
+  fetch(url,{credentials:'include',headers:{'Accept':'application/json,text/html,*/*','X-Requested-With':'XMLHttpRequest'}})
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var ct=r.headers.get('content-type')||'';
+      if(ct.indexOf('json')>=0) return r.json().then(function(d){cufeParseJSON(d,callback);});
+      return r.text().then(function(t){cufeParseTexto(t,item,callback);});
     })
-    .catch(function() {
-      cufeCalcularDesdeExcel(item, callback);
+    .catch(function(){ callback({ok:false,error:'CORS'}); });
+}
+
+function cufeParseJSON(d, callback){
+  try{
+    var t=d.totals||d.Totals||d.totales||d;
+    callback({ok:true,
+      b19:t.subtotalTaxableAmount19||t.baseGravada19||0,
+      b5: t.subtotalTaxableAmount5 ||t.baseGravada5 ||0,
+      ex: t.subtotalExempt         ||t.baseExenta   ||0,
+      exc:t.subtotalExcluded       ||t.baseExcluida ||0,
+      iv19:t.taxAmount19||0, iv5:t.taxAmount5||0
     });
+  }catch(e){callback({ok:false});}
 }
 
-function cufeParsearJSON(data, item, callback) {
-  try {
-    var t = data.totals || data.Totals || data.totales || data;
-    callback({
-      ok: true,
-      base19:    t.subtotalTaxableAmount19 || t.baseGravada19 || 0,
-      base5:     t.subtotalTaxableAmount5  || t.baseGravada5  || 0,
-      exento:    t.subtotalExempt          || t.baseExenta    || 0,
-      excluido:  t.subtotalExcluded        || t.baseExcluida  || 0,
-      iva19:     t.taxAmount19             || t.iva19         || 0,
-      iva5:      t.taxAmount5              || t.iva5          || 0,
-      reteRenta: t.withholdingTax          || t.reteFuente    || 0,
-      reteIVA:   t.withholdingVAT          || t.reteIVA       || 0,
-      total:     t.payableAmount           || t.totalFactura  || 0,
-      nit:       String(data.supplierNIT   || data.nitEmisor  || item.nit    || ''),
-      nombre:    String(data.supplierName  || data.nombreEmisor|| item.nombre|| '')
-    });
-  } catch(e) {
-    cufeCalcularDesdeExcel(item, callback);
-  }
-}
-
-function cufeParsearTexto(html, item, callback) {
-  var tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  var text = tmp.innerText || tmp.textContent || '';
-  function extraer(patron) {
-    var m = text.match(patron);
-    if (!m) return 0;
-    return parseFloat(m[1].replace(/\./g, '').replace(',', '.')) || 0;
-  }
-  var subtotal = extraer(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
-  var iva      = extraer(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
-  var reteF    = extraer(/Rete\s*fuente[\s\S]{0,30}?([\d.,]+)/i);
-  var reteI    = extraer(/Rete\s*IVA[\s\S]{0,30}?([\d.,]+)/i);
-  var totalF   = extraer(/Total\s*factura[\s\S]{0,30}?([\d.,]+)/i);
-  if (subtotal > 0) {
-    var res = { ok: true, reteRenta: reteF, reteIVA: reteI, total: totalF || subtotal + iva };
-    if (iva > 0) {
-      var pct = iva / subtotal;
-      if (Math.abs(pct - 0.19) < 0.01) { res.base19 = subtotal; res.iva19 = iva; }
-      else if (Math.abs(pct - 0.05) < 0.01) { res.base5 = subtotal; res.iva5 = iva; }
-      else { res.base19 = subtotal; res.iva19 = iva; }
-    } else {
-      res.exento = subtotal;
-    }
+function cufeParseTexto(html, item, callback){
+  var tmp=document.createElement('div'); tmp.innerHTML=html;
+  var text=tmp.innerText||tmp.textContent||'';
+  function ex(p){var m=text.match(p);return m?parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0:0;}
+  var sub=ex(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
+  var iva=ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
+  if(sub>0){
+    var res={ok:true};
+    if(iva>0){
+      var pct=iva/sub;
+      if(Math.abs(pct-0.19)<0.01){res.b19=sub;res.iv19=iva;}
+      else if(Math.abs(pct-0.05)<0.01){res.b5=sub;res.iv5=iva;}
+      else{res.b19=sub;res.iv19=iva;}
+    } else {res.ex=sub;}
     callback(res);
-  } else {
-    cufeCalcularDesdeExcel(item, callback);
+  } else {callback({ok:false});}
+}
+
+// Calcular base desde IVA/Total cuando CORS bloquea
+function cufeCalcular(item){
+  var iva=item.iva||0, total=item.total||0;
+  var sub=total-iva;
+  if(iva>0&&sub>0){
+    var pct=iva/sub;
+    if(Math.abs(pct-0.19)<0.02){item.b19=sub;item.iv19=iva;}
+    else if(Math.abs(pct-0.05)<0.02){item.b5=sub;item.iv5=iva;}
+    else{item.b19=sub;item.iv19=iva;}
+  } else if(iva===0&&total>0){
+    item.ex=total;
   }
 }
 
-function cufeCalcularDesdeExcel(item, callback) {
-  var dianData = _cufeState.excelDian || [];
-  var match = dianData.find(function(r) { return r.cufe === item.cufe; });
-  if (match && match.total > 0) {
-    var iva = match.iva || 0;
-    var sub = match.total - iva;
-    var res = { ok: true, reteRenta: match.reteRenta, reteIVA: match.reteIVA, total: match.total, nit: match.nit, nombre: match.nombre };
-    if (iva > 0) {
-      var pct = iva / sub;
-      if (Math.abs(pct - 0.19) < 0.01) { res.base19 = sub; res.iva19 = iva; }
-      else if (Math.abs(pct - 0.05) < 0.01) { res.base5 = sub; res.iva5 = iva; }
-      else { res.base19 = sub; res.iva19 = iva; }
-    } else {
-      res.exento = sub;
-    }
-    cufeLog('info', 'Calculado desde Excel DIAN (sin discriminacion exacta)');
-    callback(res);
-  } else {
-    callback({ ok: false, error: 'CUFE no encontrado en Excel ni portal DIAN' });
-  }
-}
-
-window.cufePausar = function() {
-  _cufeState.pausado = !_cufeState.pausado;
-  var bp = ge('cufe-btn-pausar');
-  if (bp) bp.textContent = _cufeState.pausado ? 'Reanudar' : 'Pausar';
-  if (!_cufeState.pausado) cufeProcesamientoCiclo();
+window.cufePausar = function(){
+  _cufeState.pausado=!_cufeState.pausado;
+  var bp=cge('cufe-btn-pausar');
+  if(bp) bp.textContent=_cufeState.pausado?'Reanudar':'Pausar';
+  if(!_cufeState.pausado) cufeCiclo();
 };
 
-window.cufeCancelar = function() {
-  _cufeState.procesando = false;
-  _cufeState.pausado = false;
-  cufeLog('err', 'Proceso cancelado.');
-  cufeFinalizarProceso();
+window.cufeCancelar = function(){
+  _cufeState.procesando=false;
+  cufeLog('err','Proceso cancelado.');
+  cufeTerminar();
 };
 
-function cufeFinalizarProceso() {
-  _cufeState.procesando = false;
-  var bar = ge('cufe-barra'); if (bar) bar.style.width = '100%';
-  var cp = ge('cufe-cnt-pend'); if (cp) cp.textContent = '0';
-  var txt = ge('cufe-progreso-txt'); if (txt) txt.textContent = 'Proceso finalizado';
-  cufeLog('ok', 'Completado: ' + _cufeState.ok + ' OK, ' + _cufeState.err + ' errores.');
-  var card = ge('cufe-resultados-card');
-  if (card) card.style.display = 'block';
+function cufeTerminar(){
+  _cufeState.procesando=false;
+  var bar=cge('cufe-barra'); if(bar) bar.style.width='100%';
+  var cp=cge('cufe-cnt-pend'); if(cp) cp.textContent='0';
+  var txt=cge('cufe-progreso-txt'); if(txt) txt.textContent='Proceso finalizado';
+  cufeLog('ok','Completado: '+_cufeState.ok+' procesadas, '+_cufeState.err+' errores.');
+  var card=cge('cufe-resultados-card'); if(card) card.style.display='block';
   cufeMostrarTabla();
 }
 
-function fmtCOP(n) { return n ? '$' + Math.round(n).toLocaleString('es-CO') : '$0'; }
+function fmtCOP(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';}
 
-function cufeMostrarTabla() {
-  var lista = _cufeState.cufeList;
-  var html = '<div style="overflow-x:auto;"><table class="cufe-tabla"><thead><tr>'
-    + '<th>Pestana</th><th>NIT</th><th>Nombre</th>'
-    + '<th>Base 19%</th><th>Base 5%</th><th>Exento</th><th>IVA 19%</th><th>IVA 5%</th>'
-    + '<th>Rete Fuente</th><th>Rete IVA</th><th>Estado</th>'
-    + '</tr></thead><tbody>';
-  lista.forEach(function(item) {
-    var tag = item.estado === 'ok' ? 'ok' : item.estado === 'error' ? 'error' : 'pending';
-    var lbl = item.estado === 'ok' ? 'OK' : item.estado === 'error' ? 'Error' : 'Pendiente';
-    html += '<tr>'
-      + '<td><b>' + item.sh + '</b></td>'
-      + '<td>' + item.nit + '</td>'
-      + '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">' + item.nombre + '</td>'
-      + '<td>' + fmtCOP(item.base19)    + '</td>'
-      + '<td>' + fmtCOP(item.base5)     + '</td>'
-      + '<td>' + fmtCOP(item.exento)    + '</td>'
-      + '<td>' + fmtCOP(item.iva19)     + '</td>'
-      + '<td>' + fmtCOP(item.iva5)      + '</td>'
-      + '<td>' + fmtCOP(item.reteRenta) + '</td>'
-      + '<td>' + fmtCOP(item.reteIVA)   + '</td>'
-      + '<td><span class="cufe-tag ' + tag + '">' + lbl + '</span>'
-      + (item.error ? '<div style="font-size:9px;color:#dc2626;">' + item.error + '</div>' : '')
-      + '</td></tr>';
+function cufeMostrarTabla(){
+  var lista=_cufeState.cufeList;
+  var html='<div style="overflow-x:auto;"><table class="cufe-tabla"><thead><tr>'
+    +'<th>Tipo</th><th>NIT Emisor</th><th>Nombre Emisor</th>'
+    +'<th>Base 19%</th><th>Base 5%</th><th>Exento</th><th>Excluido</th>'
+    +'<th>IVA 19%</th><th>IVA 5%</th><th>Rete Fuente</th><th>Rete IVA</th>'
+    +'<th>Total</th><th>Estado</th>'
+    +'</tr></thead><tbody>';
+  lista.forEach(function(item){
+    var tag=item.estado==='ok'?'ok':item.estado==='calculado'?'pending':'error';
+    var lbl=item.estado==='ok'?'Portal DIAN':item.estado==='calculado'?'Calculado':'Error';
+    html+='<tr>'
+      +'<td style="font-size:9px;">'+item.tipo+'</td>'
+      +'<td>'+item.nitEmisor+'</td>'
+      +'<td>'+item.nomEmisor+'</td>'
+      +'<td>'+fmtCOP(item.b19)+'</td>'
+      +'<td>'+fmtCOP(item.b5)+'</td>'
+      +'<td>'+fmtCOP(item.ex)+'</td>'
+      +'<td>'+fmtCOP(item.exc)+'</td>'
+      +'<td>'+fmtCOP(item.iv19)+'</td>'
+      +'<td>'+fmtCOP(item.iv5)+'</td>'
+      +'<td>'+fmtCOP(item.reteRenta)+'</td>'
+      +'<td>'+fmtCOP(item.reteIVA)+'</td>'
+      +'<td>'+fmtCOP(item.total)+'</td>'
+      +'<td><span class="cufe-tag '+tag+'">'+lbl+'</span></td>'
+      +'</tr>';
   });
-  html += '</tbody></table></div>';
-  var cont = ge('cufe-tabla-resultados');
-  if (cont) cont.innerHTML = html;
+  html+='</tbody></table></div>';
+  var cont=cge('cufe-tabla-resultados'); if(cont) cont.innerHTML=html;
 }
 
-window.cufeDescargarExcel = function() {
-  if (!_cufeState.formatoWb) { alert('No hay formato contable cargado.'); return; }
-  var wbOut = XLSX.utils.book_new();
-  _cufeState.pestanasSelec.forEach(function(shName) {
-    var dat = _cufeState.formatoData[shName];
-    if (!dat) return;
-    var rows = dat.rows.map(function(r) { return r.slice(); });
-    var headers = dat.headers.slice();
-    function findOrAdd(name) {
-      var i = headers.findIndex(function(h) { return h === name; });
-      if (i >= 0) return i;
-      headers.push(name);
-      if (rows[dat.hrow]) rows[dat.hrow].push(name);
-      return headers.length - 1;
-    }
-    var iB19 = findOrAdd('BASE 19');
-    var iB5  = findOrAdd('BASE 5');
-    var iEx  = findOrAdd('EXENTO');
-    var iExc = findOrAdd('EXCLUIDO');
-    var iI19 = findOrAdd('IVA19%');
-    var iI5  = findOrAdd('IVA 5%');
-    var iRF  = findOrAdd('APLIC. RETEFUENTE');
-    var iRI  = findOrAdd('RETEIVA');
-    var mapCufe = {};
-    _cufeState.cufeList.forEach(function(item) {
-      if (item.sh === shName && item.estado === 'ok') mapCufe[item.cufe] = item;
-    });
-    dat.cufeFilas.forEach(function(cf) {
-      var item = mapCufe[cf.cufe];
-      if (!item) return;
-      var row = rows[cf.fila];
-      var maxIdx = Math.max(iB19, iB5, iEx, iExc, iI19, iI5, iRF, iRI);
-      while (row.length <= maxIdx) row.push('');
-      row[iB19] = item.base19   || 0;
-      row[iB5]  = item.base5    || 0;
-      row[iEx]  = item.exento   || 0;
-      row[iExc] = item.excluido || 0;
-      row[iI19] = item.iva19    || 0;
-      row[iI5]  = item.iva5     || 0;
-      row[iRF]  = item.reteRenta|| 0;
-      row[iRI]  = item.reteIVA  || 0;
-    });
-    var ws = XLSX.utils.aoa_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wbOut, ws, shName);
+// Descargar reporte Excel
+window.cufeDescargarReporte = function(){
+  var lista=_cufeState.cufeList;
+  if(!lista.length){alert('No hay datos para descargar.');return;}
+  var rows=[
+    ['REPORTE CUFE - ASESORIAS Y CONSULTORIAS JNF S.A.S.'],
+    ['Generado: '+new Date().toLocaleDateString('es-CO')],
+    [],
+    ['Tipo','CUFE','NIT Emisor','Nombre Emisor','NIT Receptor','Nombre Receptor',
+     'Base 19%','Base 5%','Exento','Excluido','IVA 19%','IVA 5%',
+     'Rete Fuente','Rete IVA','Total','Estado']
+  ];
+  lista.forEach(function(item){
+    rows.push([
+      item.tipo, item.cufe,
+      item.nitEmisor, item.nomEmisor,
+      item.nitReceptor, item.nomReceptor,
+      item.b19, item.b5, item.ex, item.exc,
+      item.iv19, item.iv5,
+      item.reteRenta, item.reteIVA, item.total,
+      item.estado
+    ]);
   });
-  var hoy = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
-  XLSX.writeFile(wbOut, 'FormatoContable_CUFE_' + hoy + '.xlsx');
-  cufeLog('ok', 'Excel enriquecido descargado.');
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:25},{wch:70},{wch:15},{wch:35},{wch:15},{wch:35},
+               {wch:15},{wch:12},{wch:15},{wch:12},{wch:12},{wch:12},
+               {wch:14},{wch:12},{wch:15},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'Reporte CUFE');
+  var hoy=new Date().toLocaleDateString('es-CO').replace(/\//g,'-');
+  XLSX.writeFile(wb,'ReporteCUFE_'+hoy+'.xlsx');
+  cufeLog('ok','Reporte descargado correctamente.');
 };
 
-window.cufeNuevoProceso = function() {
-  _cufeState.excelDian   = null;
-  _cufeState.formatoWb   = null;
-  _cufeState.formatoData = null;
-  _cufeState.cufeList    = [];
-  _cufeState.resultados  = [];
-  _cufeState.pestanasSelec = [];
-  _cufeState.procesando  = false;
-  _cufeState.pausado     = false;
-  _cufeState.idxActual   = 0;
-  _cufeState.ok          = 0;
-  _cufeState.err         = 0;
-  cufeResetUI();
+window.cufeNuevoProceso = function(){
+  _cufeState.dianData=[]; _cufeState.cufeList=[];
+  _cufeState.procesando=false; _cufeState.pausado=false;
+  _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
+  window._openCufe();
 };
-
 
 </script>
 
@@ -10285,7 +10073,6 @@ function poblarFiltroContador(){
 <!-- ═══ PANTALLA: DESCARGA MASIVA CUFE ════════════════════ -->
 <div id="screen-cufe" class="main" style="display:none;min-height:100vh;background:#f0f2f8;">
 
-  <!-- Topbar -->
   <div style="background:#1a2580;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:12px;">
       <button onclick="openModulos()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">← Módulos</button>
@@ -10294,30 +10081,24 @@ function poblarFiltroContador(){
         <div style="font-size:10px;color:rgba(255,255,255,.65);" id="cufe-subtitulo">Portal DIAN — Extracción automática de bases e impuestos</div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;">
-      <div id="cufe-estado-badge" style="display:none;background:rgba(255,255,255,.15);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#c9a227;"></div>
-    </div>
   </div>
 
   <style>
     .cufe-card{background:#fff;border-radius:12px;border:0.5px solid #e5e7f0;padding:20px 24px;margin-bottom:16px;}
-    .cufe-paso{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:10px;border:1.5px solid #e5e7f0;margin-bottom:10px;transition:all .2s;}
+    .cufe-paso{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:10px;border:1.5px solid #e5e7f0;margin-bottom:10px;}
     .cufe-paso.activo{border-color:#1a2580;background:#f8faff;}
     .cufe-paso.completado{border-color:#065f46;background:#f0fdf4;}
-    .cufe-paso.error{border-color:#dc2626;background:#fef2f2;}
     .cufe-num{width:32px;height:32px;border-radius:50%;background:#e5e7f0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#6b7280;flex-shrink:0;}
     .cufe-num.activo{background:#1a2580;color:#fff;}
     .cufe-num.completado{background:#065f46;color:#fff;}
-    .cufe-num.error{background:#dc2626;color:#fff;}
-    .cufe-titulo{font-size:12px;font-weight:800;color:#1a2580;margin-bottom:3px;font-family:Montserrat,sans-serif;}
-    .cufe-desc{font-size:11px;color:#6b7280;font-family:Montserrat,sans-serif;line-height:1.5;}
-    .cufe-btn{background:#1a2580;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;margin-top:10px;}
-    .cufe-btn:disabled{background:#e5e7f0;color:#9ca3af;cursor:not-allowed;}
-    .cufe-btn.verde{background:#065f46;}
-    .cufe-btn.dorado{background:#c9a227;color:#1a2580;}
-    .cufe-tabla{width:100%;border-collapse:collapse;font-size:11px;font-family:Montserrat,sans-serif;}
-    .cufe-tabla th{background:#1a2580;color:#fff;padding:8px 10px;text-align:left;font-weight:700;font-size:10px;}
-    .cufe-tabla td{padding:7px 10px;border-bottom:1px solid #f0f0f0;color:#374151;}
+    .cufe-btn-p{background:#1a2580;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;margin-top:10px;display:inline-block;}
+    .cufe-btn-p:disabled{background:#e5e7f0;color:#9ca3af;cursor:not-allowed;}
+    .cufe-btn-p.verde{background:#065f46;}
+    .cufe-btn-p.dorado{background:#c9a227;color:#1a2580;}
+    .cufe-btn-p.rojo{background:#dc2626;}
+    .cufe-tabla{width:100%;border-collapse:collapse;font-size:10px;font-family:Montserrat,sans-serif;}
+    .cufe-tabla th{background:#1a2580;color:#fff;padding:7px 10px;text-align:left;font-weight:700;font-size:9px;}
+    .cufe-tabla td{padding:6px 10px;border-bottom:1px solid #f0f0f0;color:#374151;}
     .cufe-tabla tr:hover td{background:#f8faff;}
     .cufe-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;}
     .cufe-tag.ok{background:#dcfce7;color:#065f46;}
@@ -10326,85 +10107,54 @@ function poblarFiltroContador(){
     .cufe-progress{height:6px;background:#e5e7f0;border-radius:3px;overflow:hidden;margin:8px 0;}
     .cufe-progress-bar{height:100%;background:linear-gradient(90deg,#1a2580,#4f7fff);border-radius:3px;transition:width .3s;}
     .cufe-log{background:#0f172a;border-radius:8px;padding:12px 16px;font-size:10px;color:#94a3b8;font-family:monospace;max-height:150px;overflow-y:auto;line-height:1.7;}
-    .cufe-log .ok{color:#4ade80;}
-    .cufe-log .err{color:#f87171;}
-    .cufe-log .info{color:#60a5fa;}
+    .cufe-log .ok{color:#4ade80;} .cufe-log .err{color:#f87171;} .cufe-log .info{color:#60a5fa;}
   </style>
 
-  <div style="padding:16px 20px;max-width:1100px;margin:0 auto;">
+  <div style="padding:16px 20px;max-width:960px;margin:0 auto;">
 
-    <!-- PASO 1: Subir Excel de la DIAN -->
     <div class="cufe-card">
-      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;">📋 Configuración del proceso</div>
+      <div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:14px;">📋 Pasos del proceso</div>
 
-      <div class="cufe-paso activo" id="cufe-paso1">
-        <div class="cufe-num activo" id="cufe-n1">1</div>
+      <!-- PASO 1 -->
+      <div class="cufe-paso activo">
+        <div class="cufe-num activo">1</div>
         <div style="flex:1;">
-          <div class="cufe-titulo">Subir Excel de la DIAN (Descarga de listados)</div>
-          <div class="cufe-desc">Sube el archivo Excel que descargaste del portal DIAN en Histórico → Descarga de listados. Este archivo contiene los CUFEs de las facturas a procesar.</div>
+          <div style="font-size:12px;font-weight:800;color:#1a2580;margin-bottom:3px;">Subir Excel de la DIAN</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">Descarga el Excel desde el portal DIAN en <b>Histórico → Descarga de listados</b> y súbelo aquí. Este archivo contiene los CUFEs de todas las facturas del período.</div>
           <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label style="background:#1a2580;color:#fff;border-radius:8px;padding:9px 18px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">
+            <label class="cufe-btn-p" style="cursor:pointer;">
               📁 Seleccionar Excel DIAN
               <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="cufeCargarExcel(this)"/>
             </label>
             <span id="cufe-archivo-nombre" style="font-size:11px;color:#6b7280;font-family:Montserrat,sans-serif;"></span>
           </div>
-          <div id="cufe-paso1-info" style="display:none;margin-top:10px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #c7d0f0;">
-            <div style="font-size:11px;font-weight:700;color:#1a2580;margin-bottom:4px;" id="cufe-total-facturas"></div>
-            <div style="font-size:10px;color:#6b7280;" id="cufe-tipos-doc"></div>
+          <div id="cufe-info-dian" style="display:none;margin-top:12px;padding:12px 16px;background:#f8faff;border-radius:8px;border:1px solid #c7d0f0;">
+            <div style="font-size:12px;font-weight:800;color:#1a2580;" id="cufe-total-fact"></div>
+            <div style="font-size:10px;color:#6b7280;margin-top:3px;" id="cufe-tipos-fact"></div>
           </div>
         </div>
       </div>
 
-      <!-- PASO 2: Subir Formato Contable -->
-      <div class="cufe-paso" id="cufe-paso2">
-        <div class="cufe-num" id="cufe-n2">2</div>
+      <!-- PASO 2 -->
+      <div class="cufe-paso">
+        <div class="cufe-num">2</div>
         <div style="flex:1;">
-          <div class="cufe-titulo">Subir Formato Contable del cliente</div>
-          <div class="cufe-desc">Sube el Excel del formato contable del cliente. La app leerá los CUFEs de cada pestaña (COSTOS, VENTAS, SERV PÚBLICOS, DOC. SOPORTE, etc.) y enriquecerá los datos con la información del PDF de la DIAN.</div>
-          <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label id="cufe-btn-formato" style="background:#e5e7f0;color:#9ca3af;border-radius:8px;padding:9px 18px;font-size:11px;font-weight:700;cursor:not-allowed;font-family:Montserrat,sans-serif;pointer-events:none;">
-              📁 Seleccionar Formato Contable
-              <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="cufeCargarFormato(this)" id="cufe-input-formato"/>
-            </label>
-            <span id="cufe-formato-nombre" style="font-size:11px;color:#6b7280;font-family:Montserrat,sans-serif;"></span>
-          </div>
-          <div id="cufe-paso2-info" style="display:none;margin-top:10px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #c7d0f0;">
-            <div style="font-size:11px;font-weight:700;color:#1a2580;margin-bottom:4px;" id="cufe-formato-pestanas"></div>
+          <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:3px;">Abrir portal DIAN e iniciar sesión</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">La app abrirá el portal DIAN en una ventana separada. Inicia sesión manualmente y regresa aquí.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="cufe-btn-p" id="cufe-btn-abrir-dian" disabled onclick="cufeAbrirDian()">🌐 Abrir Portal DIAN</button>
+            <button class="cufe-btn-p verde" id="cufe-btn-sesion-ok" style="display:none;" onclick="cufeSesionOk()">✓ Ya inicié sesión</button>
           </div>
         </div>
       </div>
 
-      <!-- PASO 3: Seleccionar pestañas -->
-      <div class="cufe-paso" id="cufe-paso3">
-        <div class="cufe-num" id="cufe-n3">3</div>
+      <!-- PASO 3 -->
+      <div class="cufe-paso">
+        <div class="cufe-num">3</div>
         <div style="flex:1;">
-          <div class="cufe-titulo">Seleccionar pestañas a procesar</div>
-          <div class="cufe-desc">Selecciona qué pestañas del formato contable quieres enriquecer con los datos del portal DIAN.</div>
-          <div id="cufe-pestanas-check" style="display:none;margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;"></div>
-        </div>
-      </div>
-
-      <!-- PASO 4: Abrir portal DIAN -->
-      <div class="cufe-paso" id="cufe-paso4">
-        <div class="cufe-num" id="cufe-n4">4</div>
-        <div style="flex:1;">
-          <div class="cufe-titulo">Abrir portal DIAN e iniciar sesión</div>
-          <div class="cufe-desc">Abre el portal DIAN en una nueva ventana. Inicia sesión con tus credenciales. Una vez autenticado, regresa aquí y haz clic en <strong>"Ya inicié sesión"</strong>.</div>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="cufe-btn" id="cufe-btn-abrir-dian" disabled onclick="cufeAbrirDian()">🌐 Abrir Portal DIAN</button>
-            <button class="cufe-btn verde" id="cufe-btn-sesion-ok" style="display:none;" onclick="cufeSesionOk()">✓ Ya inicié sesión</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- PASO 5: Procesar -->
-      <div class="cufe-paso" id="cufe-paso5">
-        <div class="cufe-num" id="cufe-n5">5</div>
-        <div style="flex:1;">
-          <div class="cufe-titulo">Iniciar descarga y procesamiento</div>
-          <div class="cufe-desc">La app buscará cada CUFE en el portal DIAN, descargará la información de cada factura y extraerá: Base 19%, Base 5%, Exento, Excluido, IVA 19%, IVA 5%, Rete Fuente, Rete IVA.</div>
-          <button class="cufe-btn dorado" id="cufe-btn-iniciar" disabled onclick="cufeIniciarProceso()">⚡ Iniciar proceso</button>
+          <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:3px;">Iniciar descarga automática</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">La app consultará cada CUFE en el portal DIAN y extraerá: <b>Base 19%</b>, <b>Base 5%</b>, <b>Exento</b>, <b>Excluido</b>, <b>IVA 19%</b>, <b>IVA 5%</b>, <b>Rete Fuente</b>, <b>Rete IVA</b>.</div>
+          <button class="cufe-btn-p dorado" id="cufe-btn-iniciar" disabled onclick="cufeIniciarProceso()">⚡ Iniciar proceso</button>
         </div>
       </div>
     </div>
@@ -10414,25 +10164,25 @@ function poblarFiltroContador(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div style="font-size:13px;font-weight:800;color:#1a2580;">⚡ Procesando facturas</div>
         <div style="display:flex;gap:8px;">
-          <button onclick="cufePausar()" id="cufe-btn-pausar" style="background:#f59e0b;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">⏸ Pausar</button>
-          <button onclick="cufeCancelar()" style="background:#dc2626;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;">✕ Cancelar</button>
+          <button onclick="cufePausar()" id="cufe-btn-pausar" class="cufe-btn-p" style="background:#f59e0b;margin-top:0;">⏸ Pausar</button>
+          <button onclick="cufeCancelar()" class="cufe-btn-p rojo" style="margin-top:0;">✕ Cancelar</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
         <div style="background:#f8faff;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:20px;font-weight:800;color:#1a2580;" id="cufe-cnt-total">0</div>
+          <div style="font-size:22px;font-weight:800;color:#1a2580;" id="cufe-cnt-total">0</div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px;">Total</div>
         </div>
         <div style="background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:20px;font-weight:800;color:#065f46;" id="cufe-cnt-ok">0</div>
+          <div style="font-size:22px;font-weight:800;color:#065f46;" id="cufe-cnt-ok">0</div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px;">Procesadas</div>
         </div>
         <div style="background:#fef9c3;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:20px;font-weight:800;color:#854d0e;" id="cufe-cnt-pend">0</div>
+          <div style="font-size:22px;font-weight:800;color:#854d0e;" id="cufe-cnt-pend">0</div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px;">Pendientes</div>
         </div>
         <div style="background:#fee2e2;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:20px;font-weight:800;color:#dc2626;" id="cufe-cnt-err">0</div>
+          <div style="font-size:22px;font-weight:800;color:#dc2626;" id="cufe-cnt-err">0</div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px;">Errores</div>
         </div>
       </div>
@@ -10444,10 +10194,10 @@ function poblarFiltroContador(){
     <!-- RESULTADOS -->
     <div class="cufe-card" id="cufe-resultados-card" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:13px;font-weight:800;color:#1a2580;">📊 Resultados</div>
+        <div style="font-size:13px;font-weight:800;color:#1a2580;">📊 Reporte generado</div>
         <div style="display:flex;gap:8px;">
-          <button onclick="cufeDescargarExcel()" class="cufe-btn verde">⬇ Descargar Excel enriquecido</button>
-          <button onclick="cufeNuevoProceso()" class="cufe-btn">↺ Nuevo proceso</button>
+          <button onclick="cufeDescargarReporte()" class="cufe-btn-p verde" style="margin-top:0;">⬇ Descargar Excel</button>
+          <button onclick="cufeNuevoProceso()" class="cufe-btn-p" style="margin-top:0;">↺ Nuevo proceso</button>
         </div>
       </div>
       <div id="cufe-tabla-resultados"></div>
