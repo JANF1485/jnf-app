@@ -2297,6 +2297,7 @@ function openAnio(clientId, year){
     if(!m.active) return false;
     if(!modPerms || modPerms.length===0) return false;
     if(m.id==='estados') return true;
+    if(m.id==='cufe') return true;
     return modPerms.indexOf(m.id) >= 0;
   });
   return visible.map(function(m){
