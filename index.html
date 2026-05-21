@@ -176,7 +176,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--tx);mi
   if(!window['openExogena'])window['openExogena']=function(){var a=arguments,t=this;var r=function(){if(window['_openExogena'])window['_openExogena'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['openF300'])window['openF300']=function(){var a=arguments,t=this;var r=function(){if(window['_openF300'])window['_openF300'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['openEstados'])window['openEstados']=function(){var a=arguments,t=this;var r=function(){if(window['_openEstados'])window['_openEstados'].apply(t,a);else setTimeout(r,50);};r();};
-  if(!window['openCufe'])window['openCufe']=function(){var a=arguments,t=this;var r=function(){if(window['_openCufe'])window['_openCufe'].apply(t,a);else setTimeout(r,50);};r();};
+  if(!window['openCufe'])window['openCufe']=function(){console.log('[CUFE-LAZY] openCufe lazy llamado, _openCufe existe=',!!window._openCufe);var a=arguments,t=this;var r=function(){if(window['_openCufe'])window['_openCufe'].apply(t,a);else{console.log('[CUFE-LAZY] _openCufe aun no existe, reintentando...');setTimeout(r,50);}};r();};
   if(!window['openINC'])window['openINC']=function(){var a=arguments,t=this;var r=function(){if(window['_openINC'])window['_openINC'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['openGuardado'])window['openGuardado']=function(){var a=arguments,t=this;var r=function(){if(window['_openGuardado'])window['_openGuardado'].apply(t,a);else setTimeout(r,50);};r();};
   if(!window['openObligaciones'])window['openObligaciones']=function(){var a=arguments,t=this;var r=function(){if(window['_openObligaciones'])window['_openObligaciones'].apply(t,a);else setTimeout(r,50);};r();};
@@ -11873,7 +11873,8 @@ document.addEventListener('DOMContentLoaded', function(){
       <div style="text-align:center;font-size:10px;color:#9ca3af;">
         Versión 1.0.0 · Marzo 2026 · Contacto:
         <a href="/cdn-cgi/l/email-protection#54352731273b263d35272d373b3a272138203b263d35273e3a32273527143339353d387a373b39" style="color:#1a2580;font-weight:700;"><span class="__cf_email__" data-cfemail="c3a2b0a
-<script>
+<script>console.log('[CUFE] script10 cargando...');
+
 // MODULO DESCARGA MASIVA CUFE - JNF SAS
 var _cufeState = {
   excelDian: null,
