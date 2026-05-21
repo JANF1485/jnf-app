@@ -12,94 +12,60 @@
 <title>JNF — Sistema de Gestión Contable v2</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-console.log('[CUFE] modulo v4 cargando...');
+console.log('[CUFE] modulo v5 cargando...');
 
 var _cufeState = {
   dianRows: [],
-  dianHeaders: [],
   procesando: false,
   pausado: false,
   idx: 0, ok: 0, err: 0,
-  dianWindow: null,
-  resultados: { VENTAS:[], 'DEV EN VENTAS':[], COSTOS:[], 'DV COSTOS':[], 'DOC. SOPORTE':[], NOMINA:[], 'SERV PUBLICOS':[], IPOCONSUMO:[], CONTINGENCIA:[] }
+  dianWindow: null
 };
 
-// Mapeo tipo+grupo → pestaña
 var CUFE_MAPA = [
-  { tipos:[/factura electr/i, /factura de venta/i, /contingencia/i], grupo:/enviado/i,  sh:'VENTAS' },
-  { tipos:[/factura electr/i, /factura de compra/i, /contingencia/i, /equivalente/i], grupo:/recibido/i, sh:'COSTOS' },
-  { tipos:[/nota de cr.*electr/i], grupo:/enviado/i,  sh:'DEV EN VENTAS' },
-  { tipos:[/nota de cr.*electr/i], grupo:/recibido/i, sh:'DV COSTOS' },
-  { tipos:[/nota de d.*electr/i],  grupo:/enviado/i,  sh:'DEV EN VENTAS' },
-  { tipos:[/nota de d.*electr/i],  grupo:/recibido/i, sh:'DV COSTOS' },
-  { tipos:[/documento soporte/i],  grupo:null, sh:'DOC. SOPORTE' },
-  { tipos:[/n.*mina electr/i],     grupo:null, sh:'NOMINA' },
-  { tipos:[/servicios p.*blicos/i, /equivalente.*p.*blico/i], grupo:null, sh:'SERV PUBLICOS' },
-  { tipos:[/ipo.?consumo/i, /INC\b/i], grupo:null, sh:'IPOCONSUMO' }
+  {tipos:[/factura electr/i,/factura de venta/i],  grupo:/enviado/i,  sh:'VENTAS'},
+  {tipos:[/factura electr/i,/factura de compra/i,/equivalente/i,/contingencia/i], grupo:/recibido/i, sh:'COSTOS'},
+  {tipos:[/contingencia/i], grupo:/enviado/i, sh:'VENTAS'},
+  {tipos:[/nota de cr.*electr/i], grupo:/enviado/i,  sh:'DEV EN VENTAS'},
+  {tipos:[/nota de cr.*electr/i], grupo:/recibido/i, sh:'DV COSTOS'},
+  {tipos:[/nota de d.*electr/i],  grupo:/enviado/i,  sh:'DEV EN VENTAS'},
+  {tipos:[/nota de d.*electr/i],  grupo:/recibido/i, sh:'DV COSTOS'},
+  {tipos:[/documento soporte/i],  grupo:null, sh:'DOC. SOPORTE'},
+  {tipos:[/n.*mina electr/i],     grupo:null, sh:'NOMINA'},
+  {tipos:[/servicios p.*blicos/i,/equivalente.*p.*blico/i], grupo:null, sh:'SERV PUBLICOS'},
+  {tipos:[/ipo.?consumo/i],       grupo:null, sh:'IPOCONSUMO'}
 ];
 
-function cufeGetSh(tipo, grupo) {
-  tipo  = String(tipo  || '').trim();
-  grupo = String(grupo || '').trim();
-  for (var i = 0; i < CUFE_MAPA.length; i++) {
-    var m = CUFE_MAPA[i];
-    var tipoOk = m.tipos.some(function(r){ return r.test(tipo); });
-    if (!tipoOk) continue;
-    if (m.grupo === null) return m.sh;
-    if (m.grupo.test(grupo)) return m.sh;
+function cufeGetSh(tipo, grupo){
+  tipo=String(tipo||''); grupo=String(grupo||'');
+  for(var i=0;i<CUFE_MAPA.length;i++){
+    var m=CUFE_MAPA[i];
+    if(!m.tipos.some(function(r){return r.test(tipo);})) continue;
+    if(m.grupo===null) return m.sh;
+    if(m.grupo.test(grupo)) return m.sh;
   }
-  return null;
+  return 'COSTOS';
 }
 
-// Columnas a llenar por pestaña
-var CUFE_COLS = {
-  'VENTAS':        ['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19%','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','TOTAL FACTURA'],
-  'DEV EN VENTAS': ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','APLIC. RETEIVA','NIT Receptor','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','RETEIVA','TOTAL FACTURA'],
-  'COSTOS':        ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1','BASE RETENCION'],
-  'DV COSTOS':     ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','TOTAL'],
-  'DOC. SOPORTE':  ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','NOMBRES Y APELLIDOS','CARGO','DIRECCION','CIUDAD','DEPARTAMENTO','TOTAL'],
-  'NOMINA':        ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','CATEGORIA','NIT','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','Total'],
-  'SERV PUBLICOS': ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','RAZON SOCIAL','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1'],
-  'IPOCONSUMO':    ['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IPOCONSUMO','IPO 8%','TOTAL'],
-  'CONTINGENCIA':  ['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','NIT','Nombre','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1']
-};
-
-// Nombres de subcarpeta para el ZIP
-var CUFE_SUBCARPETAS = {
-  'VENTAS':        'Facturas_Venta',
-  'DEV EN VENTAS': 'Notas_Credito_Emitidas',
-  'COSTOS':        'Facturas_Compra',
-  'DV COSTOS':     'Notas_Credito_Recibidas',
-  'DOC. SOPORTE':  'Documentos_Soporte',
-  'NOMINA':        'Nomina_Electronica',
-  'SERV PUBLICOS': 'Servicios_Publicos',
-  'IPOCONSUMO':    'Ipoconsumo',
-  'CONTINGENCIA':  'Contingencia'
-};
-
-// Meses
-var MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-
-function mesDesFecha(fecha) {
-  if (!fecha) return '';
-  var m = String(fecha).match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-  if (m) return MESES[parseInt(m[2])-1] || '';
-  m = String(fecha).match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
-  if (m) return MESES[parseInt(m[2])-1] || '';
+var MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+function mesDeFecha(f){
+  if(!f) return '';
+  var m=String(f).match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+  if(m) return MESES[parseInt(m[2])-1]||'';
+  m=String(f).match(/(\d{4})[\/\-](\d{2})/);
+  if(m) return MESES[parseInt(m[2])-1]||'';
   return '';
 }
 
-function cge(id){ return document.getElementById(id); }
+function cge(id){return document.getElementById(id);}
 
 window._openCufe = window.openCufe = function(){
-  console.log('[CUFE] openCufe v4');
-  var cl = (typeof clients!=='undefined') ? clients.find(function(x){return x.id===activeClientId;}) : null;
-  var year = (typeof activeYear!=='undefined'?activeYear:null)||new Date().getFullYear();
-  var sub = cge('cufe-subtitulo');
-  if(sub) sub.textContent = cl?(cl.razon||cl.nit)+' - '+year:'Descarga Masiva CUFE - '+year;
+  console.log('[CUFE] openCufe v5');
+  var cl=(typeof clients!=='undefined')?clients.find(function(x){return x.id===activeClientId;}):null;
+  var year=(typeof activeYear!=='undefined'?activeYear:null)||new Date().getFullYear();
+  var sub=cge('cufe-subtitulo');
+  if(sub) sub.textContent=cl?(cl.razon||cl.nit)+' - '+year:'Descarga Masiva CUFE - '+year;
   _cufeState.dianRows=[];
-  _cufeState.dianHeaders=[];
-  _cufeState.resultados={VENTAS:[],'DEV EN VENTAS':[],COSTOS:[],'DV COSTOS':[],'DOC. SOPORTE':[],NOMINA:[],'SERV PUBLICOS':[],IPOCONSUMO:[],CONTINGENCIA:[]};
   _cufeState.procesando=false; _cufeState.pausado=false;
   _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
   ['cufe-info-dian','cufe-progreso-card','cufe-resultados-card'].forEach(function(id){
@@ -113,7 +79,7 @@ window._openCufe = window.openCufe = function(){
   showScreen('cufe');
 };
 
-function cufeLog(tipo, msg){
+function cufeLog(tipo,msg){
   var card=cge('cufe-progreso-card'); if(card) card.style.display='block';
   var log=cge('cufe-log'); if(!log) return;
   var div=document.createElement('div'); div.className=tipo;
@@ -130,26 +96,25 @@ window.cufeCargarExcel = function(input){
       var wb=XLSX.read(e.target.result,{type:'binary'});
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(rows.length<2){alert('El archivo no tiene datos.');return;}
-      _cufeState.dianHeaders=rows[0].map(function(v){return String(v).trim();});
-      var h=_cufeState.dianHeaders;
-      // Índices columnas DIAN
-      var iCufe  =h.findIndex(function(v){return /CUFE/i.test(v);});
-      var iTipo  =h.findIndex(function(v){return /Tipo\s*de\s*documento/i.test(v);});
-      var iGrupo =h.findIndex(function(v){return v==='Grupo';});
-      var iFolio =h.findIndex(function(v){return /Folio|FOLIOS/i.test(v);});
-      var iPrefi =h.findIndex(function(v){return /Prefijo|PREFIJO/i.test(v);});
-      var iFecha =h.findIndex(function(v){return /Fecha\s*Emisi/i.test(v);});
-      var iNitE  =h.findIndex(function(v){return /NIT\s*Emisor/i.test(v);});
-      var iNomE  =h.findIndex(function(v){return /Nombre\s*Emisor/i.test(v);});
-      var iNitR  =h.findIndex(function(v){return /NIT\s*Receptor/i.test(v);});
-      var iNomR  =h.findIndex(function(v){return /Nombre\s*Receptor/i.test(v);});
-      var iIVA   =h.findIndex(function(v){return v==='IVA';});
-      var iTotal =h.findIndex(function(v){return v==='Total';});
-      var iReteR =h.findIndex(function(v){return /Rete\s*Renta/i.test(v);});
-      var iReteI =h.findIndex(function(v){return /Rete\s*IVA/i.test(v);});
-      var iEst   =h.findIndex(function(v){return v==='Estado';});
-      if(iCufe<0){alert('No se encontro la columna CUFE/CUDE.');return;}
+      if(rows.length<2){alert('Archivo sin datos.');return;}
+      var h=rows[0].map(function(v){return String(v).trim();});
+      function gi(pat){return h.findIndex(function(v){return pat.test(v);});}
+      var iCufe =gi(/CUFE/i);
+      var iTipo =gi(/Tipo\s*de\s*documento/i);
+      var iGrupo=gi(/^Grupo$/i);
+      var iFolio=gi(/Folio|FOLIOS/i);
+      var iPrefi=gi(/Prefijo|PREFIJO/i);
+      var iFecha=gi(/Fecha\s*Emisi/i);
+      var iNitE =gi(/NIT\s*Emisor/i);
+      var iNomE =gi(/Nombre\s*Emisor/i);
+      var iNitR =gi(/NIT\s*Receptor/i);
+      var iNomR =gi(/Nombre\s*Receptor/i);
+      var iIVA  =gi(/^IVA$/i);
+      var iTotal=gi(/^Total$/i);
+      var iReteR=gi(/Rete\s*Renta/i);
+      var iReteI=gi(/Rete\s*IVA/i);
+      var iDV   =gi(/^DV$/i);
+      if(iCufe<0){alert('No se encontro columna CUFE/CUDE.');return;}
       var resumen={};
       var datos=[];
       rows.slice(1).forEach(function(row){
@@ -158,27 +123,25 @@ window.cufeCargarExcel = function(input){
         var tipo=String(row[iTipo]||'').trim();
         var grupo=String(row[iGrupo]||'').trim();
         var sh=cufeGetSh(tipo,grupo);
-        if(!sh) sh='CONTINGENCIA';
         resumen[sh]=(resumen[sh]||0)+1;
         var fecha=String(row[iFecha]||'').trim();
         datos.push({
           cufe:cufe, tipo:tipo, grupo:grupo, sh:sh,
-          folio: String(row[iFolio]||'').trim(),
-          prefijo: String(row[iPrefi]||'').trim(),
-          fecha: fecha,
-          mes: mesDesFecha(fecha),
-          nitEmisor:   String(row[iNitE>=0?iNitE:0]||'').trim(),
-          nomEmisor:   String(row[iNomE>=0?iNomE:0]||'').trim(),
-          nitReceptor: String(row[iNitR>=0?iNitR:0]||'').trim(),
-          nomReceptor: String(row[iNomR>=0?iNomR:0]||'').trim(),
-          iva:      parseFloat(row[iIVA])||0,
-          total:    parseFloat(row[iTotal])||0,
+          folio:String(row[iFolio>=0?iFolio:0]||'').trim(),
+          prefijo:String(row[iPrefi>=0?iPrefi:0]||'').trim(),
+          fecha:fecha, mes:mesDeFecha(fecha),
+          nitEmisor:  String(row[iNitE>=0?iNitE:0]||'').trim(),
+          nomEmisor:  String(row[iNomE>=0?iNomE:0]||'').trim(),
+          nitReceptor:String(row[iNitR>=0?iNitR:0]||'').trim(),
+          nomReceptor:String(row[iNomR>=0?iNomR:0]||'').trim(),
+          dv:String(row[iDV>=0?iDV:0]||'').trim(),
+          dir:'', ciudad:'', dpto:'',
+          iva:parseFloat(row[iIVA])||0,
+          total:parseFloat(row[iTotal])||0,
           reteRenta:parseFloat(row[iReteR])||0,
-          reteIVA:  parseFloat(row[iReteI])||0,
-          estado:   String(row[iEst]||'').trim(),
-          b19:0, b5:0, ex:0, exc:0, iv19:0, iv5:0,
-          ipo:0, ipo8:0,
-          procesado:false, error:''
+          reteIVA:parseFloat(row[iReteI])||0,
+          b19:0,b5:0,ex:0,exc:0,iv19:0,iv5:0,ipo:0,ipo8:0,
+          procesado:false
         });
       });
       _cufeState.dianRows=datos;
@@ -187,37 +150,28 @@ window.cufeCargarExcel = function(input){
       if(info){
         info.style.display='block';
         var tf=cge('cufe-total-fact');
-        if(tf) tf.textContent=datos.length+' documentos encontrados';
+        if(tf) tf.textContent=datos.length+' documentos';
         var rs=cge('cufe-resumen-sh');
-        if(rs){
-          var txt=Object.entries(resumen).map(function(e){return e[0]+': '+e[1];}).join(' | ');
-          rs.textContent=txt;
-        }
+        if(rs) rs.textContent=Object.entries(resumen).map(function(e){return e[0]+': '+e[1];}).join(' | ');
       }
       var ba=cge('cufe-btn-abrir-dian'); if(ba) ba.disabled=false;
-    }catch(err){
-      alert('Error: '+err.message);
-      if(an) an.textContent='Error';
-    }
+    }catch(err){alert('Error: '+err.message); if(an) an.textContent='Error';}
   };
   reader.readAsBinaryString(file);
 };
 
-window.cufeAbrirDian = function(){
-  _cufeState.dianWindow=window.open(
-    'https://catalogo-vpfe.dian.gov.co/User/SearchDocument',
-    'dian_portal','width=1100,height=750,resizable=yes,scrollbars=yes'
-  );
+window.cufeAbrirDian=function(){
+  _cufeState.dianWindow=window.open('https://catalogo-vpfe.dian.gov.co/User/SearchDocument','dian_portal','width=1100,height=750,resizable=yes,scrollbars=yes');
   var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
   cufeLog('info','Portal DIAN abierto. Inicia sesion y regresa aqui.');
 };
 
-window.cufeSesionOk = function(){
+window.cufeSesionOk=function(){
   var bi=cge('cufe-btn-iniciar'); if(bi) bi.disabled=false;
   cufeLog('ok','Sesion confirmada. Haz clic en Iniciar proceso.');
 };
 
-window.cufeIniciarProceso = function(){
+window.cufeIniciarProceso=function(){
   if(!_cufeState.dianRows.length){alert('Carga primero el Excel de la DIAN.');return;}
   _cufeState.procesando=true; _cufeState.pausado=false;
   _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
@@ -240,36 +194,37 @@ function cufeCiclo(){
   var pct=Math.round((idx/total)*100);
   var bar=cge('cufe-barra'); if(bar) bar.style.width=pct+'%';
   var txt=cge('cufe-progreso-txt');
-  if(txt) txt.textContent=(idx+1)+'/'+total+' ['+item.sh+'] '+(item.nomEmisor||item.nitEmisor||item.cufe.substring(0,20));
+  if(txt) txt.textContent=(idx+1)+'/'+total+' ['+item.sh+'] '+(item.nomEmisor||item.nitEmisor||'');
   var cp=cge('cufe-cnt-pend'); if(cp) cp.textContent=String(total-idx);
-  cufeFetch(item, function(r){
+  cufeFetch(item,function(r){
     if(r.ok){
       item.b19=r.b19||0; item.b5=r.b5||0;
       item.ex=r.ex||0;   item.exc=r.exc||0;
       item.iv19=r.iv19||0; item.iv5=r.iv5||0;
-      item.ipo=r.ipo||0;  item.ipo8=r.ipo8||0;
-      item.procesado=true;
-      cufeLog('ok','['+item.sh+'] '+item.nomEmisor+' B19:$'+Math.round(item.b19).toLocaleString('es-CO'));
+      item.ipo=r.ipo||0; item.ipo8=r.ipo8||0;
+      if(r.dir) item.dir=r.dir;
+      if(r.ciudad) item.ciudad=r.ciudad;
+      if(r.dpto) item.dpto=r.dpto;
+      cufeLog('ok','['+item.sh+'] '+(item.nomEmisor||item.nitEmisor)+' B19:$'+Math.round(item.b19).toLocaleString('es-CO'));
     } else {
       cufeCalcular(item);
-      item.procesado=true;
       cufeLog('info','['+item.sh+'] Calculado: '+(item.nomEmisor||item.nitEmisor));
     }
+    item.procesado=true;
     _cufeState.ok++;
     var co=cge('cufe-cnt-ok'); if(co) co.textContent=String(_cufeState.ok);
     _cufeState.idx++;
-    setTimeout(cufeCiclo, 600);
+    setTimeout(cufeCiclo,600);
   });
 }
 
-function cufeFetch(item, callback){
+function cufeFetch(item,callback){
   var dianWin=_cufeState.dianWindow;
   if(!dianWin||dianWin.closed){
     _cufeState.pausado=true;
     var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
     cufeLog('err','Ventana DIAN cerrada. Reabrir y confirmar sesion.');
-    callback({ok:false});
-    return;
+    callback({ok:false}); return;
   }
   var url='https://catalogo-vpfe.dian.gov.co/Document/FindDocument?documentKey='+encodeURIComponent(item.cufe);
   fetch(url,{credentials:'include',headers:{'Accept':'application/json,text/html,*/*','X-Requested-With':'XMLHttpRequest'}})
@@ -279,29 +234,38 @@ function cufeFetch(item, callback){
       if(ct.indexOf('json')>=0) return r.json().then(function(d){cufeParseJSON(d,callback);});
       return r.text().then(function(t){cufeParseHTML(t,callback);});
     })
-    .catch(function(){ callback({ok:false}); });
+    .catch(function(){callback({ok:false});});
 }
 
-function cufeParseJSON(d, cb){
+function cufeParseJSON(d,cb){
   try{
     var t=d.totals||d.Totals||d.totales||d;
+    var sup=d.supplier||d.Supplier||{};
+    var addr=sup.address||sup.Address||{};
     cb({ok:true,
       b19:t.subtotalTaxableAmount19||0, b5:t.subtotalTaxableAmount5||0,
-      ex:t.subtotalExempt||0,           exc:t.subtotalExcluded||0,
-      iv19:t.taxAmount19||0,            iv5:t.taxAmount5||0,
-      ipo:t.taxAmountINC||0,            ipo8:t.taxAmountINC8||0
+      ex:t.subtotalExempt||0, exc:t.subtotalExcluded||0,
+      iv19:t.taxAmount19||0, iv5:t.taxAmount5||0,
+      ipo:t.taxAmountINC||0, ipo8:t.taxAmountINC8||0,
+      dir:addr.street||addr.line||'',
+      ciudad:addr.city||addr.cityName||'',
+      dpto:addr.department||addr.departmentName||''
     });
   }catch(e){cb({ok:false});}
 }
 
-function cufeParseHTML(html, cb){
+function cufeParseHTML(html,cb){
   var tmp=document.createElement('div'); tmp.innerHTML=html;
   var text=tmp.innerText||tmp.textContent||'';
   function ex(p){var m=text.match(p);return m?parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0:0;}
+  function exStr(p){var m=text.match(p);return m?m[1].trim():'';}
   var sub=ex(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
   var iva=ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
+  var dir=exStr(/Direcci[oó]n[:\s]+([^\n\r]+)/i);
+  var mun=exStr(/Municipio\s*\/\s*Ciudad[:\s]+([^\n\r]+)/i);
+  var dpto=exStr(/Departamento[:\s]+([^\n\r]+)/i);
   if(sub>0){
-    var res={ok:true};
+    var res={ok:true,dir:dir,ciudad:mun,dpto:dpto};
     if(iva>0){
       var p=iva/sub;
       if(Math.abs(p-0.19)<0.01){res.b19=sub;res.iv19=iva;}
@@ -320,17 +284,17 @@ function cufeCalcular(item){
     else if(Math.abs(p-0.05)<0.02){item.b5=sub;item.iv5=iva;}
     else if(Math.abs(p-0.08)<0.02){item.ipo=sub;item.ipo8=iva;}
     else{item.b19=sub;item.iv19=iva;}
-  } else if(iva===0&&total>0){ item.ex=total; }
+  } else if(!iva&&total>0){item.ex=total;}
 }
 
-window.cufePausar = function(){
+window.cufePausar=function(){
   _cufeState.pausado=!_cufeState.pausado;
   var bp=cge('cufe-btn-pausar');
   if(bp) bp.textContent=_cufeState.pausado?'Reanudar':'Pausar';
   if(!_cufeState.pausado) cufeCiclo();
 };
 
-window.cufeCancelar = function(){
+window.cufeCancelar=function(){
   _cufeState.procesando=false;
   cufeLog('err','Proceso cancelado.');
   cufeTerminar();
@@ -341,7 +305,7 @@ function cufeTerminar(){
   var bar=cge('cufe-barra'); if(bar) bar.style.width='100%';
   var cp=cge('cufe-cnt-pend'); if(cp) cp.textContent='0';
   var txt=cge('cufe-progreso-txt'); if(txt) txt.textContent='Proceso finalizado';
-  cufeLog('ok','Completado: '+_cufeState.ok+' procesados.');
+  cufeLog('ok','Completado: '+_cufeState.ok+' documentos procesados.');
   var card=cge('cufe-resultados-card'); if(card) card.style.display='block';
   cufeMostrarResumen();
 }
@@ -351,125 +315,182 @@ function fmtCOP(n){return n?'$'+Math.round(n).toLocaleString('es-CO'):'$0';}
 function cufeMostrarResumen(){
   var lista=_cufeState.dianRows;
   var por={};
-  lista.forEach(function(item){
-    if(!por[item.sh]) por[item.sh]=[];
-    por[item.sh].push(item);
-  });
+  lista.forEach(function(item){if(!por[item.sh])por[item.sh]=[];por[item.sh].push(item);});
   var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
   Object.keys(por).forEach(function(sh){
-    var items=por[sh];
-    var totB19=items.reduce(function(a,r){return a+(r.b19||0);},0);
-    var totEx =items.reduce(function(a,r){return a+(r.ex||0);},0);
-    var totTot=items.reduce(function(a,r){return a+(r.total||0);},0);
+    var its=por[sh];
+    var tot=its.reduce(function(a,r){return a+(r.total||0);},0);
     html+='<div style="background:#f8faff;border:0.5px solid #c7d0f0;border-radius:8px;padding:12px;">'
-      +'<div style="font-size:11px;font-weight:800;color:#1a2580;margin-bottom:6px;">'+sh+'</div>'
-      +'<div style="font-size:10px;color:#6b7280;">'+items.length+' documentos</div>'
-      +'<div style="font-size:10px;color:#374151;">Total: '+fmtCOP(totTot)+'</div>'
-      +'<div style="font-size:10px;color:#374151;">B19: '+fmtCOP(totB19)+' | Ex: '+fmtCOP(totEx)+'</div>'
+      +'<div style="font-size:11px;font-weight:800;color:#1a2580;">'+sh+'</div>'
+      +'<div style="font-size:10px;color:#6b7280;margin-top:4px;">'+its.length+' docs | Total: '+fmtCOP(tot)+'</div>'
       +'</div>';
   });
   html+='</div>';
   var cont=cge('cufe-tabla-resultados'); if(cont) cont.innerHTML=html;
 }
 
-// Generar Excel con todas las pestañas
-window.cufeDescargarExcel = function(){
+// Generar Excel con estructura exacta del borrador
+window.cufeDescargarExcel=function(){
   var lista=_cufeState.dianRows;
   if(!lista.length){alert('No hay datos.');return;}
   var wb=XLSX.utils.book_new();
-  var shOrder=['VENTAS','DEV EN VENTAS','COSTOS','DV COSTOS','DOC. SOPORTE','NOMINA','SERV PUBLICOS','IPOCONSUMO','CONTINGENCIA'];
-  shOrder.forEach(function(sh){
-    var items=lista.filter(function(r){return r.sh===sh;});
-    if(!items.length) return;
-    var cols=CUFE_COLS[sh]||[];
-    var rows=[cols];
+  var nit='NIT: 901.904.435-9';
+  var empresa='ASESORIAS Y CONSULTORIAS JNF S.A.S.';
+  var anio=new Date().getFullYear();
+
+  function makeSheet(sh, cols, items){
+    var rows=[];
+    rows.push([]);
+    rows.push(['','',empresa,'','','','','','','','','','','','','',nit]);
+    rows.push([]);
+    rows.push(['FORMATO CONTABLE MENSUAL','','','','','','','','','','','','','ANO '+anio]);
+    rows.push([]);
+    rows.push(cols);
     items.forEach(function(item){
-      var row=[];
-      cols.forEach(function(col){
-        switch(col){
-          case 'TIPO DOC': case 'Tipo de documento': row.push(item.tipo); break;
-          case 'CUFE/CUDE': row.push(item.cufe); break;
-          case 'FOLIOS': case 'Folio': row.push(item.folio); break;
-          case 'PREFIJO': case 'Prefijo': row.push(item.prefijo); break;
-          case 'MES': row.push(item.mes); break;
-          case 'FECHA EMISION': case 'Fecha Emision': row.push(item.fecha); break;
-          case 'T.P.': row.push(''); break;
-          case 'NIT RECEPTOR': case 'NIT Receptor': row.push(item.nitReceptor); break;
-          case 'NOMBRE RECEPTOR': case 'Nombre Receptor': row.push(item.nomReceptor); break;
-          case 'NIT Emisor': row.push(item.nitEmisor); break;
-          case 'Nombre Emisor': row.push(item.nomEmisor); break;
-          case 'NIT': row.push(item.nitEmisor||item.nitReceptor); break;
-          case 'NOMBRES Y APELLIDOS': case 'RAZON SOCIAL': row.push(item.nomEmisor||item.nomReceptor); break;
-          case 'DIRECCION': row.push(''); break;
-          case 'CIUDAD': row.push(''); break;
-          case 'DEPARTAMENTO': row.push(''); break;
-          case 'DV': row.push(''); break;
-          case 'CARGO': case 'CATEGORIA': row.push(''); break;
-          case 'IVA': row.push(item.iva); break;
-          case 'TOTAL': case 'Total': case 'TOTAL.1': case 'TOTAL FACTURA': row.push(item.total); break;
-          case 'BASE': case 'BASE 19': case 'BASE 19%': row.push(item.b19); break;
-          case 'BASE 5': case 'BASE 5%': row.push(item.b5); break;
-          case 'IVA19%': case 'IVA 19%': row.push(item.iv19); break;
-          case 'IVA 5%': row.push(item.iv5); break;
-          case 'EXENTO': row.push(item.ex); break;
-          case 'EXCLUIDO': case 'EXCLUIDO/BASE IPO': row.push(item.exc); break;
-          case 'IPOCONSUMO': row.push(item.ipo); break;
-          case 'IPO 8%': row.push(item.ipo8); break;
-          case 'RETEIVA': case 'APLIC. RETEIVA': row.push(item.reteIVA); break;
-          case 'APLIC. RETEFUENTE': row.push(item.reteRenta>0?'SI':'NO'); break;
-          case 'TARIFA RETEFUENTE': case 'BASE RETENCION': row.push(item.reteRenta); break;
-          case '2.5%': row.push(''); break;
-          case '1.5%': row.push(''); break;
-          default: row.push(''); break;
-        }
-      });
+      var row=cols.map(function(col){return cufeValCol(col,item,sh);});
       rows.push(row);
     });
-    var ws=XLSX.utils.aoa_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb,ws,sh);
+    return XLSX.utils.aoa_to_sheet(rows);
+  }
+
+  var shOrder=[
+    {sh:'VENTAS',        cols:['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','APLIC. RETEFUENTE','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19%','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','TOTAL FACTURA']},
+    {sh:'DEV EN VENTAS', cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','APLIC. RETEIVA','NIT Receptor','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','RETEIVA','TOTAL FACTURA']},
+    {sh:'COSTOS',        cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1','BASE RETENCION']},
+    {sh:'DV COSTOS',     cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','TOTAL']},
+    {sh:'DOC. SOPORTE',  cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','NOMBRES Y APELLIDOS','CARGO','DIRECCION','CIUDAD','DEPARTAMENTO','ENERO','LIQUIDACION','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE','TOTAL']},
+    {sh:'NOMINA',        cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','CATEGORIA','NIT','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','Total']},
+    {sh:'SERV PUBLICOS', cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','RAZON SOCIAL','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1']},
+    {sh:'IPOCONSUMO',    cols:['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IPOCONSUMO','IPO 8%','TOTAL']}
+  ];
+
+  shOrder.forEach(function(def){
+    var items=lista.filter(function(r){return r.sh===def.sh;});
+    if(!items.length) return;
+    var ws=makeSheet(def.sh, def.cols, items);
+    XLSX.utils.book_append_sheet(wb, ws, def.sh);
   });
+
   var hoy=new Date().toLocaleDateString('es-CO').replace(/\//g,'-');
-  XLSX.writeFile(wb,'FormatoContable_CUFE_'+hoy+'.xlsx');
-  cufeLog('ok','Excel descargado con '+(wb.SheetNames.length)+' pestanas.');
+  XLSX.writeFile(wb,'FormatoContable_'+hoy+'.xlsx');
+  cufeLog('ok','Excel descargado: '+wb.SheetNames.join(', '));
 };
 
-// Descargar ZIP con PDFs separados por subcarpeta
-window.cufeDescargarZip = function(){
-  var lista=_cufeState.dianRows;
-  if(!lista.length){alert('No hay datos.');return;}
-  // Verificar que JSZip esté disponible
+function cufeValCol(col, item, sh){
+  switch(col){
+    case 'TIPO DOC': case 'Tipo de documento': return item.tipo;
+    case 'CUFE/CUDE': return item.cufe;
+    case 'FOLIOS': case 'Folio': return item.folio;
+    case 'PREFIJO': case 'Prefijo': return item.prefijo;
+    case 'MES': return item.mes;
+    case 'FECHA EMISION': case 'Fecha Emision': return item.fecha;
+    case 'T.P.': return '';
+    case 'NIT RECEPTOR': case 'NIT Receptor': return item.nitReceptor;
+    case 'NOMBRE RECEPTOR': case 'Nombre Receptor': return item.nomReceptor;
+    case 'NIT Emisor': return item.nitEmisor;
+    case 'Nombre Emisor': return item.nomEmisor;
+    case 'NIT': return item.nitEmisor||item.nitReceptor;
+    case 'DV': return item.dv;
+    case 'NOMBRES Y APELLIDOS': case 'RAZON SOCIAL': return item.nomEmisor||item.nomReceptor;
+    case 'DIRECCION': return item.dir;
+    case 'CIUDAD': return item.ciudad;
+    case 'DEPARTAMENTO': return item.dpto;
+    case 'CARGO': case 'CATEGORIA': return '';
+    case 'APLIC. RETEFUENTE': return item.reteRenta>0?'SI':'NO';
+    case 'TARIFA RETEFUENTE': case 'BASE RETENCION': return item.reteRenta||0;
+    case 'APLIC. RETEIVA': return item.reteIVA>0?'SI':'NO';
+    case 'IVA': return item.iva;
+    case 'TOTAL': case 'Total': case 'TOTAL.1': case 'TOTAL FACTURA': return item.total;
+    case 'BASE': case 'BASE 19': case 'BASE 19%': return item.b19;
+    case 'BASE 5': case 'BASE 5%': return item.b5;
+    case 'IVA19%': case 'IVA 19%': return item.iv19;
+    case 'IVA 5%': return item.iv5;
+    case 'EXENTO': return item.ex;
+    case 'EXCLUIDO': case 'EXCLUIDO/BASE IPO': return item.exc;
+    case 'IPOCONSUMO': return item.ipo;
+    case 'IPO 8%': return item.ipo8;
+    case 'RETEIVA': return item.reteIVA;
+    case 'ENERO': return item.mes==='ENERO'?item.total:0;
+    case 'LIQUIDACION': return item.mes==='FEBRERO'?item.total:0;
+    case 'MARZO': return item.mes==='MARZO'?item.total:0;
+    case 'ABRIL': return item.mes==='ABRIL'?item.total:0;
+    case 'MAYO': return item.mes==='MAYO'?item.total:0;
+    case 'JUNIO': return item.mes==='JUNIO'?item.total:0;
+    case 'JULIO': return item.mes==='JULIO'?item.total:0;
+    case 'AGOSTO': return item.mes==='AGOSTO'?item.total:0;
+    case 'SEPTIEMBRE': return item.mes==='SEPTIEMBRE'?item.total:0;
+    case 'OCTUBRE': return item.mes==='OCTUBRE'?item.total:0;
+    case 'NOVIEMBRE': return item.mes==='NOVIEMBRE'?item.total:0;
+    case 'DICIEMBRE': return item.mes==='DICIEMBRE'?item.total:0;
+    default: return '';
+  }
+}
+
+// ZIP con subcarpetas y listado de CUFEs por subcarpeta
+window.cufeDescargarZip=function(){
+  if(!_cufeState.dianRows.length){alert('No hay datos.');return;}
   if(typeof JSZip==='undefined'){
-    alert('Descargando libreria JSZip...');
     var s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    s.onload=function(){cufeGenerarZip(lista);};
+    s.onload=function(){cufeGenerarZip();};
     document.head.appendChild(s);
     return;
   }
-  cufeGenerarZip(lista);
+  cufeGenerarZip();
 };
 
-function cufeGenerarZip(lista){
+var CUFE_SUBCARPETAS={
+  'VENTAS':'Factura_Venta',
+  'DEV EN VENTAS':'Notas_Credito_Emitidas',
+  'COSTOS':'Factura_Compra',
+  'DV COSTOS':'Notas_Credito_Recibidas',
+  'DOC. SOPORTE':'Documentos_Soporte',
+  'NOMINA':'Nomina_Electronica',
+  'SERV PUBLICOS':'Servicios_Publicos',
+  'IPOCONSUMO':'Ipoconsumo',
+  'CONTINGENCIA':'Contingencia'
+};
+
+function cufeGenerarZip(){
   var zip=new JSZip();
-  // Crear subcarpetas con un README en cada una
-  var subcarpetas=Object.values(CUFE_SUBCARPETAS);
-  subcarpetas.forEach(function(sub){
-    zip.folder(sub).file('LEEME.txt','Subcarpeta: '+sub+'\nAqui van los documentos electronicos correspondientes.\nGenerado por JNF SAS - Sistema de Gestion Contable');
+  var lista=_cufeState.dianRows;
+  cufeLog('info','Generando ZIP con subcarpetas...');
+  Object.values(CUFE_SUBCARPETAS).forEach(function(sub){
+    // README en cada subcarpeta
+    zip.folder(sub).file('INSTRUCCIONES.txt',
+      'Subcarpeta: '+sub+'\n\n'+
+      'Esta carpeta contiene los documentos electronicos correspondientes.\n'+
+      'Para descargar cada PDF:\n'+
+      '1. Ingrese al portal DIAN: https://catalogo-vpfe.dian.gov.co/User/SearchDocument\n'+
+      '2. Copie el CUFE del archivo CUFEs_'+sub+'.csv\n'+
+      '3. Pegue el CUFE en el campo de busqueda\n'+
+      '4. Descargue el PDF del documento\n\n'+
+      'Generado por JNF SAS - Sistema de Gestion Contable\n'+
+      'Fecha: '+new Date().toLocaleDateString('es-CO')
+    );
   });
-  // Crear CSV por subcarpeta con los CUFEs
+  // CSV con CUFEs por subcarpeta
   Object.entries(CUFE_SUBCARPETAS).forEach(function(entry){
-    var sh=entry[0], subcarpeta=entry[1];
+    var sh=entry[0], sub=entry[1];
     var items=lista.filter(function(r){return r.sh===sh;});
     if(!items.length) return;
-    var csv='CUFE/CUDE,Tipo,Folio,Prefijo,Fecha,NIT,Nombre,IVA,Total,Base19,Base5,Exento,ReteRenta,ReteIVA\r\n';
-    items.forEach(function(item){
-      csv+='"'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'
-        +'"'+(item.nitEmisor||item.nitReceptor)+'","'+(item.nomEmisor||item.nomReceptor)+'","'
-        +item.iva+'","'+item.total+'","'+item.b19+'","'+item.b5+'","'+item.ex+'","'+item.reteRenta+'","'+item.reteIVA+'"\r\n';
+    var csv='No,CUFE/CUDE,Tipo,Folio,Prefijo,Fecha,NIT,Nombre,IVA,Base19%,Base5%,Exento,Total\r\n';
+    items.forEach(function(item,i){
+      var nit=item.nitEmisor||item.nitReceptor;
+      var nom=item.nomEmisor||item.nomReceptor;
+      csv+=(i+1)+',"'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'
+        +nit+',"'+nom+'",'+item.iva+','+item.b19+','+item.b5+','+item.ex+','+item.total+'\r\n';
     });
-    zip.folder(subcarpeta).file('documentos_'+subcarpeta+'.csv', csv);
+    zip.folder(sub).file('CUFEs_'+sub+'.csv','\uFEFF'+csv);
   });
-  // Generar el ZIP
+  // Excel resumen general
+  var csvGeneral='No,Pestana,Tipo,CUFE,Folio,Prefijo,Fecha,Mes,NIT,Nombre,Direccion,Ciudad,Departamento,IVA,Base19%,Base5%,Exento,Excluido,IVA19%,IVA5%,ReteRenta,ReteIVA,Total\r\n';
+  lista.forEach(function(item,i){
+    var nit=item.nitEmisor||item.nitReceptor;
+    var nom=item.nomEmisor||item.nomReceptor;
+    csvGeneral+=(i+1)+','+item.sh+',"'+item.tipo+'","'+item.cufe+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'+item.mes+','+nit+',"'+nom+'","'+item.dir+'","'+item.ciudad+'","'+item.dpto+'",'+item.iva+','+item.b19+','+item.b5+','+item.ex+','+item.exc+','+item.iv19+','+item.iv5+','+item.reteRenta+','+item.reteIVA+','+item.total+'\r\n';
+  });
+  zip.file('REPORTE_COMPLETO.csv','\uFEFF'+csvGeneral);
   zip.generateAsync({type:'blob'}).then(function(content){
     var a=document.createElement('a');
     var hoy=new Date().toLocaleDateString('es-CO').replace(/\//g,'-');
@@ -477,15 +498,12 @@ function cufeGenerarZip(lista){
     a.download='DocumentosElectronicos_'+hoy+'.zip';
     a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);},3000);
-    cufeLog('ok','ZIP descargado con '+subcarpetas.length+' subcarpetas.');
-  }).catch(function(e){
-    cufeLog('err','Error generando ZIP: '+e.message);
-  });
-};
+    cufeLog('ok','ZIP generado con '+Object.keys(CUFE_SUBCARPETAS).length+' subcarpetas.');
+    cufeLog('info','NOTA: Los PDFs deben descargarse manualmente del portal DIAN usando los CUFEs de cada CSV.');
+  }).catch(function(e){cufeLog('err','Error ZIP: '+e.message);});
+}
 
-window.cufeNuevoProceso = function(){
-  window._openCufe();
-};
+window.cufeNuevoProceso=function(){window._openCufe();};
 
 </script>
 
