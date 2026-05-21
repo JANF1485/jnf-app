@@ -11902,9 +11902,9 @@ var _cufeState = {
 // ── openCufe ─────────────────────────────────────────────────
 window._openCufe = window.openCufe = function(){
   var cl = clients.find(function(x){return x.id===activeClientId;});
-  if(!cl) return;
+  var year = activeYear||new Date().getFullYear();
   document.getElementById('cufe-subtitulo').textContent =
-    (cl.razon||cl.nit)+' · '+(activeYear||new Date().getFullYear());
+    cl ? (cl.razon||cl.nit)+' · '+year : 'Descarga Masiva CUFE · '+year;
   // Reset estado
   _cufeState.excelDian=null; _cufeState.formatoData=null;
   _cufeState.cufeList=[]; _cufeState.resultados=[];
@@ -11916,22 +11916,19 @@ window._openCufe = window.openCufe = function(){
 };
 
 function cufeResetUI(){
+  function ge(id){return document.getElementById(id);}
   ['cufe-paso1','cufe-paso2','cufe-paso3','cufe-paso4','cufe-paso5'].forEach(function(id,i){
-    var el=document.getElementById(id);
-    if(el){el.className='cufe-paso'+(i===0?' activo':'');}
-    var n=document.getElementById('cufe-n'+(i+1));
-    if(n){n.className='cufe-num'+(i===0?' activo':'');}
+    var el=ge(id); if(el) el.className='cufe-paso'+(i===0?' activo':'');
+    var n=ge('cufe-n'+(i+1)); if(n){n.className='cufe-num'+(i===0?' activo':'');n.textContent=String(i+1);}
   });
-  document.getElementById('cufe-paso1-info').style.display='none';
-  document.getElementById('cufe-paso2-info').style.display='none';
-  document.getElementById('cufe-progreso-card').style.display='none';
-  document.getElementById('cufe-resultados-card').style.display='none';
-  document.getElementById('cufe-btn-abrir-dian').disabled=true;
-  document.getElementById('cufe-btn-iniciar').disabled=true;
-  document.getElementById('cufe-btn-sesion-ok').style.display='none';
-  document.getElementById('cufe-archivo-nombre').textContent='';
-  document.getElementById('cufe-formato-nombre').textContent='';
-  var bl=document.getElementById('cufe-btn-formato');
+  var ids=['cufe-paso1-info','cufe-paso2-info','cufe-progreso-card','cufe-resultados-card'];
+  ids.forEach(function(id){var el=ge(id);if(el)el.style.display='none';});
+  var bd=ge('cufe-btn-abrir-dian');if(bd)bd.disabled=true;
+  var bi=ge('cufe-btn-iniciar');if(bi)bi.disabled=true;
+  var bs=ge('cufe-btn-sesion-ok');if(bs)bs.style.display='none';
+  var an=ge('cufe-archivo-nombre');if(an)an.textContent='';
+  var fn=ge('cufe-formato-nombre');if(fn)fn.textContent='';
+  var bl=ge('cufe-btn-formato');
   if(bl){bl.style.background='#e5e7f0';bl.style.color='#9ca3af';bl.style.pointerEvents='none';}
 }
 
