@@ -11880,10 +11880,10 @@ document.addEventListener('DOMContentLoaded', function(){
 var _cufeState = {
   excelDian: null,      // Datos del Excel de la DIAN
   formatoWb: null,      // Workbook del formato contable
-  formatoData: null,    // Datos del formato contable por pestaña
-  cufeList: [],         // Lista de CUFEs a procesar [{cufe, pestaña, fila, nit, nombre}]
+  formatoData: null,    // Datos del formato contable por pestana
+  cufeList: [],         // Lista de CUFEs a procesar [{cufe, pestana, fila, nit, nombre}]
   resultados: [],       // Resultados por CUFE
-  pestanasSelec: [],    // Pestañas seleccionadas
+  pestanasSelec: [],    // Pestanas seleccionadas
   dianWindow: null,     // Ventana del portal DIAN
   procesando: false,
   pausado: false,
@@ -12049,10 +12049,10 @@ window.cufeCargarFormato = function(input){
 
       document.getElementById('cufe-formato-nombre').textContent='\u2713 '+file.name;
       document.getElementById('cufe-formato-pestanas').textContent=
-        'Pestañas con CUFE: '+pestanasConCufe.join(', ');
+        'Pestanas con CUFE: '+pestanasConCufe.join(', ');
       document.getElementById('cufe-paso2-info').style.display='block';
 
-      // Construir checkboxes de pestañas
+      // Construir checkboxes de pestanas
       cufePasoActivo(3);
       var cont=document.getElementById('cufe-pestanas-check');
       cont.innerHTML='';
@@ -12061,7 +12061,7 @@ window.cufeCargarFormato = function(input){
         var dat=_cufeState.formatoData[shName];
         var lbl=document.createElement('label');
         lbl.style.cssText='display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #e5e7f0;border-radius:20px;cursor:pointer;font-size:11px;font-weight:700;color:#1a2580;font-family:Montserrat,sans-serif;';
-        lbl.innerHTML='<input type="checkbox" checked data-pestaña="'+shName+'" style="accent-color:#1a2580;"> '+shName+' <span style="color:#6b7280;font-weight:400;">('+dat.cufeFilas.length+')</span>';
+        lbl.innerHTML='<input type="checkbox" checked data-pestana="'+shName+'" style="accent-color:#1a2580;"> '+shName+' <span style="color:#6b7280;font-weight:400;">('+dat.cufeFilas.length+')</span>';
         lbl.querySelector('input').onchange=function(){cufeActualizarSeleccion();};
         cont.appendChild(lbl);
       });
@@ -12127,14 +12127,14 @@ function cufeLog(tipo,msg){
 
 // ── Iniciar proceso ───────────────────────────────────────────
 window.cufeIniciarProceso = function(){
-  // Construir lista de CUFEs de las pestañas seleccionadas
+  // Construir lista de CUFEs de las pestanas seleccionadas
   _cufeState.cufeList=[];
   _cufeState.pestanasSelec.forEach(function(shName){
     var dat=_cufeState.formatoData[shName];
     if(!dat) return;
     dat.cufeFilas.forEach(function(cf){
       _cufeState.cufeList.push({
-        cufe:cf.cufe, pestaña:shName, fila:cf.fila,
+        cufe:cf.cufe, pestana:shName, fila:cf.fila,
         config:dat.config, estado:'pendiente',
         base19:0,base5:0,exento:0,excluido:0,iva19:0,iva5:0,
         reteRenta:0,reteIVA:0,total:0,nit:'',nombre:'',error:''
@@ -12177,10 +12177,10 @@ function cufeProcesamientoCiclo(){
 
   document.getElementById('cufe-barra').style.width=pct+'%';
   document.getElementById('cufe-progreso-txt').textContent=
-    'Procesando '+( idx+1)+' de '+total+' — '+item.pesta\u00f1a+': '+item.cufe.substring(0,20)+'...';
+    'Procesando '+( idx+1)+' de '+total+' — '+item.pestana+': '+item.cufe.substring(0,20)+'...';
   document.getElementById('cufe-cnt-pend').textContent=(total-idx);
 
-  cufeLog('info','['+( idx+1)+'/'+total+'] '+item.pesta\u00f1a+' CUFE: '+item.cufe.substring(0,30)+'...');
+  cufeLog('info','['+( idx+1)+'/'+total+'] '+item.pestana+' CUFE: '+item.cufe.substring(0,30)+'...');
 
   // Intentar buscar en el portal DIAN abierto
   cufeBuscarEnPortal(item, function(resultado){
@@ -12444,7 +12444,7 @@ function cufeFinalizarProceso(){
 function cufeMostrarTabla(){
   var lista=_cufeState.cufeList;
   var html='<div style="overflow-x:auto;"><table class="cufe-tabla"><thead><tr>'
-    +'<th>Pestaña</th><th>CUFE</th><th>NIT</th><th>Nombre</th>'
+    +'<th>Pestana</th><th>CUFE</th><th>NIT</th><th>Nombre</th>'
     +'<th>Base 19%</th><th>Base 5%</th><th>Exento</th><th>IVA 19%</th><th>IVA 5%</th>'
     +'<th>Rete Fuente</th><th>Rete IVA</th><th>Estado</th>'
     +'</tr></thead><tbody>';
@@ -12455,7 +12455,7 @@ function cufeMostrarTabla(){
     var tag=item.estado==='ok'?'ok':item.estado==='error'?'error':'pending';
     var lbl=item.estado==='ok'?'OK':item.estado==='error'?'Error':'Pendiente';
     html+='<tr>'
-      +'<td><b>'+item.pesta\u00f1a+'</b></td>'
+      +'<td><b>'+item.pestana+'</b></td>'
       +'<td style="font-size:9px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">'+item.cufe.substring(0,30)+'...</td>'
       +'<td>'+item.nit+'</td>'
       +'<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">'+item.nombre+'</td>'
@@ -12480,7 +12480,7 @@ window.cufeDescargarExcel = function(){
   var wb=_cufeState.formatoWb;
   var wbOut=XLSX.utils.book_new();
 
-  // Procesar cada pestaña seleccionada
+  // Procesar cada pestana seleccionada
   _cufeState.pestanasSelec.forEach(function(shName){
     var dat=_cufeState.formatoData[shName];
     if(!dat) return;
@@ -12488,7 +12488,7 @@ window.cufeDescargarExcel = function(){
     var rows=dat.rows.map(function(r){return r.slice();});
     var headers=dat.headers;
 
-    // Mapeo de columnas a llenar según la pestaña
+    // Mapeo de columnas a llenar según la pestana
     function findOrAdd(name){
       var i=headers.findIndex(function(h){return h===name;});
       if(i>=0) return i;
@@ -12505,7 +12505,7 @@ window.cufeDescargarExcel = function(){
     // Llenar datos por CUFE
     var mapCufe={};
     _cufeState.cufeList.forEach(function(item){
-      if(item.pesta\u00f1a===shName&&item.estado==='ok') mapCufe[item.cufe]=item;
+      if(item.pestana===shName&&item.estado==='ok') mapCufe[item.cufe]=item;
     });
 
     dat.cufeFilas.forEach(function(cf){
