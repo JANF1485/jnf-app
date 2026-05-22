@@ -26,7 +26,7 @@ var CUFE_DPTOS = {
   'TOLIMA':'73','VALLE DEL CAUCA':'76','VALLE':'76','VAUPES':'97','VICHADA':'99'
 };
 
-var DIAN_MPIOS = {
+var CUFE_MPIOS = {
   // Atlantico
   '08001':'001','08078':'078','08137':'137','08141':'141','08296':'296',
   '08372':'372','08421':'421','08433':'433','08436':'436','08520':'520',
@@ -78,7 +78,7 @@ function cufeGetDpto(nombre){
 }
 
 // Calcular dígito de verificación del NIT
-function calcDV(nit){
+function cufeCalcDV(nit){
   var n=String(nit).replace(/[^0-9]/g,'');
   if(!n) return '';
   var primos=[3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
@@ -98,7 +98,7 @@ function cufeGetMpio(codDepto, nombreMpio){
   // Si no está, retornar solo el nombre
   // El Excel de la DIAN trae el nombre -- intentar match
   var prefix=codDepto;
-  for(var key in DIAN_MPIOS){
+  for(var key in CUFE_MPIOS){
     if(key.startsWith(prefix)){
       // match aproximado por nombre no disponible aqui
     }
@@ -141,13 +141,13 @@ function cufeGetSh(tipo, grupo){
   return 'COSTOS';
 }
 
-var MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-function mesDeFecha(f){
+var CUFE_MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+function cufeMesDeFecha(f){
   if(!f) return '';
   var m=String(f).match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-  if(m) return MESES[parseInt(m[2])-1]||'';
+  if(m) return CUFE_MESES[parseInt(m[2])-1]||'';
   m=String(f).match(/(\d{4})[\/\-](\d{2})/);
-  if(m) return MESES[parseInt(m[2])-1]||'';
+  if(m) return CUFE_MESES[parseInt(m[2])-1]||'';
   return '';
 }
 
@@ -223,7 +223,7 @@ window.cufeCargarExcel = function(input){
           cufe:cufe, tipo:tipo, grupo:grupo, sh:sh,
           folio:String(row[iFolio>=0?iFolio:0]||'').trim(),
           prefijo:String(row[iPrefi>=0?iPrefi:0]||'').trim(),
-          fecha:fecha, mes:mesDeFecha(fecha),
+          fecha:fecha, mes:cufeMesDeFecha(fecha),
           nitEmisor:  String(row[iNitE>=0?iNitE:0]||'').trim(),
           nomEmisor:  String(row[iNomE>=0?iNomE:0]||'').trim(),
           nitReceptor:String(row[iNitR>=0?iNitR:0]||'').trim(),
@@ -307,7 +307,7 @@ function cufeCiclo(){
     // Calcular DV del NIT
     if(!item.dv){
       var nitParaDV=item.nitEmisor||item.nitReceptor||'';
-      item.dv=calcDV(nitParaDV);
+      item.dv=cufeCalcDV(nitParaDV);
     }
     item.procesado=true;
     _cufeState.ok++;
