@@ -14,7 +14,7 @@
 <script>
 
 // ── TABLA DIVIPOLA (DIAN) ──────────────────────────────────
-var DIAN_DPTOS = {
+var CUFE_DPTOS = {
   'AMAZONAS':'91','ANTIOQUIA':'05','ARAUCA':'81','ATLANTICO':'08',
   'BOGOTA':'11','BOGOTA D.C.':'11','BOGOTA D.C':'11','BOLIVAR':'13',
   'BOYACA':'15','CALDAS':'17','CAQUETA':'18','CASANARE':'85',
@@ -74,7 +74,7 @@ function cufeGetDpto(nombre){
     .replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E')
     .replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O')
     .replace(/[ÚÙÛÜ]/g,'U').replace(/Ñ/g,'N');
-  return DIAN_DPTOS[n]||DIAN_DPTOS[n.split(' ')[0]]||'';
+  return CUFE_DPTOS[n]||CUFE_DPTOS[n.split(' ')[0]]||'';
 }
 
 // Calcular dígito de verificación del NIT
