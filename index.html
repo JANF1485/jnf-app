@@ -254,6 +254,159 @@ window.cufeCargarExcel = function(input){
   reader.readAsBinaryString(file);
 };
 
+// ── CARGAR ZIP DE FACTURAS (extension JNF) ───────────────
+window.cufeCargarZip = function(input) {
+  var file = input.files[0]; if (!file) return;
+  var zn = cge('cufe-zip-nombre');
+  if (zn) zn.textContent = 'Leyendo ZIP...';
+  cufeLog('info', 'Leyendo ZIP: ' + file.name);
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      function cargar(JSZip) {
+        JSZip.loadAsync(e.target.result).then(function(zip) {
+          cufeExtraerDatosZip(zip, file.name);
+        }).catch(function(err){ cufeLog('err','Error ZIP: '+err.message); });
+      }
+      if (typeof JSZip !== 'undefined') { cargar(JSZip); }
+      else {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = function(){ cargar(JSZip); };
+        s.onerror = function(){ cufeLog('err','Error cargando JSZip'); };
+        document.head.appendChild(s);
+      }
+    } catch(ex){ cufeLog('err','Error: '+ex.message); }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.cufeExtraerDatosZip = function(zip, nombre) {
+  var xmlData = {};
+  var archivos = [];
+  zip.forEach(function(path, entry) {
+    if (path.endsWith('.zip') && !entry.dir) archivos.push({path:path, entry:entry});
+  });
+  cufeLog('info', archivos.length + ' documentos en el ZIP');
+  if (!archivos.length) { cufeLog('err','No se encontraron documentos'); return; }
+
+  var procesados = 0;
+  archivos.forEach(function(arch) {
+    arch.entry.async('arraybuffer').then(function(data) {
+      return JSZip.loadAsync(data);
+    }).then(function(inner) {
+      var xmlEntry = null;
+      inner.forEach(function(p, e) { if(p.endsWith('.xml')&&!e.dir) xmlEntry=e; });
+      if (!xmlEntry) { procesados++; check(); return; }
+      return xmlEntry.async('text').then(function(txt) {
+        var d = cufeParseXML(txt);
+        if (d.cufe) xmlData[d.cufe] = d;
+        procesados++; check();
+      });
+    }).catch(function(err){
+      cufeLog('err','Error en '+arch.path+': '+err.message);
+      procesados++; check();
+    });
+  });
+
+  function check() {
+    if (procesados < archivos.length) return;
+    var total = Object.keys(xmlData).length;
+    cufeLog('ok', total + ' XMLs leidos correctamente');
+    var zn = cge('cufe-zip-nombre');
+    if (zn) zn.textContent = String.fromCharCode(10003)+' '+total+' XMLs de '+nombre;
+    _cufeState.xmlData = xmlData;
+    if (_cufeState.dianRows && _cufeState.dianRows.length > 0) cufeEnriquecerConXML();
+  }
+};
+
+window.cufeParseXML = function(xml) {
+  var d = {};
+  function ex(tag) {
+    var m = xml.match(new RegExp('<(?:[a-z]+:)?'+tag+'[^>]*>([^<]+)<','i'));
+    return m ? m[1].trim() : '';
+  }
+
+  // CUFE
+  d.cufe = ex('UUID');
+
+  // Emisor: NIT y DV
+  var mEm = xml.match(/AccountingSupplierParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
+  if (mEm) { d.nitEmisor=mEm[2]; d.dvEmisor=mEm[1]; }
+  d.nomEmisor = (xml.match(/AccountingSupplierParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
+  d.nomEmisor = d.nomEmisor.trim();
+
+  // Receptor: NIT y DV
+  var mRec = xml.match(/AccountingCustomerParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
+  if (mRec) { d.nitReceptor=mRec[2]; d.dvReceptor=mRec[1]; }
+  d.nomReceptor = (xml.match(/AccountingCustomerParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
+  d.nomReceptor = d.nomReceptor.trim();
+
+  // Ubicacion del emisor (PhysicalLocation)
+  var loc = (xml.match(/PhysicalLocation[\s\S]{0,2000}?<\/cac:PhysicalLocation>/i)||[])[0]||'';
+  if (loc) {
+    d.dir     = (loc.match(/<cbc:Line>([^<]+)/i)||[])[1]||'';
+    d.ciudad  = (loc.match(/<cbc:CityName>([^<]+)/i)||[])[1]||'';
+    d.dptoNom = (loc.match(/<cbc:CountrySubentity>([^<]+)/i)||[])[1]||'';
+    // Codigo DIVIPOLA 5 digitos: primeros 2 = departamento, ultimos 3 = municipio
+    var codDiv = (loc.match(/<cbc:ID>(\d{5})<\/cbc:ID>/i)||[])[1]||'';
+    if (codDiv.length === 5) {
+      d.dpto = codDiv.substring(0, 2);   // 2 digitos departamento
+      d.codMun = codDiv.substring(2, 5); // 3 digitos municipio
+    } else {
+      d.dpto = (loc.match(/<cbc:CountrySubentityCode>([^<]+)/i)||[])[1]||'';
+      d.codMun = '';
+    }
+    d.dir = d.dir.trim();
+    d.ciudad = d.ciudad.trim();
+  }
+
+  // Totales
+  d.total    = parseFloat(ex('PayableAmount')) || 0;
+  d.subtotal = parseFloat((xml.match(/<cbc:LineExtensionAmount[^>]*>([^<]+)/i)||[])[1]) || 0;
+
+  // Impuestos por tasa
+  d.iva=0; d.b19=0; d.b5=0; d.iv5=0; d.ex=0;
+  var taxBlocks = xml.match(/<cac:TaxTotal>[\s\S]*?<\/cac:TaxTotal>/gi)||[];
+  taxBlocks.forEach(function(blk){
+    var amt  = parseFloat((blk.match(/<cbc:TaxAmount[^>]*>([^<]+)/i)||[])[1]||0);
+    var base = parseFloat((blk.match(/<cbc:TaxableAmount[^>]*>([^<]+)/i)||[])[1]||0);
+    var pct  = parseFloat((blk.match(/<cbc:Percent>([^<]+)/i)||[])[1]||0);
+    if (pct===19) { d.iva+=amt; d.b19=base; }
+    else if (pct===5) { d.iv5+=amt; d.b5=base; }
+    else { d.ex=(d.ex||0)+base; }
+  });
+
+  // Fecha
+  d.fecha = ex('IssueDate');
+
+  return d;
+};
+
+window.cufeEnriquecerConXML = function() {
+  var xmlData = _cufeState.xmlData || {};
+  var rows = _cufeState.dianRows || [];
+  var ok = 0;
+  rows.forEach(function(item) {
+    var xml = xmlData[item.cufe];
+    if (!xml) return;
+    // Enriquecer con datos del XML
+    if (xml.dir)         item.dir      = xml.dir;
+    if (xml.ciudad)      item.ciudad   = xml.ciudad;
+    if (xml.dpto)        item.dpto     = xml.dpto;      // 2 digitos
+    if (xml.codMun)      item.codMun   = xml.codMun;    // 3 digitos
+    if (xml.dvEmisor)    item.dvEmisor = xml.dvEmisor;
+    if (xml.dvReceptor)  item.dvReceptor = xml.dvReceptor;
+    if (xml.b19 && !item.b19) item.b19 = xml.b19;
+    if (xml.b5  && !item.b5)  item.b5  = xml.b5;
+    if (xml.ex  && !item.ex)  item.ex  = xml.ex;
+    if (xml.iva && !item.iva) item.iva = xml.iva;
+    ok++;
+  });
+  cufeLog('ok', ok + ' documentos enriquecidos con datos del XML');
+};
+
+
 window.cufeAbrirDian=function(){
   _cufeState.dianWindow=window.open('https://catalogo-vpfe.dian.gov.co/User/SearchDocument','dian_portal','width=1100,height=750,resizable=yes,scrollbars=yes');
   var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
@@ -10434,7 +10587,12 @@ function poblarFiltroContador(){
               📁 Seleccionar Excel DIAN
               <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="cufeCargarExcel(this)"/>
             </label>
+            <label class="cufe-btn-p" style="cursor:pointer;background:#065f46;">
+              📦 Subir ZIP de facturas
+              <input type="file" accept=".zip" style="display:none;" onchange="cufeCargarZip(this)"/>
+            </label>
             <span id="cufe-archivo-nombre" style="font-size:11px;color:#6b7280;font-family:Montserrat,sans-serif;"></span>
+            <span id="cufe-zip-nombre" style="font-size:11px;color:#065f46;font-family:Montserrat,sans-serif;"></span>
           </div>
           <div id="cufe-info-dian" style="display:none;margin-top:12px;padding:12px 16px;background:#f8faff;border-radius:8px;border:1px solid #c7d0f0;">
             <div style="font-size:12px;font-weight:800;color:#1a2580;" id="cufe-total-fact"></div>
