@@ -166,9 +166,7 @@ window._openCufe = window.openCufe = function(){
   ['cufe-info-dian','cufe-progreso-card','cufe-resultados-card'].forEach(function(id){
     var el=cge(id); if(el) el.style.display='none';
   });
-  var ba=cge('cufe-btn-abrir-dian'); if(ba) ba.disabled=true;
   var bi=cge('cufe-btn-iniciar');    if(bi) bi.disabled=true;
-  var bs=cge('cufe-btn-sesion-ok');  if(bs) bs.style.display='none';
   var an=cge('cufe-archivo-nombre'); if(an) an.textContent='';
   var log=cge('cufe-log');           if(log) log.innerHTML='';
   showScreen('cufe');
@@ -249,7 +247,6 @@ window.cufeCargarExcel = function(input){
         var rs=cge('cufe-resumen-sh');
         if(rs) rs.textContent=Object.entries(resumen).map(function(e){return e[0]+': '+e[1];}).join(' | ');
       }
-      var ba=cge('cufe-btn-abrir-dian'); if(ba) ba.disabled=false;
     }catch(err){alert('Error: '+err.message); if(an) an.textContent='Error';}
   };
   reader.readAsBinaryString(file);
@@ -385,8 +382,6 @@ window.cufeExtraerDatosZip = function(zip, nombre) {
     var bi = cge('cufe-btn-iniciar');
     if (bi) bi.disabled = false;
     // Ocultar paso 2 (abrir portal DIAN) ya que no es necesario con el ZIP
-    var paso2 = cge('cufe-paso-2');
-    if (paso2) paso2.style.opacity = '0.4';
     cufeLog('ok', 'ZIP listo. Haz clic en Iniciar proceso para generar el Excel.');
   }
 };
@@ -478,17 +473,6 @@ window.cufeEnriquecerConXML = function() {
 };
 
 
-window.cufeAbrirDian=function(){
-  _cufeState.dianWindow=window.open('https://catalogo-vpfe.dian.gov.co/User/SearchDocument','dian_portal','width=1100,height=750,resizable=yes,scrollbars=yes');
-  var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
-  cufeLog('info','Portal DIAN abierto. Inicia sesion y regresa aqui.');
-};
-
-window.cufeSesionOk=function(){
-  var bi=cge('cufe-btn-iniciar'); if(bi) bi.disabled=false;
-  cufeLog('ok','Sesion confirmada. Haz clic en Iniciar proceso.');
-};
-
 window.cufeIniciarProceso=function(){
   if(!_cufeState.dianRows.length){alert('Carga primero el Excel de la DIAN o un ZIP de facturas.');return;}
   _cufeState.procesando=true; _cufeState.pausado=false;
@@ -511,179 +495,6 @@ window.cufeIniciarProceso=function(){
     cufeTerminar();
     return;
   }
-  cufeLog('info','Iniciando '+total+' documentos...');
-  cufeCiclo();
-};
-
-function cufeCiclo(){
-  if(!_cufeState.procesando||_cufeState.pausado) return;
-  var idx=_cufeState.idx, lista=_cufeState.dianRows, total=lista.length;
-  if(idx>=total){cufeTerminar();return;}
-  var item=lista[idx];
-  var pct=Math.round((idx/total)*100);
-  var bar=cge('cufe-barra'); if(bar) bar.style.width=pct+'%';
-  var txt=cge('cufe-progreso-txt');
-  if(txt) txt.textContent=(idx+1)+'/'+total+' ['+item.sh+'] '+(item.nomEmisor||item.nitEmisor||'');
-  var cp=cge('cufe-cnt-pend'); if(cp) cp.textContent=String(total-idx);
-  cufeFetch(item,function(r){
-    if(r.ok){
-      item.b19=r.b19||0; item.b5=r.b5||0;
-      item.ex=r.ex||0;   item.exc=r.exc||0;
-      item.iv19=r.iv19||0; item.iv5=r.iv5||0;
-      item.ipo=r.ipo||0; item.ipo8=r.ipo8||0;
-      if(r.dir) item.dir=r.dir;
-      if(r.ciudad) item.ciudad=r.ciudad;
-      if(r.dpto) item.dpto=r.dpto;
-      cufeLog('ok','['+item.sh+'] '+(item.nomEmisor||item.nitEmisor)+' B19:$'+Math.round(item.b19).toLocaleString('es-CO'));
-    } else {
-      cufeCalcular(item);
-      cufeLog('info','['+item.sh+'] Calculado: '+(item.nomEmisor||item.nitEmisor));
-    }
-    // Calcular DV del NIT
-    if(!item.dv){
-      var nitParaDV=item.nitEmisor||item.nitReceptor||'';
-      item.dv=cufeCalcDV(nitParaDV);
-    }
-    item.procesado=true;
-    _cufeState.ok++;
-    var co=cge('cufe-cnt-ok'); if(co) co.textContent=String(_cufeState.ok);
-    _cufeState.idx++;
-    setTimeout(cufeCiclo,600);
-  });
-}
-
-function cufeFetch(item,callback){
-  var dianWin=_cufeState.dianWindow;
-  if(!dianWin||dianWin.closed){
-    _cufeState.pausado=true;
-    var bs=cge('cufe-btn-sesion-ok'); if(bs) bs.style.display='inline-block';
-    cufeLog('err','Ventana DIAN cerrada. Reabrir y confirmar sesion.');
-    callback({ok:false}); return;
-  }
-  // Navegar la ventana DIAN al documento del CUFE
-  var url='https://catalogo-vpfe.dian.gov.co/Document/FindDocument?documentKey='+encodeURIComponent(item.cufe);
-  try {
-    dianWin.location.href = url;
-  } catch(e) {
-    callback({ok:false}); return;
-  }
-  // Esperar que cargue y leer el DOM
-  var intentos = 0;
-  var maxIntentos = 20; // 10 segundos max
-  var checker = setInterval(function(){
-    intentos++;
-    if(intentos > maxIntentos){
-      clearInterval(checker);
-      cufeLog('info','Timeout - calculando desde Excel');
-      callback({ok:false});
-      return;
-    }
-    try {
-      var doc = dianWin.document;
-      var readyState = doc.readyState;
-      var url2 = dianWin.location.href;
-      // Esperar que haya navegado y cargado
-      if(readyState !== 'complete') return;
-      if(url2.indexOf('FindDocument') >= 0 || url2.indexOf('SearchDocument') >= 0) return;
-      // Pagina cargada - leer contenido
-      clearInterval(checker);
-      var body = doc.body ? (doc.body.innerText || doc.body.textContent || '') : '';
-      if(body.length < 100){ callback({ok:false}); return; }
-      cufeParseTexto(body, callback);
-    } catch(corsErr) {
-      // CORS bloqueado - no podemos leer el DOM
-      clearInterval(checker);
-      callback({ok:false});
-    }
-  }, 500);
-}
-
-function cufeParseTexto(text, callback){
-  function ex(p){var m=text.match(p);return m?parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0:0;}
-  function exStr(p){var m=text.match(p);return m?m[1].trim():'';}
-  var sub  = ex(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
-  var iva  = ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
-  var rF   = ex(/Rete\s*fuente[\s\S]{0,30}?([\d.,]+)/i);
-  var rI   = ex(/Rete\s*IVA[\s\S]{0,30}?([\d.,]+)/i);
-  var tot  = ex(/Total\s*factura[\s\S]{0,30}?([\d.,]+)/i);
-  var dir  = exStr(/Direcci[oó]n[:\s]+([^\n\r]+)/i);
-  var mun  = exStr(/Municipio\s*\/\s*Ciudad[:\s]+([^\n\r]+)/i);
-  var dptoNom = exStr(/Departamento[:\s]+([^\n\r]+)/i);
-  var dptoCod = cufeGetDpto(dptoNom);
-  if(sub > 0){
-    var res={ok:true, dir:dir, ciudad:mun, dpto:dptoCod||dptoNom, reteRenta:rF, reteIVA:rI, total:tot||sub+iva};
-    if(iva > 0){
-      var p = iva/sub;
-      if(Math.abs(p-0.19)<0.01){res.b19=sub;res.iv19=iva;}
-      else if(Math.abs(p-0.05)<0.01){res.b5=sub;res.iv5=iva;}
-      else{res.b19=sub;res.iv19=iva;}
-    } else {res.ex=sub;}
-    callback(res);
-  } else {callback({ok:false});}
-}
-
-function cufeParseJSON(d,cb){
-  try{
-    var t=d.totals||d.Totals||d.totales||d;
-    var sup=d.supplier||d.Supplier||{};
-    var addr=sup.address||sup.Address||{};
-    cb({ok:true,
-      b19:t.subtotalTaxableAmount19||0, b5:t.subtotalTaxableAmount5||0,
-      ex:t.subtotalExempt||0, exc:t.subtotalExcluded||0,
-      iv19:t.taxAmount19||0, iv5:t.taxAmount5||0,
-      ipo:t.taxAmountINC||0, ipo8:t.taxAmountINC8||0,
-      dir:addr.street||addr.line||'',
-      ciudad:addr.city||addr.cityName||'',
-      dpto:cufeGetDpto(addr.department||addr.departmentName)||addr.department||''
-    });
-  }catch(e){cb({ok:false});}
-}
-
-function cufeParseHTML(html,cb){
-  var tmp=document.createElement('div'); tmp.innerHTML=html;
-  var text=tmp.innerText||tmp.textContent||'';
-  function ex(p){var m=text.match(p);return m?parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0:0;}
-  function exStr(p){var m=text.match(p);return m?m[1].trim():'';}
-  var sub=ex(/Subtotal[\s\S]{0,50}?([\d.,]+)/);
-  var iva=ex(/\bIVA\b[\s\S]{0,30}?([\d.,]+)/);
-  var dir=exStr(/Direcci[oó]n[:\s]+([^\n\r]+)/i);
-  var mun=exStr(/Municipio\s*\/\s*Ciudad[:\s]+([^\n\r]+)/i);
-  var dptoNom=exStr(/Departamento[:\s]+([^\n\r]+)/i);
-  var dptoCod=cufeGetDpto(dptoNom);
-  if(sub>0){
-    var res={ok:true,dir:dir,ciudad:mun,dpto:dptoCod||dptoNom};
-    if(iva>0){
-      var p=iva/sub;
-      if(Math.abs(p-0.19)<0.01){res.b19=sub;res.iv19=iva;}
-      else if(Math.abs(p-0.05)<0.01){res.b5=sub;res.iv5=iva;}
-      else{res.b19=sub;res.iv19=iva;}
-    } else {res.ex=sub;}
-    cb(res);
-  } else {cb({ok:false});}
-}
-
-function cufeCalcular(item){
-  var iva=item.iva||0, total=item.total||0, sub=total-iva;
-  if(iva>0&&sub>0){
-    var p=iva/sub;
-    if(Math.abs(p-0.19)<0.02){item.b19=sub;item.iv19=iva;}
-    else if(Math.abs(p-0.05)<0.02){item.b5=sub;item.iv5=iva;}
-    else if(Math.abs(p-0.08)<0.02){item.ipo=sub;item.ipo8=iva;}
-    else{item.b19=sub;item.iv19=iva;}
-  } else if(!iva&&total>0){item.ex=total;}
-}
-
-window.cufePausar=function(){
-  _cufeState.pausado=!_cufeState.pausado;
-  var bp=cge('cufe-btn-pausar');
-  if(bp) bp.textContent=_cufeState.pausado?'Reanudar':'Pausar';
-  if(!_cufeState.pausado) cufeCiclo();
-};
-
-window.cufeCancelar=function(){
-  _cufeState.procesando=false;
-  cufeLog('err','Proceso cancelado.');
-  cufeTerminar();
 };
 
 function cufeTerminar(){
@@ -719,83 +530,265 @@ function cufeMostrarResumen(){
 window.cufeDescargarExcel=function(){
   var lista=_cufeState.dianRows;
   if(!lista.length){alert('No hay datos.');return;}
-  var wb=XLSX.utils.book_new();
-  var nit='NIT: 901.904.435-9';
-  var empresa='ASESORIAS Y CONSULTORIAS JNF S.A.S.';
-  var anio=new Date().getFullYear();
 
-  function makeSheet(sh, cols, items){
-    var rows=[];
-    rows.push([]);
-    rows.push(['','',empresa,'','','','','','','','','','','','','',nit]);
-    rows.push([]);
-    rows.push(['FORMATO CONTABLE MENSUAL','','','','','','','','','','','','','ANO '+anio]);
-    rows.push([]);
-    rows.push(cols);
-    items.forEach(function(item){
-      var row=cols.map(function(col){return cufeValCol(col,item,sh);});
-      rows.push(row);
-    });
-    return XLSX.utils.aoa_to_sheet(rows);
+  // Usar xlsx-js-style para colores
+  var XS=(typeof XLSXStyle!=='undefined')?XLSXStyle:XLSX;
+
+  // ── Paleta corporativa ──────────────────────────────────────────────────
+  var AZUL='1A2580', AZUL2='2F4BA0', DORADO='C9A227', BLANCO='FFFFFF';
+  var GRIS1='F2F4FB', GRIS2='E8EBF5', VERDE='1A6334', ROJO='8B1A1A';
+
+  function stHdr(bg,color){
+    return{font:{bold:true,color:{rgb:color||BLANCO},sz:9,name:'Calibri'},
+      fill:{fgColor:{rgb:bg||AZUL}},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:{bottom:{style:'thin',color:{rgb:DORADO}}}};
+  }
+  function stTitulo(bg){
+    return{font:{bold:true,color:{rgb:BLANCO},sz:11,name:'Calibri'},
+      fill:{fgColor:{rgb:bg||AZUL}},
+      alignment:{horizontal:'center',vertical:'center'}};
+  }
+  function stSubtitulo(){
+    return{font:{bold:true,color:{rgb:AZUL},sz:10,name:'Calibri'},
+      fill:{fgColor:{rgb:DORADO}},
+      alignment:{horizontal:'left',vertical:'center'}};
+  }
+  function stDato(par,isNum,isNew){
+    var bg=isNew?(par?'FFF8E7':'FFFDF0'):(par?GRIS1:BLANCO);
+    return{font:{color:{rgb:'1A1A2E'},sz:9,name:'Calibri'},
+      fill:{fgColor:{rgb:bg}},
+      alignment:{horizontal:isNum?'right':'left',vertical:'center'},
+      numFmt:isNum?'#,##0':'@',
+      border:{right:{style:'hair',color:{rgb:'C7CDE8'}}}};
+  }
+  function stTotal(isNum){
+    return{font:{bold:true,color:{rgb:BLANCO},sz:9,name:'Calibri'},
+      fill:{fgColor:{rgb:VERDE}},
+      alignment:{horizontal:isNum?'right':'center',vertical:'center'},
+      numFmt:isNum?'#,##0':'@'};
   }
 
+  // Columnas nuevas (doradas en encabezado)
+  var COLS_NUEVAS=['DV RECEPTOR','DV EMISOR','DV','COD. MUNICIPIO','COD. DEPTO','COD. PAIS','PAIS'];
+
+  var COLS_NUM=['IVA','TOTAL','BASE','BASE 19%','BASE 5%','IVA 19%','IVA 5%','EXENTO',
+    'EXCLUIDO/BASE IPO','IPO 8%','TOTAL FACTURA','BASE 19','BASE 5','IVA19%','RETEIVA',
+    'IPOCONSUMO','TARIFA RETEFUENTE','BASE RETENCION','TOTAL.1',
+    'ENERO','LIQUIDACION','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO',
+    'SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+  var ANIO=new Date().getFullYear();
+  var cl=(typeof clients!=='undefined'&&typeof activeClientId!=='undefined')?
+    clients.find(function(x){return x.id===activeClientId;}):null;
+  var EMPRESA=cl?(cl.razon||'EMPRESA'):'ASESORIAS Y CONSULTORIAS JNF S.A.S.';
+  var NIT_EMP=cl?('NIT: '+(cl.nit||'')+(cl.dv?'-'+cl.dv:'')):'NIT: 901.904.435-9';
+
+  // ── Definicion de pestanas con nuevas columnas ─────────────────────────
   var shOrder=[
-    {sh:'VENTAS',        cols:['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','APLIC. RETEFUENTE','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19%','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','TOTAL FACTURA']},
-    {sh:'DEV EN VENTAS', cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','APLIC. RETEIVA','NIT Receptor','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5%','IVA 19%','IVA 5%','EXCLUIDO/BASE IPO','IPO 8%','EXENTO','RETEIVA','TOTAL FACTURA']},
-    {sh:'COSTOS',        cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1','BASE RETENCION']},
-    {sh:'DV COSTOS',     cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','MES','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA','NIT Emisor','Nombre Emisor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','TOTAL']},
-    {sh:'DOC. SOPORTE',  cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','NOMBRES Y APELLIDOS','CARGO','DIRECCION','CIUDAD','DEPARTAMENTO','ENERO','LIQUIDACION','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE','TOTAL']},
-    {sh:'NOMINA',        cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','CATEGORIA','NIT','Nombre Receptor','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','Total']},
-    {sh:'SERV PUBLICOS', cols:['Tipo de documento','CUFE/CUDE','Folio','Prefijo','Fecha Emision','T.P.','APLIC. RETEFUENTE','TARIFA RETEFUENTE','NIT','DV','RAZON SOCIAL','DIRECCION','CIUDAD','DEPARTAMENTO','IVA','TOTAL','BASE 19','BASE 5','IVA19%','IVA 5%','EXENTO','EXCLUIDO','RETEIVA','TOTAL.1']},
-    {sh:'IPOCONSUMO',    cols:['TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.','NIT RECEPTOR','NOMBRE RECEPTOR','DIRECCION','CIUDAD','DEPARTAMENTO','IPOCONSUMO','IPO 8%','TOTAL']}
+    {sh:'VENTAS', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT RECEPTOR','DV RECEPTOR','NOMBRE RECEPTOR',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE',
+      'BASE 19%','BASE 5%','EXENTO','EXCLUIDO/BASE IPO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL FACTURA']},
+    {sh:'DEV EN VENTAS', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT RECEPTOR','DV RECEPTOR','NOMBRE RECEPTOR',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE','APLIC. RETEIVA',
+      'BASE 19%','BASE 5%','EXENTO','EXCLUIDO/BASE IPO','IVA 19%','IVA 5%','IPO 8%','RETEIVA','IVA','TOTAL FACTURA']},
+    {sh:'COSTOS', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT Emisor','DV EMISOR','Nombre Emisor',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA',
+      'BASE 19','BASE 5','EXENTO','EXCLUIDO','IVA19%','IVA 5%','RETEIVA','IVA','TOTAL.1','BASE RETENCION']},
+    {sh:'DV COSTOS', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT Emisor','DV EMISOR','Nombre Emisor',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE','TARIFA RETEFUENTE','APLIC. RETEIVA',
+      'BASE 19','BASE 5','EXENTO','EXCLUIDO','IVA19%','IVA 5%','IVA','TOTAL']},
+    {sh:'DOC. SOPORTE', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','FECHA EMISION','T.P.',
+      'NIT','DV','NOMBRES Y APELLIDOS','CARGO',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE','TARIFA RETEFUENTE',
+      'ENERO','LIQUIDACION','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE','TOTAL']},
+    {sh:'NOMINA', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','FECHA EMISION','T.P.','CATEGORIA',
+      'NIT','DV','Nombre Receptor',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'IVA','TOTAL']},
+    {sh:'SERV PUBLICOS', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','FECHA EMISION','T.P.',
+      'NIT','DV','RAZON SOCIAL',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'APLIC. RETEFUENTE','TARIFA RETEFUENTE',
+      'BASE 19','BASE 5','EXENTO','EXCLUIDO','IVA19%','IVA 5%','RETEIVA','IVA','TOTAL.1']},
+    {sh:'IPOCONSUMO', cols:[
+      'TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT RECEPTOR','DV RECEPTOR','NOMBRE RECEPTOR',
+      'DIRECCION','CIUDAD','COD. MUNICIPIO','DEPARTAMENTO','COD. DEPTO','COD. PAIS',
+      'IPOCONSUMO','IPO 8%','TOTAL']}
   ];
 
+  // Colores de pestana
+  var SH_COLORS={
+    'VENTAS':      {hdr:AZUL,  tab:'1A2580'},
+    'DEV EN VENTAS':{hdr:'4A1565',tab:'4A1565'},
+    'COSTOS':      {hdr:'0F4C2A',tab:'0F4C2A'},
+    'DV COSTOS':   {hdr:'5C1F00',tab:'5C1F00'},
+    'DOC. SOPORTE':{hdr:'1A4A6B',tab:'1A4A6B'},
+    'NOMINA':      {hdr:'3D1A6B',tab:'3D1A6B'},
+    'SERV PUBLICOS':{hdr:'5C4400',tab:'5C4400'},
+    'IPOCONSUMO':  {hdr:'1A5C5C',tab:'1A5C5C'}
+  };
+
+  // ── Funcion para construir cada hoja ───────────────────────────────────
+  function makeSheet(sh, cols, items){
+    var nc=cols.length;
+    var aoa=[];
+
+    // Fila 1: titulo empresa
+    var r1=new Array(nc).fill('');
+    r1[0]=EMPRESA;
+    r1[nc-1]=NIT_EMP;
+    aoa.push(r1);
+
+    // Fila 2: titulo formato
+    var r2=new Array(nc).fill('');
+    r2[0]='FORMATO CONTABLE MENSUAL - '+sh+' - AÑO '+ANIO;
+    aoa.push(r2);
+
+    // Fila 3: encabezados
+    aoa.push(cols.map(function(c){return c.toUpperCase();}));
+
+    // Filas de datos
+    items.forEach(function(item){
+      var row=cols.map(function(col){return cufeValCol(col,item,sh);});
+      aoa.push(row);
+    });
+
+    // Fila totales
+    var totRow=cols.map(function(c){
+      if(c==='TIPO DOC'||c==='TIPO DOC') return 'TOTALES';
+      if(COLS_NUM.indexOf(c)>=0){
+        return items.reduce(function(s,r){return s+(parseFloat(cufeValCol(c,r,sh))||0);},0);
+      }
+      return '';
+    });
+    aoa.push(totRow);
+
+    var ws=XS.utils.aoa_to_sheet(aoa);
+    var shColor=SH_COLORS[sh]||{hdr:AZUL};
+
+    // Aplicar estilos celda a celda
+    aoa.forEach(function(row,ri){
+      row.forEach(function(val,ci){
+        var addr=XS.utils.encode_cell({r:ri,c:ci});
+        if(!ws[addr]) return;
+        var isNum=COLS_NUM.indexOf(cols[ci])>=0;
+        var isNew=COLS_NUEVAS.indexOf(cols[ci])>=0;
+        var isTot=ri===aoa.length-1;
+        if(ri===0){
+          ws[addr].s=stTitulo(shColor.hdr);
+        } else if(ri===1){
+          ws[addr].s=stSubtitulo();
+        } else if(ri===2){
+          // Encabezado de columna
+          var bg=isNew?DORADO:shColor.hdr;
+          var fc=isNew?AZUL:BLANCO;
+          ws[addr].s=stHdr(bg,fc);
+        } else if(isTot){
+          ws[addr].s=stTotal(isNum);
+        } else {
+          ws[addr].s=stDato((ri%2===0),isNum,isNew);
+        }
+      });
+    });
+
+    // Merge fila 1 y 2
+    ws['!merges']=[
+      {s:{r:0,c:0},e:{r:0,c:Math.floor(nc/2)-1}},
+      {s:{r:0,c:Math.floor(nc/2)},e:{r:0,c:nc-1}},
+      {s:{r:1,c:0},e:{r:1,c:nc-1}}
+    ];
+
+    // Anchos de columna
+    ws['!cols']=cols.map(function(c){
+      if(c==='CUFE/CUDE') return{wch:20};
+      if(c==='NOMBRE RECEPTOR'||c==='Nombre Emisor'||c==='NOMBRES Y APELLIDOS'||c==='RAZON SOCIAL'||c==='Nombre Receptor') return{wch:28};
+      if(c==='DIRECCION') return{wch:22};
+      if(c==='FECHA EMISION'||c==='Fecha Emision') return{wch:12};
+      if(COLS_NUM.indexOf(c)>=0) return{wch:13};
+      if(COLS_NUEVAS.indexOf(c)>=0) return{wch:10};
+      return{wch:11};
+    });
+
+    // Alto de filas
+    ws['!rows']=[{hpt:22},{hpt:18},{hpt:32}];
+
+    return ws;
+  }
+
+  // ── Generar libro ──────────────────────────────────────────────────────
+  var wb=XS.utils.book_new();
   shOrder.forEach(function(def){
     var items=lista.filter(function(r){return r.sh===def.sh;});
     if(!items.length) return;
     var ws=makeSheet(def.sh, def.cols, items);
-    XLSX.utils.book_append_sheet(wb, ws, def.sh);
+    XS.utils.book_append_sheet(wb, ws, def.sh);
   });
 
   var hoy=new Date().toLocaleDateString('es-CO').replace(/\//g,'-');
-  XLSX.writeFile(wb,'FormatoContable_'+hoy+'.xlsx');
-  cufeLog('ok','Excel descargado: '+wb.SheetNames.join(', '));
+  XS.writeFile(wb,'FormatoContable_'+hoy+'.xlsx',{cellStyles:true,bookSST:false});
+  cufeLog('ok','Excel con formato descargado: '+wb.SheetNames.join(', '));
 };
 
 function cufeValCol(col, item, sh){
+  var dvE=item.dvEmisor||cufeCalcDV(item.nitEmisor||'');
+  var dvR=item.dvReceptor||cufeCalcDV(item.nitReceptor||'');
+  var dvG=sh==='VENTAS'||sh==='DEV EN VENTAS'||sh==='IPOCONSUMO'?dvR:dvE;
   switch(col){
-    case 'TIPO DOC': case 'Tipo de documento': return item.tipo;
-    case 'CUFE/CUDE': return item.cufe;
-    case 'FOLIOS': case 'Folio': return item.folio;
-    case 'PREFIJO': case 'Prefijo': return item.prefijo;
-    case 'MES': return item.mes;
-    case 'FECHA EMISION': case 'Fecha Emision': return item.fecha;
+    case 'TIPO DOC': return item.tipo||'';
+    case 'CUFE/CUDE': return item.cufe||'';
+    case 'FOLIOS': case 'Folio': return item.folio||'';
+    case 'PREFIJO': case 'Prefijo': return item.prefijo||'';
+    case 'MES': return item.mes||'';
+    case 'FECHA EMISION': case 'Fecha Emision': return item.fecha||'';
     case 'T.P.': return '';
-    case 'NIT RECEPTOR': case 'NIT Receptor': return item.nitReceptor;
-    case 'NOMBRE RECEPTOR': case 'Nombre Receptor': return item.nomReceptor;
-    case 'NIT Emisor': return item.nitEmisor;
-    case 'Nombre Emisor': return item.nomEmisor;
-    case 'NIT': return item.nitEmisor||item.nitReceptor;
-    case 'DV': return item.dv;
-    case 'NOMBRES Y APELLIDOS': case 'RAZON SOCIAL': return item.nomEmisor||item.nomReceptor;
-    case 'DIRECCION': return item.dir;
-    case 'CIUDAD': return item.ciudad;
-    case 'DEPARTAMENTO': return item.dpto;
+    case 'NIT RECEPTOR': case 'NIT Receptor': return item.nitReceptor||'';
+    case 'DV RECEPTOR': return dvR;
+    case 'NOMBRE RECEPTOR': case 'Nombre Receptor': return item.nomReceptor||'';
+    case 'NIT Emisor': return item.nitEmisor||'';
+    case 'DV EMISOR': return dvE;
+    case 'Nombre Emisor': return item.nomEmisor||'';
+    case 'NIT': return item.nitEmisor||item.nitReceptor||'';
+    case 'DV': return dvG;
+    case 'NOMBRES Y APELLIDOS': case 'RAZON SOCIAL': return item.nomEmisor||item.nomReceptor||'';
+    case 'DIRECCION': return item.dir||'';
+    case 'CIUDAD': return item.ciudad||'';
+    case 'COD. MUNICIPIO': return item.codMun||'';
+    case 'DEPARTAMENTO': return item.dptoNom||item.dpto||'';
+    case 'COD. DEPTO': return item.dpto||'';
+    case 'COD. PAIS': case 'PAIS': return 'CO';
     case 'CARGO': case 'CATEGORIA': return '';
-    case 'APLIC. RETEFUENTE': return item.reteRenta>0?'SI':'NO';
+    case 'APLIC. RETEFUENTE': return (item.reteRenta||0)>0?'SI':'NO';
     case 'TARIFA RETEFUENTE': case 'BASE RETENCION': return item.reteRenta||0;
-    case 'APLIC. RETEIVA': return item.reteIVA>0?'SI':'NO';
-    case 'IVA': return item.iva;
-    case 'TOTAL': case 'Total': case 'TOTAL.1': case 'TOTAL FACTURA': return item.total;
-    case 'BASE': case 'BASE 19': case 'BASE 19%': return item.b19;
-    case 'BASE 5': case 'BASE 5%': return item.b5;
-    case 'IVA19%': case 'IVA 19%': return item.iv19;
-    case 'IVA 5%': return item.iv5;
-    case 'EXENTO': return item.ex;
-    case 'EXCLUIDO': case 'EXCLUIDO/BASE IPO': return item.exc;
-    case 'IPOCONSUMO': return item.ipo;
-    case 'IPO 8%': return item.ipo8;
-    case 'RETEIVA': return item.reteIVA;
+    case 'APLIC. RETEIVA': return (item.reteIVA||0)>0?'SI':'NO';
+    case 'IVA': return item.iva||0;
+    case 'TOTAL': case 'Total': case 'TOTAL.1': case 'TOTAL FACTURA': return item.total||0;
+    case 'BASE': case 'BASE 19': case 'BASE 19%': return item.b19||0;
+    case 'BASE 5': case 'BASE 5%': return item.b5||0;
+    case 'IVA19%': case 'IVA 19%': return item.iv19||0;
+    case 'IVA 5%': return item.iv5||0;
+    case 'EXENTO': return item.ex||0;
+    case 'EXCLUIDO': case 'EXCLUIDO/BASE IPO': return item.exc||0;
+    case 'IPOCONSUMO': return item.ipo||0;
+    case 'IPO 8%': return item.ipo8||0;
+    case 'RETEIVA': return item.reteIVA||0;
     case 'ENERO': return item.mes==='ENERO'?item.total:0;
     case 'LIQUIDACION': return item.mes==='FEBRERO'?item.total:0;
     case 'MARZO': return item.mes==='MARZO'?item.total:0;
@@ -846,25 +839,7 @@ function cufeGenerarZip(){
     zip.folder(sub).file('INSTRUCCIONES.txt',
       'Subcarpeta: '+sub+'\n\n'+
       'Esta carpeta contiene los documentos electronicos correspondientes.\n'+
-      'Para descargar cada PDF:\n'+
-      '1. Ingrese al portal DIAN: https://catalogo-vpfe.dian.gov.co/User/SearchDocument\n'+
-      '2. Copie el CUFE del archivo CUFEs_'+sub+'.csv\n'+
-      '3. Pegue el CUFE en el campo de busqueda\n'+
-      '4. Descargue el PDF del documento\n\n'+
-      'Generado por JNF SAS - Sistema de Gestion Contable\n'+
-      'Fecha: '+new Date().toLocaleDateString('es-CO')
-    );
-  });
-  // CSV con CUFEs por subcarpeta
-  Object.entries(CUFE_SUBCARPETAS).forEach(function(entry){
-    var sh=entry[0], sub=entry[1];
-    var items=lista.filter(function(r){return r.sh===sh;});
-    if(!items.length) return;
-    var csv='No,CUFE/CUDE,Tipo,Folio,Prefijo,Fecha,NIT,Nombre,IVA,Base19%,Base5%,Exento,Total\r\n';
-    items.forEach(function(item,i){
-      var nit=item.nitEmisor||item.nitReceptor;
-      var nom=item.nomEmisor||item.nomReceptor;
-      csv+=(i+1)+',"'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'
+      "Los PDFs se obtienen desde el portal DIAN > Descarga Masiva."'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'
         +nit+',"'+nom+'",'+item.iva+','+item.b19+','+item.b5+','+item.ex+','+item.total+'\r\n';
     });
     zip.folder(sub).file('CUFEs_'+sub+'.csv','\uFEFF'+csv);
@@ -10686,17 +10661,7 @@ function poblarFiltroContador(){
       </div>
 
       <!-- PASO 2 -->
-      <div class="cufe-paso">
-        <div class="cufe-num">2</div>
-        <div style="flex:1;">
-          <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:3px;">Abrir portal DIAN e iniciar sesión</div>
-          <div style="font-size:11px;color:#6b7280;line-height:1.5;">La app abrirá el portal DIAN en una ventana separada. Inicia sesión manualmente y regresa aquí.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="cufe-btn-p" id="cufe-btn-abrir-dian" disabled onclick="cufeAbrirDian()">🌐 Abrir Portal DIAN</button>
-            <button class="cufe-btn-p verde" id="cufe-btn-sesion-ok" style="display:none;" onclick="cufeSesionOk()">✓ Ya inicié sesión</button>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- PASO 3 -->
       <div class="cufe-paso">
