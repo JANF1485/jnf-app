@@ -317,7 +317,77 @@ window.cufeExtraerDatosZip = function(zip, nombre) {
     var zn = cge('cufe-zip-nombre');
     if (zn) zn.textContent = String.fromCharCode(10003)+' '+total+' XMLs de '+nombre;
     _cufeState.xmlData = xmlData;
-    if (_cufeState.dianRows && _cufeState.dianRows.length > 0) cufeEnriquecerConXML();
+
+    // Si ya hay filas del Excel DIAN, enriquecer con XML
+    if (_cufeState.dianRows && _cufeState.dianRows.length > 0) {
+      cufeEnriquecerConXML();
+    } else {
+      // Sin Excel DIAN: construir dianRows directamente desde los XMLs del ZIP
+      var filas = [];
+      var resumen = {};
+      Object.values(xmlData).forEach(function(d) {
+        // Determinar tipo y grupo desde el XML
+        var tipoDoc = d.tipoDoc || '';
+        var grupo   = d.grupo   || '';
+        // Si el XML no trae tipo, inferir por tags
+        var sh = cufeGetSh(tipoDoc, grupo);
+        resumen[sh] = (resumen[sh]||0) + 1;
+        filas.push({
+          cufe:        d.cufe        || '',
+          tipo:        tipoDoc,
+          grupo:       grupo,
+          sh:          sh,
+          folio:       d.folio       || '',
+          prefijo:     d.prefijo     || '',
+          fecha:       d.fecha       || '',
+          mes:         cufeMesDeFecha(d.fecha||''),
+          nitEmisor:   d.nitEmisor   || '',
+          nomEmisor:   d.nomEmisor   || '',
+          nitReceptor: d.nitReceptor || '',
+          nomReceptor: d.nomReceptor || '',
+          dv:          d.dvEmisor    || '',
+          dvEmisor:    d.dvEmisor    || '',
+          dvReceptor:  d.dvReceptor  || '',
+          dir:         d.dir         || '',
+          ciudad:      d.ciudad      || '',
+          dpto:        d.dpto        || '',
+          codMun:      d.codMun      || '',
+          iva:         d.iva         || 0,
+          total:       d.total       || 0,
+          subtotal:    d.subtotal    || 0,
+          b19:         d.b19         || 0,
+          b5:          d.b5          || 0,
+          ex:          d.ex          || 0,
+          exc:         d.exc         || 0,
+          iv19:        d.iva         || 0,
+          iv5:         d.iv5         || 0,
+          ipo:         0, ipo8:      0,
+          reteRenta:   d.reteRenta   || 0,
+          reteIVA:     d.reteIVA     || 0,
+          procesado:   true
+        });
+      });
+      _cufeState.dianRows = filas;
+      cufeLog('ok', filas.length + ' documentos cargados desde el ZIP');
+
+      // Mostrar resumen
+      var info = cge('cufe-info-dian');
+      if (info) {
+        info.style.display = 'block';
+        var tf = cge('cufe-total-fact');
+        if (tf) tf.textContent = filas.length + ' documentos';
+        var rs = cge('cufe-resumen-sh');
+        if (rs) rs.textContent = Object.entries(resumen).map(function(e){return e[0]+': '+e[1];}).join(' | ');
+      }
+    }
+
+    // Habilitar "Iniciar proceso" directamente — no requiere portal DIAN cuando hay ZIP
+    var bi = cge('cufe-btn-iniciar');
+    if (bi) bi.disabled = false;
+    // Ocultar paso 2 (abrir portal DIAN) ya que no es necesario con el ZIP
+    var paso2 = cge('cufe-paso-2');
+    if (paso2) paso2.style.opacity = '0.4';
+    cufeLog('ok', 'ZIP listo. Haz clic en Iniciar proceso para generar el Excel.');
   }
 };
 
@@ -420,7 +490,7 @@ window.cufeSesionOk=function(){
 };
 
 window.cufeIniciarProceso=function(){
-  if(!_cufeState.dianRows.length){alert('Carga primero el Excel de la DIAN.');return;}
+  if(!_cufeState.dianRows.length){alert('Carga primero el Excel de la DIAN o un ZIP de facturas.');return;}
   _cufeState.procesando=true; _cufeState.pausado=false;
   _cufeState.idx=0; _cufeState.ok=0; _cufeState.err=0;
   var card=cge('cufe-progreso-card'); if(card) card.style.display='block';
@@ -430,6 +500,17 @@ window.cufeIniciarProceso=function(){
   var co=cge('cufe-cnt-ok');    if(co) co.textContent='0';
   var ce=cge('cufe-cnt-err');   if(ce) ce.textContent='0';
   var bi=cge('cufe-btn-iniciar'); if(bi) bi.disabled=true;
+  // Si todos los docs vienen del ZIP (ya procesados), ir directo al Excel
+  var todosDelZip=_cufeState.dianRows.every(function(r){return r.procesado;});
+  if(todosDelZip && _cufeState.xmlData && Object.keys(_cufeState.xmlData).length){
+    cufeLog('info','Datos del ZIP listos. Generando Excel...');
+    _cufeState.ok=total;
+    var bar=cge('cufe-barra'); if(bar) bar.style.width='100%';
+    var cp2=cge('cufe-cnt-pend'); if(cp2) cp2.textContent='0';
+    var co2=cge('cufe-cnt-ok');   if(co2) co2.textContent=String(total);
+    cufeTerminar();
+    return;
+  }
   cufeLog('info','Iniciando '+total+' documentos...');
   cufeCiclo();
 };
