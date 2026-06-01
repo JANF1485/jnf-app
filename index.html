@@ -837,16 +837,19 @@ function cufeGenerarZip(){
   var zip=new JSZip();
   var lista=_cufeState.dianRows;
   cufeLog('info','Generando ZIP con subcarpetas...');
-  Object.values(CUFE_SUBCARPETAS).forEach(function(sub){
-    // README en cada subcarpeta
-    zip.folder(sub).file('INSTRUCCIONES.txt',
-      'Subcarpeta: '+sub+'\n\n'+
-      'Esta carpeta contiene los documentos electronicos correspondientes.\n'+
-      "Los PDFs se obtienen desde el portal DIAN > Descarga Masiva."'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.prefijo+'","'+item.fecha+'",'
-        +nit+',"'+nom+'",'+item.iva+','+item.b19+','+item.b5+','+item.ex+','+item.total+'\r\n';
+  Object.keys(CUFE_SUBCARPETAS).forEach(function(sh){
+    var sub=CUFE_SUBCARPETAS[sh];
+    var items=lista.filter(function(r){return r.sh===sh;});
+    var csv='No,CUFE,Tipo,Folio,Fecha,NIT,Nombre,Total\r\n';
+    items.forEach(function(item,i){
+      var nit=item.nitEmisor||item.nitReceptor||'';
+      var nom=(item.nomEmisor||item.nomReceptor||'').replace(/"/g,"'");
+      csv+=(i+1)+',"'+item.cufe+'","'+item.tipo+'","'+item.folio+'","'+item.fecha+'",'+nit+',"'+nom+'",'+item.total+'\r\n';
     });
+    zip.folder(sub).file('INSTRUCCIONES.txt','Subcarpeta: '+sub+'\nLos PDFs se obtienen desde el portal DIAN > Facturacion Electronica > Descarga Masiva.');
     zip.folder(sub).file('CUFEs_'+sub+'.csv','\uFEFF'+csv);
   });
+
   // Excel resumen general
   var csvGeneral='No,Pestana,Tipo,CUFE,Folio,Prefijo,Fecha,Mes,NIT,Nombre,Direccion,Ciudad,Departamento,IVA,Base19%,Base5%,Exento,Excluido,IVA19%,IVA5%,ReteRenta,ReteIVA,Total\r\n';
   lista.forEach(function(item,i){
