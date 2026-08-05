@@ -4028,6 +4028,19 @@ function loadClientesFromFirestore(){
     // Sin internet: cargar desde IndexedDB
     jnfOffline.getClientesLocal().then(function(localClients){
       if(localClients && localClients.length > 0){
+        (function(){
+          function normNit(v){ return String(v||'').replace(/[^0-9]/g,''); }
+          function normNombre(v){ return String(v||'').trim().toUpperCase().replace(/\s+/g,' '); }
+          var vistos={}, dedup=[];
+          localClients.forEach(function(c){
+            var nitNorm = normNit(c.nit);
+            var clave = nitNorm || ('NOMBRE:'+normNombre(c.razon||c.nombre));
+            if(vistos[clave]) return;
+            vistos[clave]=true;
+            dedup.push(c);
+          });
+          localClients = dedup;
+        })();
         clients = localClients;
         renderClients();
         // El átomo indica modo offline visualmente
@@ -4041,11 +4054,14 @@ function loadClientesFromFirestore(){
   db.collection('clientes').get().then(function(snap){
     clients = [];
     snap.forEach(function(doc){ clients.push(Object.assign({id:doc.id}, doc.data())); });
-    // Deduplicar por NIT (conserva el primero encontrado)
+    // Deduplicar: normaliza el NIT (solo dígitos); si no hay NIT, usa el nombre normalizado
     (function(){
+      function normNit(v){ return String(v||'').replace(/[^0-9]/g,''); }
+      function normNombre(v){ return String(v||'').trim().toUpperCase().replace(/\s+/g,' '); }
       var vistos={}, dedup=[];
       clients.forEach(function(c){
-        var clave = (c.nit && String(c.nit).trim()) || c.id;
+        var nitNorm = normNit(c.nit);
+        var clave = nitNorm || ('NOMBRE:'+normNombre(c.razon||c.nombre));
         if(vistos[clave]) return;
         vistos[clave]=true;
         dedup.push(c);
@@ -12924,9 +12940,12 @@ function ccSetDefaults(){
 }
 
 function ccDedupClientes(lista){
+  function normNit(v){ return String(v||'').replace(/[^0-9]/g,''); }
+  function normNombre(v){ return String(v||'').trim().toUpperCase().replace(/\s+/g,' '); }
   var vistos={}, out=[];
   lista.forEach(function(c){
-    var clave = (c.nit && String(c.nit).trim()) || c.id;
+    var nitNorm = normNit(c.nit);
+    var clave = nitNorm || ('NOMBRE:'+normNombre(c.razon||c.nombre));
     if(vistos[clave]) return;
     vistos[clave]=true;
     out.push(c);
