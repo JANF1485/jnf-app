@@ -1475,82 +1475,90 @@ window.addEventListener('online', function(){
 
 <!-- ═══ PANTALLA: CUENTA DE COBRO ══════════════════════ -->
 <div id="screen-cuentacobro" class="main" style="display:none;">
-  <div class="gold-bar"></div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-    <button class="btn btn-ol btn-sm" onclick="showScreen('clientes')" style="gap:5px;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      Volver
-    </button>
-    <span style="font-size:10px;color:var(--t3);">›</span>
-    <span style="font-size:10px;font-weight:700;color:var(--bd);">🧾 Cuenta de Cobro</span>
+  <div style="background:linear-gradient(135deg,#0d1257 0%,#1a2580 45%,#2c1e6b 100%);border-radius:18px;padding:20px 24px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 12px 30px rgba(13,18,87,.30);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative;">
+      <button class="btn btn-sm" onclick="showScreen('clientes')" style="gap:5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver
+      </button>
+    </div>
+    <div style="color:#fff;font-size:22px;font-weight:800;position:relative;">
+      🧾 Cuenta de <span style="background:linear-gradient(90deg,#f0d060,#c9a227);-webkit-background-clip:text;background-clip:text;color:transparent;">Cobro</span> — Honorarios
+    </div>
+    <div style="color:rgba(255,255,255,.8);font-size:11px;margin-top:6px;position:relative;">
+      Genera cuentas de cobro para uno, varios o todos los clientes registrados.
+    </div>
   </div>
 
-  <div class="page-title">Cuenta de Cobro — Honorarios</div>
-  <div class="page-sub" style="font-size:11px;color:var(--t2);margin-bottom:18px;">
-    Genera cuentas de cobro para uno, varios o todos los clientes registrados.
-  </div>
-
-  <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;">
+  <div style="background:var(--sf);border-radius:16px;border-top:4px solid #c9a227;padding:18px 20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(26,37,128,.08);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--bd);margin-bottom:12px;">📋 Datos de la cuenta</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Concepto</label>
         <input id="cc-concepto" type="text" placeholder="Asesorías Contables"
-          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Período</label>
         <input id="cc-periodo" type="text" placeholder="Junio – 2026"
-          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha de expedición</label>
         <input id="cc-fecha" type="date"
-          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
     </div>
+  </div>
 
-    <label style="font-size:10px;font-weight:700;color:var(--t2);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+  <div style="background:var(--sf);border-radius:16px;border-top:4px solid #1a2580;padding:18px 20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(26,37,128,.08);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--bd);margin-bottom:12px;">
+      🔍 Selección de clientes
+      <span id="cc-badge-count" style="display:inline-block;background:linear-gradient(90deg,#c9a227,#f0d060);color:var(--bd);font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px;margin-left:6px;text-transform:none;letter-spacing:0;"></span>
+    </div>
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:flex;align-items:center;gap:6px;margin-bottom:8px;">
       <input type="checkbox" id="cc-todos" onchange="ccToggleTodos()"> Seleccionar todos los clientes
     </label>
     <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">
       Clientes (mantén Ctrl / Cmd para elegir varios)
     </label>
     <input id="cc-buscar-cliente" type="text" placeholder="🔍 Buscar por nombre o NIT..." oninput="ccFiltrarClientes()"
-      style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;margin-bottom:6px;">
+      style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--bd);border-radius:9px;padding:8px 10px;margin-bottom:8px;">
     <select id="cc-clientes" multiple size="8" onchange="ccRenderTablaHonorarios()"
-      style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px;"></select>
+      style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:6px;"></select>
 
     <label style="font-size:10px;font-weight:700;color:var(--t2);display:flex;align-items:center;gap:6px;margin-top:10px;">
       <input type="checkbox" id="cc-firma" checked> Incluir firma escaneada
     </label>
+  </div>
 
-    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--br);display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+  <div style="background:var(--sf);border-radius:16px;border-top:4px solid #0891b2;padding:18px 20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(26,37,128,.08);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--bd);margin-bottom:12px;">🔢 Numeración de cuentas</div>
+    <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">
           Iniciar consecutivo en (para clientes sin cuentas previas)
         </label>
         <input id="cc-inicio-input" type="number" min="1" step="1" value="1"
-          style="width:140px;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+          style="width:140px;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
-      <button class="btn btn-ol btn-sm" onclick="ccGuardarInicio()">Guardar número inicial</button>
+      <button class="btn btn-sm" onclick="ccGuardarInicio()" style="background:linear-gradient(90deg,#1a2580,#2c1e6b);color:#f0d060;border-radius:9px;padding:9px 16px;">Guardar número inicial</button>
     </div>
-    <div id="cc-inicio-msg" style="display:none;font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:6px;padding:7px 10px;margin-top:8px;"></div>
+    <div id="cc-inicio-msg" style="display:none;font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:6px;padding:7px 10px;margin-top:10px;"></div>
   </div>
 
-  <div id="cc-tabla-wrap" style="display:none;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;overflow-x:auto;">
-    <div style="font-size:11px;font-weight:800;color:var(--bd);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px;">
-      Honorarios por cliente
-    </div>
-    <div style="font-size:10px;color:var(--t2);margin-bottom:8px;">
+  <div id="cc-tabla-wrap" style="display:none;background:var(--sf);border-radius:16px;border-top:4px solid #c9a227;padding:16px 18px;margin-bottom:16px;overflow-x:auto;box-shadow:0 4px 16px rgba(26,37,128,.08);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--bd);margin-bottom:6px;">💰 Honorarios por cliente</div>
+    <div style="font-size:10px;color:var(--t2);margin-bottom:10px;">
       El número de cuenta se sugiere automáticamente; puedes editarlo si lo necesitas.
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <thead>
-        <tr style="background:var(--bd);color:#fff;">
-          <th style="padding:7px 10px;text-align:left;font-size:9px;">Cliente</th>
-          <th style="padding:7px 10px;text-align:left;font-size:9px;">NIT</th>
-          <th style="padding:7px 10px;text-align:left;font-size:9px;">No. Cuenta</th>
-          <th style="padding:7px 10px;text-align:left;font-size:9px;">Honorarios ($)</th>
+        <tr style="background:linear-gradient(90deg,#1a2580,#0d1257);color:#fff;">
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">Cliente</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">NIT</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">No. Cuenta</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">Honorarios ($)</th>
         </tr>
       </thead>
       <tbody id="cc-tabla-body"></tbody>
@@ -1559,7 +1567,7 @@ window.addEventListener('online', function(){
 
   <div id="cc-progress" style="display:none;font-size:11px;font-weight:700;color:var(--bd);background:var(--bl);border-radius:7px;padding:9px 13px;margin-bottom:14px;"></div>
 
-  <button class="btn btn-gold" onclick="ccGenerarTodas()">🧾 Generar Cuenta(s) de Cobro</button>
+  <button class="btn" onclick="ccGenerarTodas()" style="background:linear-gradient(90deg,#c9a227,#f0d060);color:var(--bd);box-shadow:0 8px 20px rgba(201,162,39,.45);font-size:12px;font-weight:800;padding:12px 26px;border-radius:10px;border:none;cursor:pointer;">🧾 Generar Cuenta(s) de Cobro</button>
 </div>
 
 <!-- ═══ PANTALLA 1: LISTA DE CLIENTES ═══════════════════ -->
@@ -12979,6 +12987,8 @@ function ccRenderTablaHonorarios(){
   if(!body) return;
   var sel=ccGetSeleccionados();
   var hon=ccLoadHonorarios();
+  var badge=document.getElementById('cc-badge-count');
+  if(badge) badge.textContent = sel.length ? (sel.length+(sel.length===1?' seleccionado':' seleccionados')) : '';
   if(!sel.length){
     wrap.style.display='none';
     body.innerHTML='';
