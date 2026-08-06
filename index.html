@@ -1523,7 +1523,7 @@ window.addEventListener('online', function(){
     </div>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
     <button id="audit-menu-btn" onclick="openAuditoria()" style="display:none;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">📋 Auditoría</button>
-    <button id="cc-menu-btn" onclick="ccOpen()" style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">🧾 Cuenta de Cobro</button>
+    <button id="cc-menu-btn" onclick="ccOpen()" style="display:none;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">🧾 Cuenta de Cobro</button>
     <button id="btn-mi-cuenta" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">🔑 Mi cuenta</button><button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;">Salir</button>
     <div id="atom-indicator" style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-right:6px;">
       <div id="atom-wrap" class="online-anim" style="position:relative;width:43px;height:43px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
@@ -4073,6 +4073,8 @@ function showApp(){
   if(adminBtn) adminBtn.style.display = currentPerfil.rol==='admin'?'':'none';
   var auditBtn=document.getElementById('audit-menu-btn');
   if(auditBtn) auditBtn.style.display = currentPerfil.rol==='admin'?'':'none';
+  var ccBtn=document.getElementById('cc-menu-btn');
+  if(ccBtn) ccBtn.style.display = currentPerfil.rol==='admin'?'':'none';
 
   // Controles exclusivos de admin en pantalla clientes
   var isAdmin = currentPerfil.rol==='admin';
@@ -13000,6 +13002,10 @@ function ccNumeroALetras(num){
 
 // ── Render de la pantalla ─────────────────────────────────
 function ccOpen(){
+  if(!(typeof currentPerfil!=='undefined' && currentPerfil && currentPerfil.rol==='admin')){
+    alert('Esta función está disponible solo para el administrador.');
+    return;
+  }
   showScreen('cuentacobro');
   ccSetDefaults();
   ccRenderListaClientes();
