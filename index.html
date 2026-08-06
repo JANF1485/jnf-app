@@ -279,7 +279,39 @@ window.cufeCargarZip = function(input) {
   reader.readAsArrayBuffer(file);
 };
 
-window.cufeExtraerDatosZip = function(zip, nombre) {
+// ── ZIP-CUADRE: carpeta comprimida con documentos mixtos ──
+// (facturas de venta, facturas de compra, documentos soporte, nómina
+// electrónica, facturas de contingencia, notas débito y notas crédito).
+// Usa el mismo motor de lectura de cufeCargarZip; el Excel final
+// separa automáticamente cada tipo en su propia pestaña.
+window.cufeCargarZipCuadre = function(input) {
+  var file = input.files[0]; if (!file) return;
+  var zn = cge('cufe-zip-cuadre-nombre');
+  if (zn) zn.textContent = 'Leyendo ZIP-Cuadre...';
+  cufeLog('info', 'Leyendo ZIP-Cuadre: ' + file.name);
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      function cargar(JSZip) {
+        JSZip.loadAsync(e.target.result).then(function(zip) {
+          cufeExtraerDatosZip(zip, file.name, 'cufe-zip-cuadre-nombre');
+        }).catch(function(err){ cufeLog('err','Error ZIP-Cuadre: '+err.message); });
+      }
+      if (typeof JSZip !== 'undefined') { cargar(JSZip); }
+      else {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = function(){ cargar(JSZip); };
+        s.onerror = function(){ cufeLog('err','Error cargando JSZip'); };
+        document.head.appendChild(s);
+      }
+    } catch(ex){ cufeLog('err','Error: '+ex.message); }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
+  targetElId = targetElId || 'cufe-zip-nombre';
   var xmlData = {};
   var subZips   = [];
   var xmlDirect = [];
@@ -341,7 +373,7 @@ window.cufeExtraerDatosZip = function(zip, nombre) {
     if (procesados < archivos.length) return;
     var total = Object.keys(xmlData).length;
     cufeLog('ok', total + ' XMLs leidos correctamente');
-    var zn = cge('cufe-zip-nombre');
+    var zn = cge(targetElId);
     if (zn) zn.textContent = String.fromCharCode(10003)+' '+total+' XMLs de '+nombre;
     _cufeState.xmlData = xmlData;
 
@@ -10854,8 +10886,13 @@ function poblarFiltroContador(){
               📦 Subir ZIP de facturas
               <input type="file" accept=".zip" style="display:none;" onchange="cufeCargarZip(this)"/>
             </label>
+            <label class="cufe-btn-p" id="cufe-btn-zip-cuadre" style="cursor:pointer;background:#92400e;">
+              📦 ZIP-Cuadre
+              <input type="file" accept=".zip,.rar" style="display:none;" onchange="cufeCargarZipCuadre(this)"/>
+            </label>
             <span id="cufe-archivo-nombre" style="font-size:11px;color:#6b7280;font-family:Montserrat,sans-serif;"></span>
             <span id="cufe-zip-nombre" style="font-size:11px;color:#065f46;font-family:Montserrat,sans-serif;"></span>
+            <span id="cufe-zip-cuadre-nombre" style="font-size:11px;color:#92400e;font-family:Montserrat,sans-serif;"></span>
           </div>
           <div id="cufe-info-dian" style="display:none;margin-top:12px;padding:12px 16px;background:#f8faff;border-radius:8px;border:1px solid #c7d0f0;">
             <div style="font-size:12px;font-weight:800;color:#1a2580;" id="cufe-total-fact"></div>
