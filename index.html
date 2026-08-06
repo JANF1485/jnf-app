@@ -375,6 +375,8 @@ window.cufeExtraerDatosZip = function(zip, nombre) {
           dv:          d.dvEmisor    || '',
           dvEmisor:    d.dvEmisor    || '',
           dvReceptor:  d.dvReceptor  || '',
+          tpEmisor:    d.tpEmisor    || 'PJ',
+          tpReceptor:  d.tpReceptor  || 'PJ',
           dir:         d.dir         || '',
           ciudad:      d.ciudad      || '',
           dpto:        d.dpto        || '',
@@ -426,6 +428,23 @@ window.cufeParseXML = function(xml) {
   // CUFE
   d.cufe = ex('UUID');
 
+  // Folio y Prefijo: el primer <cbc:ID> del documento es su propio número
+  var idMatch = xml.match(/<cbc:ID>([^<]+)<\/cbc:ID>/i);
+  var docId = idMatch ? idMatch[1].trim() : '';
+  var pref = docId.match(/^([A-Za-z]+)(\d+)$/);
+  if (pref) { d.prefijo = pref[1]; d.folio = pref[2]; }
+  else { d.prefijo = ''; d.folio = docId; }
+
+  // Tipo de documento: se infiere del elemento raíz del XML
+  var rootTag = (xml.match(/<(?:[a-z]+:)?([A-Za-z]+)[^>]*xmlns/i)||[])[1] || '';
+  var esContingencia = /contingenc/i.test(xml);
+  if (/CreditNote/i.test(rootTag)) d.tipoDoc = 'Nota Crédito Electrónica';
+  else if (/DebitNote/i.test(rootTag)) d.tipoDoc = 'Nota Débito Electrónica';
+  else if (/(DocumentoSoporte|SupportDocument)/i.test(rootTag) || /DocumentoSoporte/i.test(xml)) d.tipoDoc = 'Documento Soporte en Adquisiciones';
+  else if (/(NominaIndividual|Payroll)/i.test(rootTag)) d.tipoDoc = 'Nómina Electrónica';
+  else if (/Invoice/i.test(rootTag)) d.tipoDoc = esContingencia ? 'Factura Electrónica de Venta - Contingencia' : 'Factura Electrónica de Venta';
+  else d.tipoDoc = '';
+
   // Emisor: NIT y DV
   var mEm = xml.match(/AccountingSupplierParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
   if (mEm) { d.nitEmisor=mEm[2]; d.dvEmisor=mEm[1]; }
@@ -437,6 +456,24 @@ window.cufeParseXML = function(xml) {
   if (mRec) { d.nitReceptor=mRec[2]; d.dvReceptor=mRec[1]; }
   d.nomReceptor = (xml.match(/AccountingCustomerParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
   d.nomReceptor = d.nomReceptor.trim();
+
+  // Tipo de Persona (T.P.): presencia de <cac:Person> = Persona Natural; si no, Persona Jurídica
+  var blkEm = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var blkRec = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  d.tpEmisor   = /<cac:Person\b/i.test(blkEm)  ? 'PN' : 'PJ';
+  d.tpReceptor = /<cac:Person\b/i.test(blkRec) ? 'PN' : 'PJ';
+
+  // Grupo (Enviado/Recibido) según el NIT del cliente activo
+  try{
+    var cl = (typeof clients!=='undefined' && typeof activeClientId!=='undefined')
+      ? clients.find(function(x){return x.id===activeClientId;}) : null;
+    var nitCliente = cl ? String(cl.nit||'').replace(/[^0-9]/g,'') : '';
+    var nitE = String(d.nitEmisor||'').replace(/[^0-9]/g,'');
+    var nitR = String(d.nitReceptor||'').replace(/[^0-9]/g,'');
+    if (nitCliente && nitE === nitCliente) d.grupo = 'Enviado';
+    else if (nitCliente && nitR === nitCliente) d.grupo = 'Recibido';
+    else d.grupo = '';
+  }catch(e){ d.grupo=''; }
 
   // Ubicacion del emisor (PhysicalLocation)
   var loc = (xml.match(/PhysicalLocation[\s\S]{0,2000}?<\/cac:PhysicalLocation>/i)||[])[0]||'';
@@ -493,6 +530,11 @@ window.cufeEnriquecerConXML = function() {
     if (xml.codMun)      item.codMun   = xml.codMun;    // 3 digitos
     if (xml.dvEmisor)    item.dvEmisor = xml.dvEmisor;
     if (xml.dvReceptor)  item.dvReceptor = xml.dvReceptor;
+    if (xml.tpEmisor)    item.tpEmisor = xml.tpEmisor;
+    if (xml.tpReceptor)  item.tpReceptor = xml.tpReceptor;
+    if (!item.tipo && xml.tipoDoc) item.tipo = xml.tipoDoc;
+    if (!item.folio && xml.folio)     item.folio = xml.folio;
+    if (!item.prefijo && xml.prefijo) item.prefijo = xml.prefijo;
     if (xml.b19 && !item.b19) item.b19 = xml.b19;
     if (xml.b5  && !item.b5)  item.b5  = xml.b5;
     if (xml.ex  && !item.ex)  item.ex  = xml.ex;
@@ -784,14 +826,15 @@ function cufeValCol(col, item, sh){
   var dvE=item.dvEmisor||cufeCalcDV(item.nitEmisor||'');
   var dvR=item.dvReceptor||cufeCalcDV(item.nitReceptor||'');
   var dvG=sh==='VENTAS'||sh==='DEV EN VENTAS'||sh==='IPOCONSUMO'?dvR:dvE;
+  var tpG=sh==='VENTAS'||sh==='DEV EN VENTAS'||sh==='IPOCONSUMO'?(item.tpReceptor||''):(item.tpEmisor||'');
   switch(col){
     case 'TIPO DOC': return item.tipo||'';
     case 'CUFE/CUDE': return item.cufe||'';
     case 'FOLIOS': case 'Folio': return item.folio||'';
-    case 'PREFIJO': case 'Prefijo': return item.prefijo||'';
+    case 'PREFIJO': case 'Prefijo': return item.prefijo||'N/N';
     case 'MES': return item.mes||'';
     case 'FECHA EMISION': case 'Fecha Emision': return item.fecha||'';
-    case 'T.P.': return '';
+    case 'T.P.': return tpG;
     case 'NIT RECEPTOR': case 'NIT Receptor': return item.nitReceptor||'';
     case 'DV RECEPTOR': return dvR;
     case 'NOMBRE RECEPTOR': case 'Nombre Receptor': return item.nomReceptor||'';
