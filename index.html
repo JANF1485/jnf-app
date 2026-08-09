@@ -846,6 +846,63 @@ window.cufeDescargarExcel=function(){
     XS.utils.book_append_sheet(wb, ws, def.sh);
   });
 
+  // ── Pestaña consolidada: TODOS LOS DOCUMENTOS ───────────────────────────
+  // Reúne todos los documentos del ZIP en una sola hoja, indicando en qué
+  // pestaña quedó clasificado cada uno, para poder filtrar y confirmar.
+  // También muestra aquí cualquier documento que no se haya podido
+  // clasificar en ninguna pestaña (PESTAÑA vacía), para que no pase
+  // desapercibido.
+  if(lista.length){
+    var colsTodos=['PESTAÑA','TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
+      'NIT EMISOR','NOMBRE EMISOR','NIT RECEPTOR','NOMBRE RECEPTOR',
+      'BASE 19%','BASE 5%','EXENTO','EXCLUIDO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL'];
+    var nc=colsTodos.length;
+    var aoa=[];
+    var r1=new Array(nc).fill(''); r1[0]=EMPRESA; r1[nc-1]=NIT_EMP; aoa.push(r1);
+    var r2=new Array(nc).fill(''); r2[0]='TODOS LOS DOCUMENTOS — REVISIÓN Y FILTROS — AÑO '+ANIO; aoa.push(r2);
+    aoa.push(colsTodos.map(function(c){return c;}));
+    lista.forEach(function(item){
+      var dvE=item.dvEmisor||cufeCalcDV(item.nitEmisor||'');
+      var dvR=item.dvReceptor||cufeCalcDV(item.nitReceptor||'');
+      aoa.push([
+        item.sh||'SIN CLASIFICAR',
+        item.tipo||'', item.cufe||'', item.folio||'', item.prefijo||'N/N',
+        item.mes||'', item.fecha||'',
+        item.sh==='VENTAS'||item.sh==='DEV EN VENTAS'||item.sh==='IPOCONSUMO'?(item.tpReceptor||''):(item.tpEmisor||''),
+        item.nitEmisor||'', item.nomEmisor||'',
+        item.nitReceptor||'', item.nomReceptor||'',
+        item.b19||0, item.b5||0, item.ex||0, item.exc||0, item.iv19||0, item.iv5||0, item.ipo8||0,
+        item.iva||0, item.total||0
+      ]);
+    });
+    var wsTodos=XS.utils.aoa_to_sheet(aoa);
+    aoa.forEach(function(row,ri){
+      row.forEach(function(val,ci){
+        var addr=XS.utils.encode_cell({r:ri,c:ci});
+        if(!wsTodos[addr]) return;
+        var isNum=['BASE 19%','BASE 5%','EXENTO','EXCLUIDO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL'].indexOf(colsTodos[ci])>=0;
+        if(ri===0) wsTodos[addr].s=stTitulo(DORADO);
+        else if(ri===1) wsTodos[addr].s=stSubtitulo();
+        else if(ri===2) wsTodos[addr].s=stHdr(AZUL,BLANCO);
+        else wsTodos[addr].s=stDato((ri%2===0),isNum,false);
+      });
+    });
+    wsTodos['!merges']=[
+      {s:{r:0,c:0},e:{r:0,c:Math.floor(nc/2)-1}},
+      {s:{r:0,c:Math.floor(nc/2)},e:{r:0,c:nc-1}},
+      {s:{r:1,c:0},e:{r:1,c:nc-1}}
+    ];
+    wsTodos['!cols']=colsTodos.map(function(c){
+      if(c==='CUFE/CUDE') return{wch:20};
+      if(c==='NOMBRE EMISOR'||c==='NOMBRE RECEPTOR') return{wch:26};
+      if(c==='FECHA EMISION') return{wch:12};
+      return{wch:12};
+    });
+    wsTodos['!rows']=[{hpt:22},{hpt:18},{hpt:26}];
+    wsTodos['!autofilter']={ref:XS.utils.encode_range({s:{r:2,c:0},e:{r:aoa.length-1,c:nc-1}})};
+    XS.utils.book_append_sheet(wb, wsTodos, 'TODOS LOS DOCUMENTOS');
+  }
+
   var hoy=new Date().toLocaleDateString('es-CO').replace(/\//g,'-');
   var cl2=(typeof clients!=='undefined'&&typeof activeClientId!=='undefined')?clients.find(function(x){return x.id===activeClientId;}):null;
   var nomCl=(cl2&&cl2.razon)?cl2.razon.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30):'';
