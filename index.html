@@ -342,9 +342,20 @@ function cufeCargarJSZipLib() {
 var _cufeLibarchivePromise = null;
 function cufeCargarLibarchive() {
   if (_cufeLibarchivePromise) return _cufeLibarchivePromise;
+  var WORKER_URL = 'https://cdn.jsdelivr.net/npm/libarchive.js@2.0.2/dist/worker-bundle.js';
+  // Los navegadores no permiten crear un Worker directamente sobre una URL
+  // de otro origen (aunque sí se puede hacer import() normal de un módulo
+  // externo). El truco estándar: un módulo "puente" del mismo origen
+  // (blob:) cuyo único contenido es un import del script real — así el
+  // Worker se crea desde una URL same-origin, y adentro, import.meta.url
+  // sigue resolviendo correctamente hacia el CDN para cargar el .wasm.
+  var blobShim = new Blob(['import ' + JSON.stringify(WORKER_URL) + ';'], {type: 'text/javascript'});
+  var blobUrl = URL.createObjectURL(blobShim);
   _cufeLibarchivePromise = import('https://cdn.jsdelivr.net/npm/libarchive.js@2.0.2/dist/libarchive.js')
     .then(function(mod) {
-      mod.Archive.init({ workerUrl: 'https://cdn.jsdelivr.net/npm/libarchive.js@2.0.2/dist/worker-bundle.js' });
+      mod.Archive.init({
+        getWorker: function() { return new Worker(blobUrl, {type: 'module'}); }
+      });
       return mod.Archive;
     });
   return _cufeLibarchivePromise;
