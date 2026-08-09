@@ -258,12 +258,18 @@ window.cufeCargarZip = function(input) {
   var zn = cge('cufe-zip-nombre');
   if (zn) zn.textContent = 'Leyendo ZIP...';
   cufeLog('info', 'Leyendo ZIP: ' + file.name);
+
+  if (file.name.toLowerCase().endsWith('.rar')) {
+    cufeProcesarRAR(file, 'cufe-zip-nombre');
+    return;
+  }
+
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
       function cargar(JSZip) {
         JSZip.loadAsync(e.target.result).then(function(zip) {
-          cufeExtraerDatosZip(zip, file.name);
+          cufeExtraerDatosZip(zip, file.name, 'cufe-zip-nombre');
         }).catch(function(err){ cufeLog('err','Error ZIP: '+err.message); });
       }
       if (typeof JSZip !== 'undefined') { cargar(JSZip); }
@@ -289,6 +295,12 @@ window.cufeCargarZipCuadre = function(input) {
   var zn = cge('cufe-zip-cuadre-nombre');
   if (zn) zn.textContent = 'Leyendo ZIP-Cuadre...';
   cufeLog('info', 'Leyendo ZIP-Cuadre: ' + file.name);
+
+  if (file.name.toLowerCase().endsWith('.rar')) {
+    cufeProcesarRAR(file, 'cufe-zip-cuadre-nombre');
+    return;
+  }
+
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -310,31 +322,146 @@ window.cufeCargarZipCuadre = function(input) {
   reader.readAsArrayBuffer(file);
 };
 
+// ── Soporte RAR (vía libarchive.js — WebAssembly, RAR v4 y v5) ─────────
+// JSZip solo entiende ZIP; para .rar (el archivo subido o cualquier .rar
+// anidado adentro) usamos libarchive.js, que sí descomprime RAR de verdad.
+var _cufeJSZipPromise = null;
+function cufeCargarJSZipLib() {
+  if (typeof JSZip !== 'undefined') return Promise.resolve(JSZip);
+  if (_cufeJSZipPromise) return _cufeJSZipPromise;
+  _cufeJSZipPromise = new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = function(){ resolve(JSZip); };
+    s.onerror = function(){ reject(new Error('Error cargando JSZip')); };
+    document.head.appendChild(s);
+  });
+  return _cufeJSZipPromise;
+}
+
+var _cufeLibarchivePromise = null;
+function cufeCargarLibarchive() {
+  if (_cufeLibarchivePromise) return _cufeLibarchivePromise;
+  _cufeLibarchivePromise = import('https://cdn.jsdelivr.net/npm/libarchive.js@2.0.2/dist/libarchive.js')
+    .then(function(mod) {
+      mod.Archive.init({ workerUrl: 'https://cdn.jsdelivr.net/npm/libarchive.js@2.0.2/dist/worker-bundle.js' });
+      return mod.Archive;
+    });
+  return _cufeLibarchivePromise;
+}
+
+// Recorre recursivamente lo que devuelve libarchive.js/JSZip, clasificando
+// cada archivo encontrado: .xml se lee directo, .zip se delega a JSZip,
+// .rar se delega (recursivamente) a libarchive.js de nuevo.
+function cufeRecorrerArchivoMixto(archiveFile, xmlData, contadores) {
+  var nombre = (archiveFile.file && archiveFile.file.name) || '';
+  var pLower = nombre.toLowerCase();
+  return archiveFile.file.extract().then(function(extracted) {
+    if (pLower.endsWith('.xml')) {
+      return extracted.text().then(function(txt) {
+        var d = cufeParseXML(txt);
+        var key = d.cufe || nombre;
+        xmlData[key] = d;
+        contadores.xml++;
+      });
+    } else if (pLower.endsWith('.zip')) {
+      return extracted.arrayBuffer().then(function(buf) {
+        return cufeCargarJSZipLib().then(function(JSZip){ return JSZip.loadAsync(buf); });
+      }).then(function(innerZip) {
+        var proms = [];
+        innerZip.forEach(function(p, entry) {
+          if (entry.dir) return;
+          if (p.toLowerCase().endsWith('.xml')) {
+            proms.push(entry.async('text').then(function(txt) {
+              var d = cufeParseXML(txt);
+              xmlData[d.cufe || p] = d;
+              contadores.xml++;
+            }));
+          } else {
+            contadores.otros.push(p);
+          }
+        });
+        return Promise.all(proms);
+      });
+    } else if (pLower.endsWith('.rar')) {
+      return extracted.arrayBuffer().then(function(buf) {
+        return cufeCargarLibarchive().then(function(Archive) {
+          return Archive.open(new File([buf], nombre));
+        });
+      }).then(function(innerArchive) {
+        return innerArchive.getFilesArray();
+      }).then(function(innerFiles) {
+        return Promise.all(innerFiles.map(function(af) {
+          return cufeRecorrerArchivoMixto(af, xmlData, contadores);
+        }));
+      });
+    } else {
+      contadores.otros.push(nombre);
+    }
+  });
+}
+
+window.cufeProcesarRAR = function(file, targetElId) {
+  cufeLog('info', 'Descomprimiendo RAR con libarchive.js (puede tardar unos segundos la primera vez)...');
+  cufeCargarLibarchive().then(function(Archive) {
+    return Archive.open(file);
+  }).then(function(archive) {
+    return archive.getFilesArray();
+  }).then(function(filesArray) {
+    var xmlData = {};
+    var contadores = {xml:0, otros:[]};
+    return Promise.all(filesArray.map(function(af) {
+      return cufeRecorrerArchivoMixto(af, xmlData, contadores);
+    })).then(function() {
+      if (contadores.otros.length) {
+        cufeLog('warn', '⚠️ ' + contadores.otros.length + ' archivo(s) dentro del RAR no se procesaron (extensión no reconocida): ' + contadores.otros.slice(0,8).join(', ') + (contadores.otros.length>8?'...':''));
+      }
+      if (!Object.keys(xmlData).length) {
+        cufeLog('err', 'No se encontraron XML dentro del RAR.');
+        return;
+      }
+      cufeFinalizarXmlData(xmlData, file.name, targetElId);
+    });
+  }).catch(function(err) {
+    cufeLog('err', 'Error leyendo RAR: ' + err.message);
+  });
+};
+
 window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
   targetElId = targetElId || 'cufe-zip-nombre';
   var xmlData = {};
   var subZips   = [];
+  var subRars   = [];
   var xmlDirect = [];
+  var noReconocidos = [];
 
   zip.forEach(function(path, entry) {
     if (entry.dir) return;
     var p = path.toLowerCase();
     if (p.endsWith('.zip'))      subZips.push({path:path,   entry:entry});
+    else if (p.endsWith('.rar')) subRars.push({path:path,   entry:entry});
     else if (p.endsWith('.xml')) xmlDirect.push({path:path, entry:entry});
+    else noReconocidos.push(path);
   });
 
-  cufeLog('info', 'ZIP: ' + subZips.length + ' sub-ZIPs  |  ' + xmlDirect.length + ' XMLs directos');
+  cufeLog('info', 'ZIP: ' + subZips.length + ' sub-ZIPs  |  ' + subRars.length + ' sub-RARs  |  ' + xmlDirect.length + ' XMLs directos');
 
-  // Decidir modo según contenido
-  var archivos = subZips.length > 0 ? subZips : xmlDirect;
-  var modoXML  = subZips.length === 0 && xmlDirect.length > 0;
+  if (noReconocidos.length) {
+    cufeLog('warn', '⚠️ ' + noReconocidos.length + ' archivo(s) dentro del comprimido no se procesaron (extensión no reconocida): ' + noReconocidos.slice(0,8).join(', ') + (noReconocidos.length>8?'...':''));
+  }
 
-  if (!archivos.length) { cufeLog('err','No se encontraron documentos (.zip ni .xml) en el archivo subido.'); return; }
+  // Decidir modo según contenido: si hay sub-ZIPs y/o sub-RARs, se procesan esos;
+  // si no hay ninguno, se procesan los XML sueltos directamente.
+  var archivos = (subZips.length > 0 || subRars.length > 0) ? subZips.concat(subRars) : xmlDirect;
+  var modoXML  = subZips.length === 0 && subRars.length === 0 && xmlDirect.length > 0;
+
+  if (!archivos.length) { cufeLog('err','No se encontraron documentos (.zip, .rar ni .xml) en el archivo subido.'); return; }
   cufeLog('info', 'Procesando ' + archivos.length + ' documentos...');
 
   var procesados = 0;
 
   function procesarEntry(arch) {
+    var esRar = arch.path.toLowerCase().endsWith('.rar');
     if (modoXML) {
       // XML directo — leer como texto
       arch.entry.async('text').then(function(txt) {
@@ -346,14 +473,46 @@ window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
         cufeLog('err','Error XML '+arch.path+': '+err.message);
         procesados++; check();
       });
+    } else if (esRar) {
+      // Sub-RAR — abrirlo con libarchive.js (JSZip no lee RAR) y extraer el XML interno
+      arch.entry.async('arraybuffer').then(function(data) {
+        return cufeCargarLibarchive().then(function(Archive) {
+          return Archive.open(new File([data], arch.path.split('/').pop()));
+        });
+      }).then(function(innerArchive) {
+        return innerArchive.getFilesArray();
+      }).then(function(innerFiles) {
+        var xmlAf = innerFiles.find(function(af){ return af.file.name.toLowerCase().endsWith('.xml'); });
+        if (!xmlAf) {
+          cufeLog('warn', '⚠️ ' + arch.path + ' (RAR) no contiene un XML — se omitió.');
+          procesados++; check(); return;
+        }
+        return xmlAf.file.extract().then(function(extracted){ return extracted.text(); }).then(function(txt) {
+          var d = cufeParseXML(txt);
+          var key = d.cufe || arch.path;
+          xmlData[key] = d;
+          procesados++; check();
+        });
+      }).catch(function(err){
+        cufeLog('err','Error sub-RAR '+arch.path+': '+err.message);
+        procesados++; check();
+      });
     } else {
       // Sub-ZIP — abrirlo y extraer el XML interno
       arch.entry.async('arraybuffer').then(function(data) {
         return JSZip.loadAsync(data);
       }).then(function(inner) {
         var xmlEntry = null;
-        inner.forEach(function(p, e) { if(p.toLowerCase().endsWith('.xml')&&!e.dir) xmlEntry=e; });
-        if (!xmlEntry) { procesados++; check(); return; }
+        var otros = [];
+        inner.forEach(function(p, e) {
+          if(e.dir) return;
+          if(p.toLowerCase().endsWith('.xml')) xmlEntry=e;
+          else otros.push(p);
+        });
+        if (!xmlEntry) {
+          cufeLog('warn', '⚠️ ' + arch.path + ' no contiene un XML' + (otros.length ? ' (contiene: '+otros.slice(0,4).join(', ')+(otros.length>4?'...':'')+')' : ' (está vacío)') + ' — se omitió.');
+          procesados++; check(); return;
+        }
         return xmlEntry.async('text').then(function(txt) {
           var d = cufeParseXML(txt);
           var key = d.cufe || arch.path;
@@ -371,6 +530,13 @@ window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
 
   function check() {
     if (procesados < archivos.length) return;
+    cufeFinalizarXmlData(xmlData, nombre, targetElId);
+  }
+};
+
+// ── Finaliza el procesamiento de un lote de XML ya leídos ──────────────
+// (compartida entre el flujo ZIP/JSZip y el flujo RAR/libarchive.js)
+window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
     var total = Object.keys(xmlData).length;
     cufeLog('ok', total + ' XMLs leidos correctamente');
     var zn = cge(targetElId);
@@ -381,7 +547,7 @@ window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
     if (_cufeState.dianRows && _cufeState.dianRows.length > 0) {
       cufeEnriquecerConXML();
     } else {
-      // Sin Excel DIAN: construir dianRows directamente desde los XMLs del ZIP
+      // Sin Excel DIAN: construir dianRows directamente desde los XMLs del ZIP/RAR
       var filas = [];
       var resumen = {};
       Object.values(xmlData).forEach(function(d) {
@@ -447,7 +613,6 @@ window.cufeExtraerDatosZip = function(zip, nombre, targetElId) {
     if (bi) bi.disabled = false;
     // Ocultar paso 2 (abrir portal DIAN) ya que no es necesario con el ZIP
     cufeLog('ok', 'ZIP listo. Haz clic en Iniciar proceso para generar el Excel.');
-  }
 };
 
 window.cufeParseXML = function(xml) {
@@ -10922,7 +11087,7 @@ function poblarFiltroContador(){
     .cufe-progress{height:6px;background:#e5e7f0;border-radius:3px;overflow:hidden;margin:8px 0;}
     .cufe-progress-bar{height:100%;background:linear-gradient(90deg,#1a2580,#4f7fff);border-radius:3px;transition:width .3s;}
     .cufe-log{background:#0f172a;border-radius:8px;padding:12px 16px;font-size:10px;color:#94a3b8;font-family:monospace;max-height:150px;overflow-y:auto;line-height:1.7;}
-    .cufe-log .ok{color:#4ade80;} .cufe-log .err{color:#f87171;} .cufe-log .info{color:#60a5fa;}
+    .cufe-log .ok{color:#4ade80;} .cufe-log .err{color:#f87171;} .cufe-log .info{color:#60a5fa;} .cufe-log .warn{color:#fbbf24;}
   </style>
 
   <div style="padding:16px 20px;max-width:960px;margin:0 auto;">
@@ -10943,7 +11108,7 @@ function poblarFiltroContador(){
             </label>
             <label class="cufe-btn-p" style="cursor:pointer;background:#065f46;">
               📦 Subir ZIP de facturas
-              <input type="file" accept=".zip" style="display:none;" onchange="cufeCargarZip(this)"/>
+              <input type="file" accept=".zip,.rar" style="display:none;" onchange="cufeCargarZip(this)"/>
             </label>
             <label class="cufe-btn-p" id="cufe-btn-zip-cuadre" style="cursor:pointer;background:#92400e;">
               📦 ZIP-Cuadre
