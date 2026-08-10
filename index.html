@@ -556,6 +556,21 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
     if (zn) zn.textContent = String.fromCharCode(10003)+' '+total+' XMLs de '+nombre;
     _cufeState.xmlData = xmlData;
 
+    // Diagnóstico: qué cliente activo (carpeta abierta) hay en este momento,
+    // que es la referencia principal para clasificar Enviado/Recibido.
+    (function(){
+      var lc = (typeof clients!=='undefined') ? clients : [];
+      var idAct = (typeof activeClientId!=='undefined') ? activeClientId : null;
+      var cl = idAct ? lc.find(function(x){return x.id===idAct;}) : null;
+      if (cl) {
+        cufeLog('info', 'Cliente activo (carpeta abierta): ' + (cl.razon||'—') + ' · NIT ' + (cl.nit||'—'));
+      } else if (idAct) {
+        cufeLog('warn', '⚠️ Hay un activeClientId ('+idAct+') pero no coincide con ningún cliente en la lista cargada — revisa si "clients" ya terminó de cargar desde Firestore.');
+      } else {
+        cufeLog('warn', '⚠️ No hay ningún cliente activo (ninguna carpeta de cliente abierta) en este momento. La clasificación Enviado/Recibido usará como respaldo la lista completa de clientes registrados (' + lc.length + ').');
+      }
+    })();
+
     // Si ya hay filas del Excel DIAN, enriquecer con XML
     if (_cufeState.dianRows && _cufeState.dianRows.length > 0) {
       cufeEnriquecerConXML();
@@ -563,6 +578,7 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       // Sin Excel DIAN: construir dianRows directamente desde los XMLs del ZIP/RAR
       var filas = [];
       var resumen = {};
+      var sinClasificarNits = {};
       Object.values(xmlData).forEach(function(d) {
         // Determinar tipo y grupo desde el XML
         var tipoDoc = d.tipoDoc || '';
@@ -570,6 +586,10 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
         // Si el XML no trae tipo, inferir por tags
         var sh = cufeGetSh(tipoDoc, grupo);
         resumen[sh] = (resumen[sh]||0) + 1;
+        if (!sh) {
+          var par = (d.nitEmisor||'?')+' → '+(d.nitReceptor||'?');
+          sinClasificarNits[par] = (sinClasificarNits[par]||0) + 1;
+        }
         filas.push({
           cufe:        d.cufe        || '',
           tipo:        tipoDoc,
@@ -609,6 +629,10 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       });
       _cufeState.dianRows = filas;
       cufeLog('ok', filas.length + ' documentos cargados desde el ZIP');
+      var nitsSC = Object.keys(sinClasificarNits);
+      if (nitsSC.length) {
+        cufeLog('warn', '⚠️ ' + Object.values(sinClasificarNits).reduce(function(a,b){return a+b;},0) + ' documento(s) quedaron SIN CLASIFICAR (ningún NIT emisor/receptor coincidió con un cliente registrado). Pares NIT emisor→receptor: ' + nitsSC.slice(0,5).join(' | ') + (nitsSC.length>5?' ...':''));
+      }
 
       // Mostrar resumen
       var info = cge('cufe-info-dian');
@@ -694,13 +718,14 @@ window.cufeParseXML = function(xml) {
   d.tpEmisor   = /<cac:Person\b/i.test(blkEm)  ? 'PN' : 'PJ';
   d.tpReceptor = /<cac:Person\b/i.test(blkRec) ? 'PN' : 'PJ';
 
-  // Grupo (Enviado/Recibido): compara el NIT del emisor/receptor contra
-  // TODOS los clientes registrados (no solo el cliente activo), porque
-  // un ZIP-Cuadre suele traer documentos de varios NITs distintos a la vez.
-  // La comparación es por PREFIJO (no igualdad exacta), porque el NIT
-  // guardado del cliente puede incluir el dígito de verificación
-  // (ej. "901875183-1") mientras que el XML trae el NIT base sin DV
-  // (ej. "901875183"), o viceversa.
+  // Grupo (Enviado/Recibido): el módulo de Descarga Masiva se abre
+  // siempre dentro de la carpeta de UN cliente específico (activeClientId),
+  // así que ese es el NIT de referencia principal para decidir si cada
+  // documento es una venta (el cliente es el emisor) o una compra (el
+  // cliente es el receptor). La comparación es por PREFIJO, no igualdad
+  // exacta, porque el NIT guardado del cliente puede incluir el dígito
+  // de verificación (ej. "901875183-1") mientras que el XML trae el NIT
+  // base sin DV (ej. "901875183"), o viceversa.
   function nitCoincide(a, b){
     a=String(a||'').replace(/[^0-9]/g,''); b=String(b||'').replace(/[^0-9]/g,'');
     if (!a || !b || a.length<6 || b.length<6) return false;
@@ -708,16 +733,20 @@ window.cufeParseXML = function(xml) {
   }
   try{
     var listaClientes = (typeof clients!=='undefined') ? clients : [];
-    var emisorEsCliente   = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitEmisor); });
-    var receptorEsCliente = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitReceptor); });
-    if (emisorEsCliente) d.grupo = 'Enviado';
-    else if (receptorEsCliente) d.grupo = 'Recibido';
-    else {
-      // Respaldo: si no coincide con ningún cliente registrado, usar el
-      // cliente activo (comportamiento anterior), por si aplica.
-      var cl = (typeof activeClientId!=='undefined') ? listaClientes.find(function(x){return x.id===activeClientId;}) : null;
-      if (cl && nitCoincide(cl.nit, d.nitEmisor)) d.grupo = 'Enviado';
-      else if (cl && nitCoincide(cl.nit, d.nitReceptor)) d.grupo = 'Recibido';
+    var clienteActivo = (typeof activeClientId!=='undefined' && activeClientId)
+      ? listaClientes.find(function(x){return x.id===activeClientId;}) : null;
+
+    if (clienteActivo && nitCoincide(clienteActivo.nit, d.nitEmisor)) {
+      d.grupo = 'Enviado';
+    } else if (clienteActivo && nitCoincide(clienteActivo.nit, d.nitReceptor)) {
+      d.grupo = 'Recibido';
+    } else {
+      // Respaldo: sin cliente activo (o el NIT no calzó con él), busca
+      // entre todos los clientes registrados por si aplica.
+      var emisorEsCliente   = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitEmisor); });
+      var receptorEsCliente = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitReceptor); });
+      if (emisorEsCliente) d.grupo = 'Enviado';
+      else if (receptorEsCliente) d.grupo = 'Recibido';
       else d.grupo = '';
     }
   }catch(e){ d.grupo=''; }
