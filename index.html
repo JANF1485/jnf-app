@@ -579,6 +579,7 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       var filas = [];
       var resumen = {};
       var sinClasificarNits = {};
+      var coincidenActivo = 0;
       Object.values(xmlData).forEach(function(d) {
         // Determinar tipo y grupo desde el XML
         var tipoDoc = d.tipoDoc || '';
@@ -586,6 +587,7 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
         // Si el XML no trae tipo, inferir por tags
         var sh = cufeGetSh(tipoDoc, grupo);
         resumen[sh] = (resumen[sh]||0) + 1;
+        if (d.coincideClienteActivo) coincidenActivo++;
         if (!sh) {
           var par = (d.nitEmisor||'?')+' → '+(d.nitReceptor||'?');
           sinClasificarNits[par] = (sinClasificarNits[par]||0) + 1;
@@ -629,6 +631,21 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       });
       _cufeState.dianRows = filas;
       cufeLog('ok', filas.length + ' documentos cargados desde el ZIP');
+
+      // ── Seguro: ¿estos documentos realmente son del cliente activo? ──
+      (function(){
+        var idAct = (typeof activeClientId!=='undefined') ? activeClientId : null;
+        var lc = (typeof clients!=='undefined') ? clients : [];
+        var cl = idAct ? lc.find(function(x){return x.id===idAct;}) : null;
+        if (!cl || !filas.length) return;
+        var pct = coincidenActivo / filas.length;
+        if (pct === 0) {
+          cufeLog('err', '🚫 NINGUNO de los ' + filas.length + ' documentos corresponde al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Es muy probable que estos archivos sean de OTRO cliente. Verifica que abriste la carpeta correcta antes de generar el Excel.');
+        } else if (pct < 0.5) {
+          cufeLog('warn', '⚠️ Solo ' + coincidenActivo + ' de ' + filas.length + ' documentos corresponden al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Revisa si mezclaste archivos de otro cliente en el mismo comprimido.');
+        }
+      })();
+
       var nitsSC = Object.keys(sinClasificarNits);
       if (nitsSC.length) {
         cufeLog('warn', '⚠️ ' + Object.values(sinClasificarNits).reduce(function(a,b){return a+b;},0) + ' documento(s) quedaron SIN CLASIFICAR (ningún NIT emisor/receptor coincidió con un cliente registrado). Pares NIT emisor→receptor: ' + nitsSC.slice(0,5).join(' | ') + (nitsSC.length>5?' ...':''));
@@ -735,11 +752,14 @@ window.cufeParseXML = function(xml) {
     var listaClientes = (typeof clients!=='undefined') ? clients : [];
     var clienteActivo = (typeof activeClientId!=='undefined' && activeClientId)
       ? listaClientes.find(function(x){return x.id===activeClientId;}) : null;
+    d.coincideClienteActivo = false;
 
     if (clienteActivo && nitCoincide(clienteActivo.nit, d.nitEmisor)) {
       d.grupo = 'Enviado';
+      d.coincideClienteActivo = true;
     } else if (clienteActivo && nitCoincide(clienteActivo.nit, d.nitReceptor)) {
       d.grupo = 'Recibido';
+      d.coincideClienteActivo = true;
     } else {
       // Respaldo: sin cliente activo (o el NIT no calzó con él), busca
       // entre todos los clientes registrados por si aplica.
@@ -749,7 +769,7 @@ window.cufeParseXML = function(xml) {
       else if (receptorEsCliente) d.grupo = 'Recibido';
       else d.grupo = '';
     }
-  }catch(e){ d.grupo=''; }
+  }catch(e){ d.grupo=''; d.coincideClienteActivo=false; }
 
   // Ubicacion del emisor (PhysicalLocation)
   var loc = (xml.match(/PhysicalLocation[\s\S]{0,2000}?<\/cac:PhysicalLocation>/i)||[])[0]||'';
