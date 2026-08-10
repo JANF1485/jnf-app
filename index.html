@@ -139,7 +139,7 @@ function cufeGetSh(tipo, grupo){
     if(m.grupo===null) return m.sh;
     if(m.grupo.test(grupo)) return m.sh;
   }
-  return 'COSTOS';
+  return '';
 }
 
 var CUFE_MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -646,8 +646,8 @@ window.cufeParseXML = function(xml) {
   // Tipo de documento: se infiere del elemento raíz del XML
   var rootTag = (xml.match(/<(?:[a-z]+:)?([A-Za-z]+)[^>]*xmlns/i)||[])[1] || '';
   var esContingencia = /contingenc/i.test(xml);
-  if (/CreditNote/i.test(rootTag)) d.tipoDoc = 'Nota Crédito Electrónica';
-  else if (/DebitNote/i.test(rootTag)) d.tipoDoc = 'Nota Débito Electrónica';
+  if (/CreditNote/i.test(rootTag)) d.tipoDoc = 'Nota de Crédito Electrónica';
+  else if (/DebitNote/i.test(rootTag)) d.tipoDoc = 'Nota de Débito Electrónica';
   else if (/(DocumentoSoporte|SupportDocument)/i.test(rootTag) || /DocumentoSoporte/i.test(xml)) d.tipoDoc = 'Documento Soporte en Adquisiciones';
   else if (/(NominaIndividual|Payroll)/i.test(rootTag)) d.tipoDoc = 'Nómina Electrónica';
   else if (/Invoice/i.test(rootTag)) d.tipoDoc = esContingencia ? 'Factura Electrónica de Venta - Contingencia' : 'Factura Electrónica de Venta';
@@ -671,16 +671,26 @@ window.cufeParseXML = function(xml) {
   d.tpEmisor   = /<cac:Person\b/i.test(blkEm)  ? 'PN' : 'PJ';
   d.tpReceptor = /<cac:Person\b/i.test(blkRec) ? 'PN' : 'PJ';
 
-  // Grupo (Enviado/Recibido) según el NIT del cliente activo
+  // Grupo (Enviado/Recibido): compara el NIT del emisor/receptor contra
+  // TODOS los clientes registrados (no solo el cliente activo), porque
+  // un ZIP-Cuadre suele traer documentos de varios NITs distintos a la vez.
   try{
-    var cl = (typeof clients!=='undefined' && typeof activeClientId!=='undefined')
-      ? clients.find(function(x){return x.id===activeClientId;}) : null;
-    var nitCliente = cl ? String(cl.nit||'').replace(/[^0-9]/g,'') : '';
     var nitE = String(d.nitEmisor||'').replace(/[^0-9]/g,'');
     var nitR = String(d.nitReceptor||'').replace(/[^0-9]/g,'');
-    if (nitCliente && nitE === nitCliente) d.grupo = 'Enviado';
-    else if (nitCliente && nitR === nitCliente) d.grupo = 'Recibido';
-    else d.grupo = '';
+    var listaClientes = (typeof clients!=='undefined') ? clients : [];
+    var emisorEsCliente   = listaClientes.some(function(c){ return nitE && String(c.nit||'').replace(/[^0-9]/g,'')===nitE; });
+    var receptorEsCliente = listaClientes.some(function(c){ return nitR && String(c.nit||'').replace(/[^0-9]/g,'')===nitR; });
+    if (emisorEsCliente) d.grupo = 'Enviado';
+    else if (receptorEsCliente) d.grupo = 'Recibido';
+    else {
+      // Respaldo: si no coincide con ningún cliente registrado, usar el
+      // cliente activo (comportamiento anterior), por si aplica.
+      var cl = (typeof activeClientId!=='undefined') ? listaClientes.find(function(x){return x.id===activeClientId;}) : null;
+      var nitCliente = cl ? String(cl.nit||'').replace(/[^0-9]/g,'') : '';
+      if (nitCliente && nitE === nitCliente) d.grupo = 'Enviado';
+      else if (nitCliente && nitR === nitCliente) d.grupo = 'Recibido';
+      else d.grupo = '';
+    }
   }catch(e){ d.grupo=''; }
 
   // Ubicacion del emisor (PhysicalLocation)
