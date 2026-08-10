@@ -674,21 +674,27 @@ window.cufeParseXML = function(xml) {
   // Grupo (Enviado/Recibido): compara el NIT del emisor/receptor contra
   // TODOS los clientes registrados (no solo el cliente activo), porque
   // un ZIP-Cuadre suele traer documentos de varios NITs distintos a la vez.
+  // La comparación es por PREFIJO (no igualdad exacta), porque el NIT
+  // guardado del cliente puede incluir el dígito de verificación
+  // (ej. "901875183-1") mientras que el XML trae el NIT base sin DV
+  // (ej. "901875183"), o viceversa.
+  function nitCoincide(a, b){
+    a=String(a||'').replace(/[^0-9]/g,''); b=String(b||'').replace(/[^0-9]/g,'');
+    if (!a || !b || a.length<6 || b.length<6) return false;
+    return a===b || a.indexOf(b)===0 || b.indexOf(a)===0;
+  }
   try{
-    var nitE = String(d.nitEmisor||'').replace(/[^0-9]/g,'');
-    var nitR = String(d.nitReceptor||'').replace(/[^0-9]/g,'');
     var listaClientes = (typeof clients!=='undefined') ? clients : [];
-    var emisorEsCliente   = listaClientes.some(function(c){ return nitE && String(c.nit||'').replace(/[^0-9]/g,'')===nitE; });
-    var receptorEsCliente = listaClientes.some(function(c){ return nitR && String(c.nit||'').replace(/[^0-9]/g,'')===nitR; });
+    var emisorEsCliente   = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitEmisor); });
+    var receptorEsCliente = listaClientes.some(function(c){ return nitCoincide(c.nit, d.nitReceptor); });
     if (emisorEsCliente) d.grupo = 'Enviado';
     else if (receptorEsCliente) d.grupo = 'Recibido';
     else {
       // Respaldo: si no coincide con ningún cliente registrado, usar el
       // cliente activo (comportamiento anterior), por si aplica.
       var cl = (typeof activeClientId!=='undefined') ? listaClientes.find(function(x){return x.id===activeClientId;}) : null;
-      var nitCliente = cl ? String(cl.nit||'').replace(/[^0-9]/g,'') : '';
-      if (nitCliente && nitE === nitCliente) d.grupo = 'Enviado';
-      else if (nitCliente && nitR === nitCliente) d.grupo = 'Recibido';
+      if (cl && nitCoincide(cl.nit, d.nitEmisor)) d.grupo = 'Enviado';
+      else if (cl && nitCoincide(cl.nit, d.nitReceptor)) d.grupo = 'Recibido';
       else d.grupo = '';
     }
   }catch(e){ d.grupo=''; }
