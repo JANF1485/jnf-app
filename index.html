@@ -118,6 +118,10 @@ var _cufeState = {
 };
 
 var CUFE_MAPA = [
+  {tipos:[/documento soporte/i],  grupo:null, sh:'DOC. SOPORTE'},
+  {tipos:[/n.*mina electr/i],     grupo:null, sh:'NOMINA'},
+  {tipos:[/servicios? p.*blicos?/i,/equivalente.*p.*blico/i], grupo:null, sh:'SERV PUBLICOS'},
+  {tipos:[/ipo.?consumo/i],       grupo:null, sh:'IPOCONSUMO'},
   {tipos:[/factura electr/i,/factura de venta/i],  grupo:/enviado/i,  sh:'VENTAS'},
   {tipos:[/factura electr/i,/factura de compra/i,/equivalente/i,/contingencia/i], grupo:/recibido/i, sh:'COSTOS'},
   {tipos:[/contingencia/i], grupo:/enviado/i, sh:'VENTAS'},
@@ -125,10 +129,8 @@ var CUFE_MAPA = [
   {tipos:[/nota de cr.*electr/i], grupo:/recibido/i, sh:'DV COSTOS'},
   {tipos:[/nota de d.*electr/i],  grupo:/enviado/i,  sh:'DEV EN VENTAS'},
   {tipos:[/nota de d.*electr/i],  grupo:/recibido/i, sh:'DV COSTOS'},
-  {tipos:[/documento soporte/i],  grupo:null, sh:'DOC. SOPORTE'},
-  {tipos:[/n.*mina electr/i],     grupo:null, sh:'NOMINA'},
-  {tipos:[/servicios p.*blicos/i,/equivalente.*p.*blico/i], grupo:null, sh:'SERV PUBLICOS'},
-  {tipos:[/ipo.?consumo/i],       grupo:null, sh:'IPOCONSUMO'}
+  {tipos:[/documento\s+equivalente/i], grupo:/enviado/i,  sh:'VENTAS'},
+  {tipos:[/documento\s+equivalente/i], grupo:/recibido/i, sh:'COSTOS'}
 ];
 
 function cufeGetSh(tipo, grupo){
@@ -643,15 +645,36 @@ window.cufeParseXML = function(xml) {
   if (pref) { d.prefijo = pref[1]; d.folio = pref[2]; }
   else { d.prefijo = ''; d.folio = docId; }
 
-  // Tipo de documento: se infiere del elemento raíz del XML
+  // Tipo de documento: la señal más confiable es el texto de cbc:ProfileID
+  // (la DIAN exige un literal fijo ahí, ej. "DIAN 2.1: Factura Electrónica
+  // de Venta"). El elemento raíz del XML NO alcanza para distinguir todo:
+  // el Documento Soporte usa la MISMA raíz <Invoice> que una factura común
+  // (confirmado en el anexo técnico de la DIAN), así que se revisa el
+  // texto del documento (ProfileID/Note) ANTES de asumir que es factura.
   var rootTag = (xml.match(/<(?:[a-z]+:)?([A-Za-z]+)[^>]*xmlns/i)||[])[1] || '';
+  var profileId = (xml.match(/<cbc:ProfileID>([^<]+)<\/cbc:ProfileID>/i)||[])[1] || '';
+  var xmlLower = xml.toLowerCase();
   var esContingencia = /contingenc/i.test(xml);
-  if (/CreditNote/i.test(rootTag)) d.tipoDoc = 'Nota de Crédito Electrónica';
-  else if (/DebitNote/i.test(rootTag)) d.tipoDoc = 'Nota de Débito Electrónica';
-  else if (/(DocumentoSoporte|SupportDocument)/i.test(rootTag) || /DocumentoSoporte/i.test(xml)) d.tipoDoc = 'Documento Soporte en Adquisiciones';
-  else if (/(NominaIndividual|Payroll)/i.test(rootTag)) d.tipoDoc = 'Nómina Electrónica';
-  else if (/Invoice/i.test(rootTag)) d.tipoDoc = esContingencia ? 'Factura Electrónica de Venta - Contingencia' : 'Factura Electrónica de Venta';
-  else d.tipoDoc = '';
+
+  if (/CreditNote/i.test(rootTag)) {
+    d.tipoDoc = 'Nota de Crédito Electrónica';
+  } else if (/DebitNote/i.test(rootTag)) {
+    d.tipoDoc = 'Nota de Débito Electrónica';
+  } else if (/(NominaIndividual|Payroll)/i.test(rootTag)) {
+    d.tipoDoc = 'Nómina Electrónica';
+  } else if (/documento\s+soporte/i.test(profileId) || /documento\s+soporte/i.test(xmlLower)) {
+    d.tipoDoc = 'Documento Soporte en Adquisiciones';
+  } else if (/servicios?\s+p[uú]blicos?/i.test(profileId) || /servicios?\s+p[uú]blicos?/i.test(xmlLower)) {
+    d.tipoDoc = 'Factura Electrónica de Venta - Servicios Públicos';
+  } else if (/impuesto\s+al\s+consumo/i.test(profileId) || /ipo.?consumo/i.test(xmlLower)) {
+    d.tipoDoc = 'Factura Electrónica de Venta - IPOconsumo';
+  } else if (/documento\s+equivalente/i.test(profileId) || /documento\s+equivalente/i.test(xmlLower)) {
+    d.tipoDoc = 'Documento Equivalente Electrónico';
+  } else if (/Invoice/i.test(rootTag)) {
+    d.tipoDoc = esContingencia ? 'Factura Electrónica de Venta - Contingencia' : 'Factura Electrónica de Venta';
+  } else {
+    d.tipoDoc = '';
+  }
 
   // Emisor: NIT y DV
   var mEm = xml.match(/AccountingSupplierParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
