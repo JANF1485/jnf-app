@@ -726,8 +726,8 @@ window.cufeParseXML = function(xml) {
     var dv = (m[1].match(/schemeID="(\d*)"/i)||[])[1] || '';
     return { nit: m[2], dv: dv };
   }
-  var blkEmNit = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
-  var blkRecNit = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var blkEmNit = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkRecNit = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
   var rEm = extraerNitDV(blkEmNit);
   if (rEm) { d.nitEmisor=rEm.nit; d.dvEmisor=rEm.dv; }
   d.nomEmisor = (xml.match(/AccountingSupplierParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
@@ -739,11 +739,24 @@ window.cufeParseXML = function(xml) {
   d.nomReceptor = (xml.match(/AccountingCustomerParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
   d.nomReceptor = d.nomReceptor.trim();
 
+  // Respaldo: la DIAN exige en TODO documento electrónico un bloque de
+  // texto tipo "código QR" con los datos clave en texto plano (NitFac:
+  // emisor, DocAdq: receptor), sin importar el software que lo generó.
+  // Algunos ERP (ej. MEICO) no llenan el bloque estructurado <cac:Party>
+  // del receptor, o usan un prefijo de espacio de nombres no estándar
+  // (ej. <grl:Party/> vacío) — en esos casos, este texto es la única
+  // fuente confiable de los NIT.
+  if (!d.nitEmisor || !d.nitReceptor) {
+    var qr = (xml.match(/NitFac:\s*([0-9]+)[\s\S]{0,80}?DocAdq:\s*([0-9]+)/i)||[]);
+    if (qr[1] && !d.nitEmisor) d.nitEmisor = qr[1];
+    if (qr[2] && !d.nitReceptor) d.nitReceptor = qr[2];
+  }
+
   // Tipo de Persona (T.P.): primero se busca el TaxLevelCode explícito
   // (ej. "R-99-PN" = persona natural), que la DIAN exige y es más
   // confiable; si no está, se recurre a la presencia de <cac:Person>.
-  var blkEmT = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
-  var blkRecT = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var blkEmT = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkRecT = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
   function tipoPersonaDe(blk){
     var tlc = (blk.match(/TaxLevelCode[^>]*>([^<]+)</i)||[])[1]||'';
     if (/-PN\b|PN$/i.test(tlc)) return 'PN';
