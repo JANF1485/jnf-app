@@ -717,23 +717,42 @@ window.cufeParseXML = function(xml) {
     d.tipoDoc = '';
   }
 
-  // Emisor: NIT y DV
-  var mEm = xml.match(/AccountingSupplierParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
-  if (mEm) { d.nitEmisor=mEm[2]; d.dvEmisor=mEm[1]; }
+  // Emisor: NIT y DV. El atributo schemeID (dígito de verificación) puede
+  // venir vacío o directamente AUSENTE — normal en cédulas de persona
+  // natural, que no tienen DV como el NIT. No se exige que exista.
+  function extraerNitDV(bloque){
+    var m = bloque.match(/<cbc:CompanyID([^>]*)>(\d+)</i);
+    if (!m) return null;
+    var dv = (m[1].match(/schemeID="(\d*)"/i)||[])[1] || '';
+    return { nit: m[2], dv: dv };
+  }
+  var blkEmNit = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var blkRecNit = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var rEm = extraerNitDV(blkEmNit);
+  if (rEm) { d.nitEmisor=rEm.nit; d.dvEmisor=rEm.dv; }
   d.nomEmisor = (xml.match(/AccountingSupplierParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
   d.nomEmisor = d.nomEmisor.trim();
 
   // Receptor: NIT y DV
-  var mRec = xml.match(/AccountingCustomerParty[\s\S]{0,3000}?CompanyID[^>]*schemeID="(\d+)"[^>]*>(\d+)</i);
-  if (mRec) { d.nitReceptor=mRec[2]; d.dvReceptor=mRec[1]; }
+  var rRec = extraerNitDV(blkRecNit);
+  if (rRec) { d.nitReceptor=rRec.nit; d.dvReceptor=rRec.dv; }
   d.nomReceptor = (xml.match(/AccountingCustomerParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
   d.nomReceptor = d.nomReceptor.trim();
 
-  // Tipo de Persona (T.P.): presencia de <cac:Person> = Persona Natural; si no, Persona Jurídica
-  var blkEm = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
-  var blkRec = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
-  d.tpEmisor   = /<cac:Person\b/i.test(blkEm)  ? 'PN' : 'PJ';
-  d.tpReceptor = /<cac:Person\b/i.test(blkRec) ? 'PN' : 'PJ';
+  // Tipo de Persona (T.P.): primero se busca el TaxLevelCode explícito
+  // (ej. "R-99-PN" = persona natural), que la DIAN exige y es más
+  // confiable; si no está, se recurre a la presencia de <cac:Person>.
+  var blkEmT = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  var blkRecT = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/cac:Party>/i)||[])[0]||'';
+  function tipoPersonaDe(blk){
+    var tlc = (blk.match(/TaxLevelCode[^>]*>([^<]+)</i)||[])[1]||'';
+    if (/-PN\b|PN$/i.test(tlc)) return 'PN';
+    if (/-PJ\b|PJ$/i.test(tlc)) return 'PJ';
+    return /<cac:Person\b/i.test(blk) ? 'PN' : 'PJ';
+  }
+
+  d.tpEmisor   = tipoPersonaDe(blkEmT);
+  d.tpReceptor = tipoPersonaDe(blkRecT);
 
   // Grupo (Enviado/Recibido): el módulo de Descarga Masiva se abre
   // siempre dentro de la carpeta de UN cliente específico (activeClientId),
