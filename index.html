@@ -580,17 +580,22 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       var resumen = {};
       var sinClasificarNits = {};
       var coincidenActivo = 0;
+      var totalFinancieros = 0;
       Object.values(xmlData).forEach(function(d) {
         // Determinar tipo y grupo desde el XML
         var tipoDoc = d.tipoDoc || '';
         var grupo   = d.grupo   || '';
+        var esAcuse = tipoDoc === 'Acuse de Recibo (evento DIAN)';
         // Si el XML no trae tipo, inferir por tags
-        var sh = cufeGetSh(tipoDoc, grupo);
+        var sh = esAcuse ? 'ACUSE' : cufeGetSh(tipoDoc, grupo);
         resumen[sh] = (resumen[sh]||0) + 1;
-        if (d.coincideClienteActivo) coincidenActivo++;
-        if (!sh) {
-          var par = (d.nitEmisor||'?')+' → '+(d.nitReceptor||'?');
-          sinClasificarNits[par] = (sinClasificarNits[par]||0) + 1;
+        if (!esAcuse) {
+          totalFinancieros++;
+          if (d.coincideClienteActivo) coincidenActivo++;
+          if (!sh) {
+            var par = (d.nitEmisor||'?')+' → '+(d.nitReceptor||'?');
+            sinClasificarNits[par] = (sinClasificarNits[par]||0) + 1;
+          }
         }
         filas.push({
           cufe:        d.cufe        || '',
@@ -610,6 +615,8 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
           dvReceptor:  d.dvReceptor  || '',
           tpEmisor:    d.tpEmisor    || 'PJ',
           tpReceptor:  d.tpReceptor  || 'PJ',
+          refFolio:    d.refFolio    || '',
+          refCufe:     d.refCufe     || '',
           dir:         d.dir         || '',
           ciudad:      d.ciudad      || '',
           dpto:        d.dpto        || '',
@@ -633,16 +640,18 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
       cufeLog('ok', filas.length + ' documentos cargados desde el ZIP');
 
       // ── Seguro: ¿estos documentos realmente son del cliente activo? ──
+      // (los Acuses de Recibo no tienen NIT de cliente por diseño, así
+      // que no cuentan ni a favor ni en contra de este chequeo)
       (function(){
         var idAct = (typeof activeClientId!=='undefined') ? activeClientId : null;
         var lc = (typeof clients!=='undefined') ? clients : [];
         var cl = idAct ? lc.find(function(x){return x.id===idAct;}) : null;
-        if (!cl || !filas.length) return;
-        var pct = coincidenActivo / filas.length;
+        if (!cl || !totalFinancieros) return;
+        var pct = coincidenActivo / totalFinancieros;
         if (pct === 0) {
-          cufeLog('err', '🚫 NINGUNO de los ' + filas.length + ' documentos corresponde al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Es muy probable que estos archivos sean de OTRO cliente. Verifica que abriste la carpeta correcta antes de generar el Excel.');
+          cufeLog('err', '🚫 NINGUNO de los ' + totalFinancieros + ' documentos con datos financieros corresponde al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Es muy probable que estos archivos sean de OTRO cliente. Verifica que abriste la carpeta correcta antes de generar el Excel.');
         } else if (pct < 0.5) {
-          cufeLog('warn', '⚠️ Solo ' + coincidenActivo + ' de ' + filas.length + ' documentos corresponden al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Revisa si mezclaste archivos de otro cliente en el mismo comprimido.');
+          cufeLog('warn', '⚠️ Solo ' + coincidenActivo + ' de ' + totalFinancieros + ' documentos con datos financieros corresponden al NIT del cliente activo (' + cl.razon + ' · ' + cl.nit + '). Revisa si mezclaste archivos de otro cliente en el mismo comprimido.');
         }
       })();
 
@@ -713,6 +722,10 @@ window.cufeParseXML = function(xml) {
     d.tipoDoc = 'Documento Equivalente Electrónico';
   } else if (/Invoice/i.test(rootTag)) {
     d.tipoDoc = esContingencia ? 'Factura Electrónica de Venta - Contingencia' : 'Factura Electrónica de Venta';
+  } else if (/ApplicationResponse/i.test(rootTag)) {
+    d.tipoDoc = 'Acuse de Recibo (evento DIAN)';
+    var refM = xml.match(/<cac:DocumentReference>\s*<cbc:ID>([^<]*)<\/cbc:ID>\s*<cbc:UUID[^>]*>([^<]+)<\/cbc:UUID>/i);
+    if (refM) { d.refFolio = refM[1]; d.refCufe = refM[2]; }
   } else {
     d.tipoDoc = '';
   }
@@ -830,19 +843,30 @@ window.cufeParseXML = function(xml) {
   }
 
   // Totales
-  d.total    = parseFloat(ex('PayableAmount')) || 0;
+  var blkTotal = (xml.match(/<cac:LegalMonetaryTotal>[\s\S]*?<\/cac:LegalMonetaryTotal>/i)||[])[0]||xml;
+  d.total    = parseFloat((blkTotal.match(/<cbc:PayableAmount[^>]*>([^<]+)</i)||[])[1]) || 0;
   d.subtotal = parseFloat((xml.match(/<cbc:LineExtensionAmount[^>]*>([^<]+)/i)||[])[1]) || 0;
 
-  // Impuestos por tasa
+  // Impuestos por tasa: SOLO del resumen a nivel de documento (el o los
+  // <cac:TaxTotal> que aparecen ANTES de la primera línea de producto).
+  // El XML también trae un <cac:TaxTotal> repetido DENTRO de cada línea
+  // (InvoiceLine/CreditNoteLine/DebitNoteLine) como detalle — son el
+  // mismo impuesto ya contado en el resumen, y sumarlos todos duplica
+  // (o multiplica) la base y el IVA según el número de líneas.
   d.iva=0; d.b19=0; d.b5=0; d.iv5=0; d.ex=0;
-  var taxBlocks = xml.match(/<cac:TaxTotal>[\s\S]*?<\/cac:TaxTotal>/gi)||[];
+  var finLinea = xml.search(/<cac:(Invoice|CreditNote|DebitNote)Line>/i);
+  var xmlResumen = finLinea > 0 ? xml.slice(0, finLinea) : xml;
+  var taxBlocks = xmlResumen.match(/<cac:TaxTotal>[\s\S]*?<\/cac:TaxTotal>/gi)||[];
   taxBlocks.forEach(function(blk){
-    var amt  = parseFloat((blk.match(/<cbc:TaxAmount[^>]*>([^<]+)/i)||[])[1]||0);
-    var base = parseFloat((blk.match(/<cbc:TaxableAmount[^>]*>([^<]+)/i)||[])[1]||0);
-    var pct  = parseFloat((blk.match(/<cbc:Percent>([^<]+)/i)||[])[1]||0);
-    if (pct===19) { d.iva+=amt; d.b19=base; }
-    else if (pct===5) { d.iv5+=amt; d.b5=base; }
-    else { d.ex=(d.ex||0)+base; }
+    var subtotales = blk.match(/<cac:TaxSubtotal>[\s\S]*?<\/cac:TaxSubtotal>/gi)||[blk];
+    subtotales.forEach(function(sub){
+      var amt  = parseFloat((sub.match(/<cbc:TaxAmount[^>]*>([^<]+)/i)||[])[1]||0);
+      var base = parseFloat((sub.match(/<cbc:TaxableAmount[^>]*>([^<]+)/i)||[])[1]||0);
+      var pct  = parseFloat((sub.match(/<cbc:Percent>([^<]+)/i)||[])[1]||0);
+      if (pct===19) { d.iva+=amt; d.b19+=base; }
+      else if (pct===5) { d.iv5+=amt; d.b5+=base; }
+      else { d.ex=(d.ex||0)+base; }
+    });
   });
 
   // Fecha
@@ -1158,7 +1182,8 @@ window.cufeDescargarExcel=function(){
   if(lista.length){
     var colsTodos=['PESTAÑA','TIPO DOC','CUFE/CUDE','FOLIOS','PREFIJO','MES','FECHA EMISION','T.P.',
       'NIT EMISOR','NOMBRE EMISOR','NIT RECEPTOR','NOMBRE RECEPTOR',
-      'BASE 19%','BASE 5%','EXENTO','EXCLUIDO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL'];
+      'BASE 19%','BASE 5%','EXENTO','EXCLUIDO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL',
+      'FACTURA REFERENCIADA (Folio)','CUFE FACTURA REFERENCIADA'];
     var nc=colsTodos.length;
     var aoa=[];
     var r1=new Array(nc).fill(''); r1[0]=EMPRESA; r1[nc-1]=NIT_EMP; aoa.push(r1);
@@ -1175,7 +1200,8 @@ window.cufeDescargarExcel=function(){
         item.nitEmisor||'', item.nomEmisor||'',
         item.nitReceptor||'', item.nomReceptor||'',
         item.b19||0, item.b5||0, item.ex||0, item.exc||0, item.iv19||0, item.iv5||0, item.ipo8||0,
-        item.iva||0, item.total||0
+        item.iva||0, item.total||0,
+        item.refFolio||'', item.refCufe||''
       ]);
     });
     var wsTodos=XS.utils.aoa_to_sheet(aoa);
@@ -1196,9 +1222,10 @@ window.cufeDescargarExcel=function(){
       {s:{r:1,c:0},e:{r:1,c:nc-1}}
     ];
     wsTodos['!cols']=colsTodos.map(function(c){
-      if(c==='CUFE/CUDE') return{wch:20};
+      if(c==='CUFE/CUDE'||c==='CUFE FACTURA REFERENCIADA') return{wch:20};
       if(c==='NOMBRE EMISOR'||c==='NOMBRE RECEPTOR') return{wch:26};
       if(c==='FECHA EMISION') return{wch:12};
+      if(c==='FACTURA REFERENCIADA (Folio)') return{wch:16};
       return{wch:12};
     });
     wsTodos['!rows']=[{hpt:22},{hpt:18},{hpt:26}];
