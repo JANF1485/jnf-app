@@ -1188,6 +1188,7 @@ window.cufeDescargarExcel=function(){
     var aoa=[];
     var r1=new Array(nc).fill(''); r1[0]=EMPRESA; r1[nc-1]=NIT_EMP; aoa.push(r1);
     var r2=new Array(nc).fill(''); r2[0]='TODOS LOS DOCUMENTOS — REVISIÓN Y FILTROS — AÑO '+ANIO; aoa.push(r2);
+    var r3=new Array(nc).fill(''); r3[0]='Nota: los documentos "ACUSE" son eventos DIAN (acuse de recibo / recibo del bien o servicio) asociados a facturas de crédito, no facturas en sí — según la Ley 2155 de 2021 y el RADIAN, son el requisito para poder tomar esa factura como costo/deducción e IVA descontable. No se incluyen en los totales de las demás pestañas.'; aoa.push(r3);
     aoa.push(colsTodos.map(function(c){return c;}));
     lista.forEach(function(item){
       var dvE=item.dvEmisor||cufeCalcDV(item.nitEmisor||'');
@@ -1212,14 +1213,16 @@ window.cufeDescargarExcel=function(){
         var isNum=['BASE 19%','BASE 5%','EXENTO','EXCLUIDO','IVA 19%','IVA 5%','IPO 8%','IVA','TOTAL'].indexOf(colsTodos[ci])>=0;
         if(ri===0) wsTodos[addr].s=stTitulo(DORADO);
         else if(ri===1) wsTodos[addr].s=stSubtitulo();
-        else if(ri===2) wsTodos[addr].s=stHdr(AZUL,BLANCO);
+        else if(ri===2) wsTodos[addr].s={font:{italic:true,sz:9,color:{rgb:'555555'}},alignment:{wrapText:true,vertical:'center'}};
+        else if(ri===3) wsTodos[addr].s=stHdr(AZUL,BLANCO);
         else wsTodos[addr].s=stDato((ri%2===0),isNum,false);
       });
     });
     wsTodos['!merges']=[
       {s:{r:0,c:0},e:{r:0,c:Math.floor(nc/2)-1}},
       {s:{r:0,c:Math.floor(nc/2)},e:{r:0,c:nc-1}},
-      {s:{r:1,c:0},e:{r:1,c:nc-1}}
+      {s:{r:1,c:0},e:{r:1,c:nc-1}},
+      {s:{r:2,c:0},e:{r:2,c:nc-1}}
     ];
     wsTodos['!cols']=colsTodos.map(function(c){
       if(c==='CUFE/CUDE'||c==='CUFE FACTURA REFERENCIADA') return{wch:20};
@@ -1228,8 +1231,8 @@ window.cufeDescargarExcel=function(){
       if(c==='FACTURA REFERENCIADA (Folio)') return{wch:16};
       return{wch:12};
     });
-    wsTodos['!rows']=[{hpt:22},{hpt:18},{hpt:26}];
-    wsTodos['!autofilter']={ref:XS.utils.encode_range({s:{r:2,c:0},e:{r:aoa.length-1,c:nc-1}})};
+    wsTodos['!rows']=[{hpt:22},{hpt:18},{hpt:30},{hpt:26}];
+    wsTodos['!autofilter']={ref:XS.utils.encode_range({s:{r:3,c:0},e:{r:aoa.length-1,c:nc-1}})};
     XS.utils.book_append_sheet(wb, wsTodos, 'TODOS LOS DOCUMENTOS');
   }
 
