@@ -9684,30 +9684,66 @@ function bitSelect(id, opciones, valorActual){
   return html;
 }
 
+function bitTabBtn(value, label, current, setter){
+  var active = value===current;
+  return '<button type="button" onclick="'+setter+'(\''+value+'\')" style="padding:9px 18px;background:none;border:none;border-bottom:2px solid '+(active?'var(--bd)':'transparent')+';margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:'+(active?'var(--bd)':'var(--t2)')+';cursor:pointer;">'+label+'</button>';
+}
+
+function bitFechaFiltroHtml(valorActual, hoy){
+  return '<div style="display:flex;gap:4px;align-items:center;">'+
+    '<input type="date" id="bit-f-fecha" value="'+(valorActual||'')+'" max="'+hoy+'" style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--br);border-radius:7px;padding:6px 8px;background:var(--sf);color:var(--bd);outline:none;">'+
+    '<button type="button" class="btn btn-ol btn-sm" onclick="bitFiltroFecha(\''+hoy+'\')" style="font-size:10px;">Hoy</button>'+
+    '<button type="button" class="btn btn-ol btn-sm" onclick="bitFiltroFecha(\'\')" style="font-size:10px;">Todas</button>'+
+  '</div>';
+}
+
 // ── VISTA COLABORADOR ("Mi día") ─────────────────────────
+var _bitTabColab = 'hoy';
+
+window.bitSetTabColab = function bitSetTabColab(tab){
+  _bitTabColab = tab;
+  bitRenderColaborador();
+};
+
 function bitRenderColaborador(){
   var root = document.getElementById('bit-root');
-  var mios = _bitCache.slice().sort(function(a,b){
-    var orden = {en_progreso:0, pendiente:1, completada:2};
-    var d = orden[a.estado]-orden[b.estado];
-    if(d!==0) return d;
-    return new Date(b.creadoEn)-new Date(a.creadoEn);
-  });
   var hoy = bitHoy();
-  var deHoy = mios.filter(function(r){ return r.fecha===hoy; });
-  var completadasHoy = deHoy.filter(function(r){ return r.estado==='completada'; }).length;
-  var estAcum = mios.reduce(function(s,r){ return s+(r.estimadoMin||0); },0);
-  var realAcum = mios.reduce(function(s,r){ return s+(r.realMin||0); },0);
 
   var html = '';
   html += '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">';
   html += '<div class="page-title">Mi día</div><span style="font-family:monospace;font-size:11px;color:var(--t3);">'+hoy+'</span></div>';
   html += '<div class="page-sub">Solo tú ves esta lista. Registra tu actividad y avanza el estado con un toque.</div>';
 
+  html += '<div style="display:flex;gap:0;margin:14px 0 18px;border-bottom:2px solid var(--br);">';
+  html += bitTabBtn('hoy', 'Hoy', _bitTabColab, 'bitSetTabColab');
+  html += bitTabBtn('historial', 'Historial por día', _bitTabColab, 'bitSetTabColab');
+  html += '</div>';
+
+  html += '<div id="bit-colab-body"></div>';
+
+  root.innerHTML = html;
+
+  if(_bitTabColab==='hoy'){ bitRenderColaboradorHoy(); } else { bitRenderColaboradorHistorial(); }
+}
+
+function bitRenderColaboradorHoy(){
+  var body = document.getElementById('bit-colab-body');
+  var hoy = bitHoy();
+  var deHoy = _bitCache.filter(function(r){ return r.fecha===hoy; }).sort(function(a,b){
+    var orden = {en_progreso:0, pendiente:1, completada:2};
+    var d = orden[a.estado]-orden[b.estado];
+    if(d!==0) return d;
+    return new Date(b.creadoEn)-new Date(a.creadoEn);
+  });
+  var completadasHoy = deHoy.filter(function(r){ return r.estado==='completada'; }).length;
+  var estHoy = deHoy.reduce(function(s,r){ return s+(r.estimadoMin||0); },0);
+  var realHoy = deHoy.reduce(function(s,r){ return s+(r.realMin||0); },0);
+
+  var html = '';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">';
   html += bitKpi('Completadas hoy', completadasHoy+' / '+deHoy.length);
-  html += bitKpi('Estimado total', bitFmtMin(estAcum));
-  html += bitKpi('Real acumulado', bitFmtMin(realAcum));
+  html += bitKpi('Estimado de hoy', bitFmtMin(estHoy));
+  html += bitKpi('Real de hoy', bitFmtMin(realHoy));
   html += '</div>';
 
   html += '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:16px 18px;margin-bottom:18px;">';
@@ -9723,20 +9759,59 @@ function bitRenderColaborador(){
   html += '</div></div>';
 
   html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-  if(mios.length===0){
-    html += '<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px;border:1.5px dashed var(--br);border-radius:var(--r);">Todavía no has registrado nada.</div>';
+  if(deHoy.length===0){
+    html += '<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px;border:1.5px dashed var(--br);border-radius:var(--r);">Todavía no has registrado nada hoy.</div>';
   } else {
-    mios.forEach(function(r){ html += bitTaskRow(r); });
+    deHoy.forEach(function(r){ html += bitTaskRow(r); });
   }
   html += '</div>';
 
-  root.innerHTML = html;
+  body.innerHTML = html;
 
   var inp = document.getElementById('bit-desc-input');
   inp.focus();
   inp.addEventListener('keydown', function(e){
     if(e.key==='Enter'){ e.preventDefault(); bitCrear(); }
   });
+}
+
+function bitRenderColaboradorHistorial(){
+  var body = document.getElementById('bit-colab-body');
+  var hoy = bitHoy();
+  var porDia = {};
+  _bitCache.forEach(function(r){
+    if(!porDia[r.fecha]) porDia[r.fecha] = { fecha:r.fecha, total:0, completadas:0, estimado:0, real:0 };
+    var d = porDia[r.fecha];
+    d.total++;
+    if(r.estado==='completada') d.completadas++;
+    d.estimado += (r.estimadoMin||0);
+    d.real += (r.realMin||0);
+  });
+  var dias = Object.keys(porDia).map(function(k){ return porDia[k]; }).sort(function(a,b){ return a.fecha < b.fecha ? 1 : -1; });
+
+  var html = '';
+  if(dias.length===0){
+    html += '<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px;border:1.5px dashed var(--br);border-radius:var(--r);">Todavía no tienes historial.</div>';
+  } else {
+    html += '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html += '<thead><tr style="background:#f8faff;">'+
+      ['Fecha','Completadas','Estimado','Real','Comparación'].map(function(h){
+        return '<th style="text-align:left;padding:9px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);white-space:nowrap;">'+h+'</th>';
+      }).join('')+'</tr></thead><tbody>';
+    dias.forEach(function(d){
+      var pctShow = d.real>0 ? bitComparacionPct(d.estimado, d.real) : null;
+      html += '<tr>'+
+        '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;'+(d.fecha===hoy?'font-weight:700;color:var(--bd);':'')+'">'+d.fecha+(d.fecha===hoy?' (hoy)':'')+'</td>'+
+        '<td style="padding:8px 10px;border-bottom:1px solid var(--br);">'+d.completadas+' / '+d.total+'</td>'+
+        '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;">'+bitFmtMin(d.estimado)+'</td>'+
+        '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;">'+bitFmtMin(d.real)+'</td>'+
+        '<td style="padding:8px 10px;border-bottom:1px solid var(--br);"><div style="width:70px;height:6px;border-radius:99px;background:var(--bl);overflow:hidden;"><div style="height:100%;width:'+(pctShow===null?0:pctShow)+'%;background:'+bitComparacionColor(pctShow)+';"></div></div></td>'+
+      '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+  body.innerHTML = html;
 }
 
 function bitTaskRow(r){
@@ -9806,6 +9881,18 @@ window.bitAvanzar = function bitAvanzar(id){
 };
 
 // ── VISTA SUPERVISOR (panel de todos los contadores) ─────
+var _bitTabAdmin = 'actividades';
+
+window.bitSetTabAdmin = function bitSetTabAdmin(tab){
+  _bitTabAdmin = tab;
+  bitRenderSupervisor();
+};
+
+window.bitFiltroFecha = function bitFiltroFecha(v){
+  _bitFiltros.fecha = v;
+  bitRenderSupervisorActividades();
+};
+
 function bitRenderSupervisor(){
   var root = document.getElementById('bit-root');
   var hoy = bitHoy();
@@ -9827,9 +9914,26 @@ function bitRenderSupervisor(){
   html += bitKpi('Sin registrar hoy', sinRegistroHoy.length);
   html += '</div>';
 
+  html += '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--br);">';
+  html += bitTabBtn('actividades', 'Actividades', _bitTabAdmin, 'bitSetTabAdmin');
+  html += bitTabBtn('resumen', 'Resumen por día', _bitTabAdmin, 'bitSetTabAdmin');
+  html += '</div>';
+
+  html += '<div id="bit-admin-body"></div>';
+
+  root.innerHTML = html;
+
+  if(_bitTabAdmin==='actividades'){ bitRenderSupervisorActividades(); } else { bitRenderSupervisorResumen(); }
+}
+
+function bitRenderSupervisorActividades(){
+  var body = document.getElementById('bit-admin-body');
+  var hoy = bitHoy();
+
+  var html = '';
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;">';
   html += bitSelect('bit-f-contador', [['','Todos los contadores']].concat(_bitUsuarios.map(function(u){ return [u.uid, u.nombre||u.email]; })), _bitFiltros.contadorId);
-  html += bitSelect('bit-f-fecha', [['','Todas las fechas'],[hoy,'Hoy ('+hoy+')']], _bitFiltros.fecha);
+  html += bitFechaFiltroHtml(_bitFiltros.fecha, hoy);
   html += bitSelect('bit-f-estado', [['','Todos los estados'],['pendiente','Pendiente'],['en_progreso','En progreso'],['completada','Completada']], _bitFiltros.estado);
   html += '</div>';
 
@@ -9838,7 +9942,7 @@ function bitRenderSupervisor(){
     if(_bitFiltros.fecha && r.fecha!==_bitFiltros.fecha) return false;
     if(_bitFiltros.estado && r.estado!==_bitFiltros.estado) return false;
     return true;
-  });
+  }).sort(function(a,b){ return new Date(b.creadoEn)-new Date(a.creadoEn); });
 
   html += '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">';
   html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
@@ -9870,11 +9974,11 @@ function bitRenderSupervisor(){
   });
   html += '</tbody></table></div></div>';
 
-  root.innerHTML = html;
+  body.innerHTML = html;
 
-  document.getElementById('bit-f-contador').addEventListener('change', function(e){ _bitFiltros.contadorId=e.target.value; bitRenderSupervisor(); });
-  document.getElementById('bit-f-fecha').addEventListener('change', function(e){ _bitFiltros.fecha=e.target.value; bitRenderSupervisor(); });
-  document.getElementById('bit-f-estado').addEventListener('change', function(e){ _bitFiltros.estado=e.target.value; bitRenderSupervisor(); });
+  document.getElementById('bit-f-contador').addEventListener('change', function(e){ _bitFiltros.contadorId=e.target.value; bitRenderSupervisorActividades(); });
+  document.getElementById('bit-f-fecha').addEventListener('change', function(e){ _bitFiltros.fecha=e.target.value; bitRenderSupervisorActividades(); });
+  document.getElementById('bit-f-estado').addEventListener('change', function(e){ _bitFiltros.estado=e.target.value; bitRenderSupervisorActividades(); });
 
   Object.keys(_bitComentarioAbierto).forEach(function(id){
     if(!_bitComentarioAbierto[id]) return;
@@ -9887,6 +9991,63 @@ function bitRenderSupervisor(){
       });
     }
   });
+}
+
+function bitRenderSupervisorResumen(){
+  var body = document.getElementById('bit-admin-body');
+  var hoy = bitHoy();
+
+  var html = '';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;">';
+  html += bitSelect('bit-r-contador', [['','Todos los contadores']].concat(_bitUsuarios.map(function(u){ return [u.uid, u.nombre||u.email]; })), _bitFiltros.contadorId);
+  html += '</div>';
+
+  var base = _bitCache.filter(function(r){
+    if(_bitFiltros.contadorId && r.usuarioId!==_bitFiltros.contadorId) return false;
+    return true;
+  });
+
+  var porDia = {};
+  base.forEach(function(r){
+    var key = r.fecha+'|'+r.usuarioId;
+    if(!porDia[key]) porDia[key] = { fecha:r.fecha, usuarioId:r.usuarioId, usuarioNombre:r.usuarioNombre, total:0, completadas:0, estimado:0, real:0 };
+    var d = porDia[key];
+    d.total++;
+    if(r.estado==='completada') d.completadas++;
+    d.estimado += (r.estimadoMin||0);
+    d.real += (r.realMin||0);
+  });
+  var filas = Object.keys(porDia).map(function(k){ return porDia[k]; }).sort(function(a,b){
+    if(a.fecha!==b.fecha) return a.fecha < b.fecha ? 1 : -1;
+    return (a.usuarioNombre||'').localeCompare(b.usuarioNombre||'');
+  });
+
+  html += '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow:hidden;">';
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
+  html += '<thead><tr style="background:#f8faff;">'+
+    ['Fecha','Contador','Completadas','Estimado','Real','Comparación'].map(function(h){
+      return '<th style="text-align:left;padding:9px 10px;font-weight:700;color:var(--t2);border-bottom:2px solid var(--br);white-space:nowrap;">'+h+'</th>';
+    }).join('')+'</tr></thead><tbody>';
+
+  if(filas.length===0){
+    html += '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3);">No hay registros con estos filtros.</td></tr>';
+  }
+  filas.forEach(function(d){
+    var pctShow = d.real>0 ? bitComparacionPct(d.estimado, d.real) : null;
+    html += '<tr>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;'+(d.fecha===hoy?'font-weight:700;color:var(--bd);':'color:var(--t3);')+'">'+d.fecha+(d.fecha===hoy?' (hoy)':'')+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-weight:700;">'+bitEscapeHtml(d.usuarioNombre||'—')+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);">'+d.completadas+' / '+d.total+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;">'+bitFmtMin(d.estimado)+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;">'+bitFmtMin(d.real)+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);"><div style="width:70px;height:6px;border-radius:99px;background:var(--bl);overflow:hidden;"><div style="height:100%;width:'+(pctShow===null?0:pctShow)+'%;background:'+bitComparacionColor(pctShow)+';"></div></div></td>'+
+    '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  body.innerHTML = html;
+
+  document.getElementById('bit-r-contador').addEventListener('change', function(e){ _bitFiltros.contadorId=e.target.value; bitRenderSupervisorResumen(); });
 }
 
 function bitComentariosPanel(r){
@@ -9911,7 +10072,7 @@ function bitComentariosPanel(r){
 
 window.bitToggleComentarios = function bitToggleComentarios(id){
   _bitComentarioAbierto[id] = !_bitComentarioAbierto[id];
-  bitRenderSupervisor();
+  bitRenderSupervisorActividades();
 };
 
 function bitEnviarComentario(id, texto){
