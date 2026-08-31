@@ -9669,10 +9669,27 @@ function bitCargar(){
   }
 }
 
-function bitKpi(label, valor){
+function bitKpi(label, valor, alerta){
   return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;">'+
     '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);margin-bottom:4px;">'+label+'</div>'+
-    '<div style="font-size:18px;font-weight:800;color:var(--bd);">'+valor+'</div></div>';
+    '<div style="font-size:18px;font-weight:800;color:'+(alerta?'var(--re)':'var(--bd)')+';">'+valor+'</div></div>';
+}
+
+// Fecha (YYYY-MM-DD) en que un registro entró a un estado dado, según su
+// historial — usado para saber si algo se completó "hoy" aunque lleve
+// varios días abierto. Si no hay historial, cae de vuelta a r.fecha.
+function bitFechaEvento(r, estadoBuscado){
+  var hist = r.historial||[];
+  for(var i=hist.length-1;i>=0;i--){
+    if(hist[i].estado===estadoBuscado) return (hist[i].en||'').slice(0,10);
+  }
+  return r.estado===estadoBuscado ? r.fecha : null;
+}
+
+// Un proceso de varios días está "atrasado" cuando pasó su fecha estimada
+// de entrega y todavía no se marca como completado.
+function bitEstaAtrasada(r){
+  return !!r.fechaEntrega && r.fechaEntrega < bitHoy() && r.estado!=='completada';
 }
 
 function bitSelect(id, opciones, valorActual){
@@ -9729,21 +9746,32 @@ function bitRenderColaborador(){
 function bitRenderColaboradorHoy(){
   var body = document.getElementById('bit-colab-body');
   var hoy = bitHoy();
-  var deHoy = _bitCache.filter(function(r){ return r.fecha===hoy; }).sort(function(a,b){
+  // Persistencia: una tarea sigue en "Hoy" mientras no esté completada,
+  // sin importar el día en que se creó — para procesos de varios días.
+  // Lo completado solo se queda en "Hoy" el mismo día en que se completó.
+  var visibles = _bitCache.filter(function(r){
+    return r.estado!=='completada' || bitFechaEvento(r,'completada')===hoy;
+  }).sort(function(a,b){
     var orden = {en_progreso:0, pendiente:1, completada:2};
     var d = orden[a.estado]-orden[b.estado];
     if(d!==0) return d;
+    if(a.estado!=='completada'){
+      var fa = a.fechaEntrega||'9999-99-99', fb = b.fechaEntrega||'9999-99-99';
+      if(fa!==fb) return fa<fb?-1:1;
+    }
     return new Date(b.creadoEn)-new Date(a.creadoEn);
   });
-  var completadasHoy = deHoy.filter(function(r){ return r.estado==='completada'; }).length;
-  var estHoy = deHoy.reduce(function(s,r){ return s+(r.estimadoMin||0); },0);
-  var realHoy = deHoy.reduce(function(s,r){ return s+(r.realMin||0); },0);
+  var completadasHoy = visibles.filter(function(r){ return r.estado==='completada'; }).length;
+  var estHoy = visibles.reduce(function(s,r){ return s+(r.estimadoMin||0); },0);
+  var realHoy = visibles.reduce(function(s,r){ return s+(r.realMin||0); },0);
+  var atrasadas = _bitCache.filter(bitEstaAtrasada).length;
 
   var html = '';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">';
-  html += bitKpi('Completadas hoy', completadasHoy+' / '+deHoy.length);
-  html += bitKpi('Estimado de hoy', bitFmtMin(estHoy));
-  html += bitKpi('Real de hoy', bitFmtMin(realHoy));
+  html += bitKpi('Completadas hoy', completadasHoy+' / '+visibles.length);
+  html += bitKpi('Estimado', bitFmtMin(estHoy));
+  html += bitKpi('Real', bitFmtMin(realHoy));
+  html += bitKpi('Atrasadas', atrasadas, atrasadas>0);
   html += '</div>';
 
   html += '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:16px 18px;margin-bottom:18px;">';
@@ -9754,15 +9782,18 @@ function bitRenderColaboradorHoy(){
   });
   html += '</div>';
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  html += '<input type="text" id="bit-desc-input" placeholder="Describe la actividad de hoy…" style="flex:1;min-width:220px;border:1.5px solid var(--br);border-radius:8px;padding:9px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">';
+  html += '<input type="text" id="bit-desc-input" placeholder="Describe la actividad…" style="flex:1;min-width:220px;border:1.5px solid var(--br);border-radius:8px;padding:9px 12px;font-family:Montserrat,sans-serif;font-size:12px;outline:none;">';
+  html += '<input type="date" id="bit-entrega-input" min="'+hoy+'" title="Fecha estimada de entrega (opcional, para procesos de varios días)" style="border:1.5px solid var(--br);border-radius:8px;padding:9px 10px;font-family:Montserrat,sans-serif;font-size:12px;color:var(--bd);outline:none;">';
   html += '<button class="btn btn-gold btn-sm" onclick="bitCrear()">+ Agregar</button>';
-  html += '</div></div>';
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--t3);margin-top:6px;">La fecha de entrega es opcional — úsala cuando un proceso va a tomar varios días.</div>';
+  html += '</div>';
 
   html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-  if(deHoy.length===0){
-    html += '<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px;border:1.5px dashed var(--br);border-radius:var(--r);">Todavía no has registrado nada hoy.</div>';
+  if(visibles.length===0){
+    html += '<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px;border:1.5px dashed var(--br);border-radius:var(--r);">Todavía no has registrado nada.</div>';
   } else {
-    deHoy.forEach(function(r){ html += bitTaskRow(r); });
+    visibles.forEach(function(r){ html += bitTaskRow(r); });
   }
   html += '</div>';
 
@@ -9816,20 +9847,28 @@ function bitRenderColaboradorHistorial(){
 
 function bitTaskRow(r){
   var pct = bitComparacionPct(r.estimadoMin, r.realMin);
-  var col = bitEstadoColor(r.estado);
+  var atrasada = bitEstaAtrasada(r);
+  var col = atrasada ? {bg:'var(--rb)', fg:'var(--re)'} : bitEstadoColor(r.estado);
+  var etiqueta = atrasada ? 'Atrasada' : bitEstadoLabel(r.estado);
   var accion = '';
   if(r.estado==='pendiente'){
     accion = '<button class="btn btn-ol btn-sm" onclick="bitAvanzar(\''+r.id+'\')">Iniciar</button>';
   } else if(r.estado==='en_progreso'){
     accion = '<button class="btn btn-gold btn-sm" onclick="bitAvanzar(\''+r.id+'\')">Completar</button>';
   }
+  var meta = 'est. '+bitFmtMin(r.estimadoMin);
+  if(r.realMin!=null) meta += ' · real '+bitFmtMin(r.realMin);
+  if(r.fechaEntrega) meta += atrasada
+    ? ' · <span style="color:var(--re);font-weight:700;">vencía '+r.fechaEntrega+'</span>'
+    : ' · entrega '+r.fechaEntrega;
+  meta += ' · '+bitFmtRelativo(r.creadoEn);
   return '<div style="display:flex;align-items:center;gap:12px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;flex-wrap:wrap;">'+
     '<div style="flex:1;min-width:180px;">'+
       '<div style="font-size:12px;font-weight:700;color:var(--tx);">'+bitEscapeHtml(r.descripcion)+'</div>'+
-      '<div style="font-size:10px;color:var(--t3);margin-top:2px;">est. '+bitFmtMin(r.estimadoMin)+(r.realMin!=null?' · real '+bitFmtMin(r.realMin):'')+' · '+bitFmtRelativo(r.creadoEn)+'</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+meta+'</div>'+
     '</div>'+
     '<div style="width:70px;height:6px;border-radius:99px;background:var(--bl);overflow:hidden;flex-shrink:0;"><div style="height:100%;width:'+(pct===null?0:pct)+'%;background:'+bitComparacionColor(pct)+';"></div></div>'+
-    '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:'+col.bg+';color:'+col.fg+';white-space:nowrap;">'+bitEstadoLabel(r.estado)+'</span>'+
+    '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:'+col.bg+';color:'+col.fg+';white-space:nowrap;">'+etiqueta+'</span>'+
     accion+
   '</div>';
 }
@@ -9845,6 +9884,8 @@ window.bitCrear = function bitCrear(){
   var input = document.getElementById('bit-desc-input');
   var desc = (input.value||'').trim();
   if(!desc) return;
+  var entregaInput = document.getElementById('bit-entrega-input');
+  var fechaEntrega = (entregaInput && entregaInput.value) ? entregaInput.value : null;
   var ahora = new Date().toISOString();
   var reg = {
     usuarioId: currentUser.uid,
@@ -9852,6 +9893,7 @@ window.bitCrear = function bitCrear(){
     fecha: bitHoy(),
     descripcion: desc,
     estimadoMin: _bitMinutosElegidos,
+    fechaEntrega: fechaEntrega,
     realMin: null,
     estado: 'pendiente',
     historial: [{estado:'pendiente', en: ahora}],
@@ -9859,7 +9901,7 @@ window.bitCrear = function bitCrear(){
     creadoEn: ahora
   };
   db.collection('bitacora_registros').add(reg).then(function(){
-    if(typeof audRegistrar==='function') audRegistrar('Crear','Bitácora','','', desc);
+    if(typeof audRegistrar==='function') audRegistrar('Crear','Bitácora','','', desc+(fechaEntrega?' (entrega '+fechaEntrega+')':''));
     bitCargar();
   }).catch(function(e){ alert('No se pudo guardar la actividad: '+e.message); });
 };
@@ -9902,6 +9944,7 @@ function bitRenderSupervisor(){
   var estAcum = _bitCache.reduce(function(s,r){ return s+(r.estimadoMin||0); },0);
   var realAcum = _bitCache.reduce(function(s,r){ return s+(r.realMin||0); },0);
   var sinRegistroHoy = _bitUsuarios.filter(function(u){ return !deHoy.some(function(r){ return r.usuarioId===u.uid; }); });
+  var atrasadas = _bitCache.filter(bitEstaAtrasada).length;
 
   var html = '';
   html += '<div class="page-title">Panel de supervisión</div>';
@@ -9912,6 +9955,7 @@ function bitRenderSupervisor(){
   html += bitKpi('Estimado total', bitFmtMin(estAcum));
   html += bitKpi('Real acumulado', bitFmtMin(realAcum));
   html += bitKpi('Sin registrar hoy', sinRegistroHoy.length);
+  html += bitKpi('Atrasadas', atrasadas, atrasadas>0);
   html += '</div>';
 
   html += '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--br);">';
@@ -9956,13 +10000,16 @@ function bitRenderSupervisorActividades(){
   }
   filtrados.forEach(function(r){
     var pct = bitComparacionPct(r.estimadoMin, r.realMin);
-    var col = bitEstadoColor(r.estado);
+    var atrasada = bitEstaAtrasada(r);
+    var col = atrasada ? {bg:'var(--rb)', fg:'var(--re)'} : bitEstadoColor(r.estado);
+    var etiqueta = atrasada ? 'Atrasada' : bitEstadoLabel(r.estado);
     var nComentarios = (r.comentarios||[]).length;
+    var fechaCell = r.fecha+(r.fechaEntrega?'<div style="font-size:9px;'+(atrasada?'color:var(--re);font-weight:700;':'color:var(--t3);')+'">vence '+r.fechaEntrega+'</div>':'');
     html += '<tr>'+
       '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-weight:700;white-space:nowrap;">'+bitEscapeHtml(r.usuarioNombre||'—')+'</td>'+
-      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;color:var(--t3);white-space:nowrap;">'+r.fecha+'</td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;color:var(--t3);white-space:nowrap;">'+fechaCell+'</td>'+
       '<td style="padding:8px 10px;border-bottom:1px solid var(--br);">'+bitEscapeHtml(r.descripcion)+'</td>'+
-      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:'+col.bg+';color:'+col.fg+';white-space:nowrap;">'+bitEstadoLabel(r.estado)+'</span></td>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--br);"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:'+col.bg+';color:'+col.fg+';white-space:nowrap;">'+etiqueta+'</span></td>'+
       '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;white-space:nowrap;">'+bitFmtMin(r.estimadoMin)+'</td>'+
       '<td style="padding:8px 10px;border-bottom:1px solid var(--br);font-family:monospace;white-space:nowrap;">'+bitFmtMin(r.realMin)+'</td>'+
       '<td style="padding:8px 10px;border-bottom:1px solid var(--br);"><div style="width:60px;height:6px;border-radius:99px;background:var(--bl);overflow:hidden;"><div style="height:100%;width:'+(pct===null?0:pct)+'%;background:'+bitComparacionColor(pct)+';"></div></div></td>'+
