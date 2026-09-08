@@ -4026,12 +4026,22 @@ async function readRUT(file){
             })
           });
 
-          if(!resp.ok){ lastErr = 'HTTP ' + resp.status; continue; }
+          if(!resp.ok){
+            lastErr = 'HTTP ' + resp.status;
+            if(attempt < 2) await new Promise(function(r){ setTimeout(r, 1000*(attempt+1)); });
+            continue;
+          }
           var data = await resp.json();
           console.log('[RUT] intento ' + (attempt+1) + ' raw:', JSON.stringify(data).slice(0, 300));
 
           if(data && data.error){
-            lastErr = (data.error.message || '').includes('quota') ? 'Cuota agotada' : (data.error.message || 'Error API');
+            var msgErr = data.error.message || '';
+            lastErr = msgErr.includes('quota') ? 'Cuota agotada' : (msgErr || 'Error API');
+            // Saturación momentánea del modelo (503/UNAVAILABLE/"high demand"):
+            // reintentar de inmediato casi nunca ayuda, porque el pico de
+            // demanda no alcanza a bajar. Se espera un poco más en cada
+            // intento (1s, luego 2s) antes de volver a intentar.
+            if(attempt < 2) await new Promise(function(r){ setTimeout(r, 1000*(attempt+1)); });
             continue;
           }
 
