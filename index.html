@@ -681,9 +681,19 @@ window.cufeFinalizarXmlData = function(xmlData, nombre, targetElId) {
 
 window.cufeParseXML = function(xml) {
   var d = {};
+  // Algunos ERP envuelven el texto en CDATA (ej. <![CDATA[JAVIER...]]>).
+  // El primer carácter dentro de un CDATA es "<" (el de "<![CDATA["), así
+  // que un patrón tipo [^<]+ no solo deja el envoltorio sin limpiar —
+  // falla por completo y no captura nada. Este extractor reconoce las
+  // dos formas (con y sin CDATA) directamente en el patrón.
+  function extraerTexto(texto, tagAbrePatron) {
+    var re = new RegExp(tagAbrePatron + '\\s*(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([^<]*))', 'i');
+    var m = texto.match(re);
+    if (!m) return '';
+    return ((m[1] !== undefined ? m[1] : m[2]) || '').trim();
+  }
   function ex(tag) {
-    var m = xml.match(new RegExp('<(?:[a-z]+:)?'+tag+'[^>]*>([^<]+)<','i'));
-    return m ? m[1].trim() : '';
+    return extraerTexto(xml, '<(?:[a-z]+:)?'+tag+'[^>]*>');
   }
 
   // CUFE
@@ -736,21 +746,27 @@ window.cufeParseXML = function(xml) {
   // natural, que no tienen DV como el NIT. No se exige que exista.
   function extraerNitDV(bloque){
     var m = bloque.match(/<cbc:CompanyID([^>]*)>(\d+)</i);
-    if (!m) return null;
-    var dv = (m[1].match(/schemeID="(\d*)"/i)||[])[1] || '';
-    return { nit: m[2], dv: dv };
+    if (m) {
+      var dv = (m[1].match(/schemeID="(\d*)"/i)||[])[1] || '';
+      return { nit: m[2], dv: dv };
+    }
+    // Documento Equivalente Electrónico (y otros formatos simplificados)
+    // no usan <cac:PartyTaxScheme><cbc:CompanyID> — identifican al
+    // tercero directamente con <cac:PartyIdentification><cbc:ID>.
+    var m2 = bloque.match(/<cac:PartyIdentification>[\s\S]{0,300}?<cbc:ID[^>]*>(\d+)</i);
+    if (m2) return { nit: m2[1], dv: '' };
+    return null;
   }
-  var blkEmNit = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
-  var blkRecNit = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkEmNit = (xml.match(/AccountingSupplierParty[\s\S]{0,8000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkRecNit = (xml.match(/AccountingCustomerParty[\s\S]{0,8000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
   var rEm = extraerNitDV(blkEmNit);
   if (rEm) { d.nitEmisor=rEm.nit; d.dvEmisor=rEm.dv; }
-  d.nomEmisor = (xml.match(/AccountingSupplierParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
-  d.nomEmisor = d.nomEmisor.trim();
+  d.nomEmisor = extraerTexto(blkEmNit, 'RegistrationName>') || extraerTexto(blkEmNit, '<cac:PartyName>[\\s\\S]{0,200}?<cbc:Name>');
 
   // Receptor: NIT y DV
   var rRec = extraerNitDV(blkRecNit);
   if (rRec) { d.nitReceptor=rRec.nit; d.dvReceptor=rRec.dv; }
-  d.nomReceptor = (xml.match(/AccountingCustomerParty[\s\S]{0,1500}?RegistrationName>([^<]+)</i)||[])[1]||'';
+  d.nomReceptor = extraerTexto(blkRecNit, 'RegistrationName>') || extraerTexto(blkRecNit, '<cac:PartyName>[\\s\\S]{0,200}?<cbc:Name>');
   d.nomReceptor = d.nomReceptor.trim();
 
   // Respaldo: la DIAN exige en TODO documento electrónico un bloque de
@@ -769,8 +785,8 @@ window.cufeParseXML = function(xml) {
   // Tipo de Persona (T.P.): primero se busca el TaxLevelCode explícito
   // (ej. "R-99-PN" = persona natural), que la DIAN exige y es más
   // confiable; si no está, se recurre a la presencia de <cac:Person>.
-  var blkEmT = (xml.match(/AccountingSupplierParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
-  var blkRecT = (xml.match(/AccountingCustomerParty[\s\S]{0,3000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkEmT = (xml.match(/AccountingSupplierParty[\s\S]{0,8000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
+  var blkRecT = (xml.match(/AccountingCustomerParty[\s\S]{0,8000}?<\/[a-zA-Z0-9]+:Party>/i)||[])[0]||'';
   function tipoPersonaDe(blk){
     var tlc = (blk.match(/TaxLevelCode[^>]*>([^<]+)</i)||[])[1]||'';
     if (/-PN\b|PN$/i.test(tlc)) return 'PN';
@@ -827,9 +843,9 @@ window.cufeParseXML = function(xml) {
   // Ubicacion del emisor (PhysicalLocation)
   var loc = (xml.match(/PhysicalLocation[\s\S]{0,2000}?<\/cac:PhysicalLocation>/i)||[])[0]||'';
   if (loc) {
-    d.dir     = (loc.match(/<cbc:Line>([^<]+)/i)||[])[1]||'';
-    d.ciudad  = (loc.match(/<cbc:CityName>([^<]+)/i)||[])[1]||'';
-    d.dptoNom = (loc.match(/<cbc:CountrySubentity>([^<]+)/i)||[])[1]||'';
+    d.dir     = extraerTexto(loc, '<cbc:Line>');
+    d.ciudad  = extraerTexto(loc, '<cbc:CityName>');
+    d.dptoNom = extraerTexto(loc, '<cbc:CountrySubentity>');
     // Codigo DIVIPOLA 5 digitos: primeros 2 = departamento, ultimos 3 = municipio
     var codDiv = (loc.match(/<cbc:ID>(\d{5})<\/cbc:ID>/i)||[])[1]||'';
     if (codDiv.length === 5) {
