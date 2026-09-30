@@ -2082,6 +2082,8 @@ window.addEventListener('online', function(){
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Hoy</button>
       <button id="bit-tab-historial" onclick="bitSetTabContador('historial')"
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Historial por día</button>
+      <button id="bit-tab-semanal" onclick="bitSetTabContador('semanal')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Registro semanal</button>
     </div>
 
     <div id="bit-panel-hoy">
@@ -2091,6 +2093,9 @@ window.addEventListener('online', function(){
     </div>
     <div id="bit-panel-historial" style="display:none;">
       <div id="bit-lista-historial"></div>
+    </div>
+    <div id="bit-panel-semanal" style="display:none;">
+      <div id="bit-lista-semanal"></div>
     </div>
   </div>
 
@@ -2104,6 +2109,8 @@ window.addEventListener('online', function(){
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Actividades</button>
       <button id="bit-atab-resumen" onclick="bitSetTabAdmin('resumen')"
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Resumen por día</button>
+      <button id="bit-atab-semanal" onclick="bitSetTabAdmin('semanal')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Resumen semanal</button>
     </div>
 
     <div id="bit-apanel-actividades">
@@ -2153,6 +2160,21 @@ window.addEventListener('online', function(){
         </table>
       </div>
     </div>
+
+    <div id="bit-apanel-semanal" style="display:none;">
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;">
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
+        <select id="bit-filtro-contador-semanal" onchange="bitRenderAdminSemanal()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:220px;"></select>
+      </div>
+      <div id="bit-alista-semanal"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PROGRESO MENSUAL Y RANKING (visible para todos) ═══ -->
+  <div style="margin-top:28px;border-top:2px solid var(--br);padding-top:20px;">
+    <div style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:4px;">🏆 Progreso del mes</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:14px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
+    <div id="bit-progreso-lista"></div>
   </div>
 </div>
 
@@ -2172,8 +2194,15 @@ window.addEventListener('online', function(){
         <input id="bit-nueva-estimado" type="number" min="0" step="5" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
       </div>
       <div>
-        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha de entrega (opcional)</label>
-        <input id="bit-nueva-fechaentrega" type="date" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Días para entregar</label>
+        <select id="bit-nueva-diasentrega" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+          <option value="">Sin plazo definido</option>
+          <option value="1">1 día</option>
+          <option value="2">2 días</option>
+          <option value="3">3 días</option>
+          <option value="4">4 días</option>
+          <option value="5">5 días</option>
+        </select>
       </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -2195,6 +2224,39 @@ window.addEventListener('online', function(){
     </div>
     <div style="text-align:right;margin-top:12px;">
       <button class="btn btn-ol btn-sm" onclick="bitCerrarModalComentarios()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDITAR ACTIVIDAD (corregir errores de digitación) ═══ -->
+<div id="bit-modal-editar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10005;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;">
+    <div style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:14px;">✎ Editar actividad</div>
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Título</label>
+    <input id="bit-editar-titulo" type="text" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Descripción</label>
+    <textarea id="bit-editar-descripcion" rows="2" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;resize:vertical;"></textarea>
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Cliente</label>
+    <input id="bit-editar-cliente" type="text" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Tiempo estimado (min)</label>
+    <input id="bit-editar-estimado" type="number" min="0" step="5" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+    <div id="bit-editar-dias-wrap" style="margin-bottom:10px;">
+      <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Ajustar plazo de entrega (opcional)</label>
+      <select id="bit-editar-dias" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+        <option value="">No cambiar</option>
+        <option value="1">1 día desde hoy</option>
+        <option value="2">2 días desde hoy</option>
+        <option value="3">3 días desde hoy</option>
+        <option value="4">4 días desde hoy</option>
+        <option value="5">5 días desde hoy</option>
+      </select>
+    </div>
+    <div id="bit-editar-dias-bloqueado" style="display:none;font-size:10px;color:#b91c1c;background:#fef2f2;border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+      Esta actividad ya está completada o atrasada — el plazo de entrega ya no se puede modificar.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ol btn-sm" onclick="bitCerrarModalEditar()">Cancelar</button>
+      <button class="btn btn-gold" onclick="bitGuardarEdicion()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -13885,7 +13947,8 @@ var _bitState = {
   filtroFechaAdmin: '',
   filtroContadorAdmin: '',
   filtroContadorHist: '',
-  comentariosId: null
+  comentariosId: null,
+  editandoId: null
 };
 
 function bitHoy(){ return new Date().toISOString().slice(0,10); }
@@ -13983,14 +14046,14 @@ function bitRender(){
 // ── VISTA CONTADOR: "Mi día" ──────────────────────────────
 function bitSetTabContador(tab){
   _bitState.tabContador = tab;
-  var t1 = document.getElementById('bit-tab-hoy');
-  var t2 = document.getElementById('bit-tab-historial');
-  if (t1) { t1.style.borderBottomColor = tab==='hoy' ? '#1a2580' : 'transparent'; t1.style.color = tab==='hoy' ? '#1a2580' : 'var(--t2)'; }
-  if (t2) { t2.style.borderBottomColor = tab==='historial' ? '#1a2580' : 'transparent'; t2.style.color = tab==='historial' ? '#1a2580' : 'var(--t2)'; }
-  var p1 = document.getElementById('bit-panel-hoy');
-  var p2 = document.getElementById('bit-panel-historial');
-  if (p1) p1.style.display = tab==='hoy' ? '' : 'none';
-  if (p2) p2.style.display = tab==='historial' ? '' : 'none';
+  var tabs = {hoy:'bit-tab-hoy', historial:'bit-tab-historial', semanal:'bit-tab-semanal'};
+  var paneles = {hoy:'bit-panel-hoy', historial:'bit-panel-historial', semanal:'bit-panel-semanal'};
+  Object.keys(tabs).forEach(function(k){
+    var el = document.getElementById(tabs[k]);
+    if (el) { el.style.borderBottomColor = (tab===k) ? '#1a2580' : 'transparent'; el.style.color = (tab===k) ? '#1a2580' : 'var(--t2)'; }
+    var p = document.getElementById(paneles[k]);
+    if (p) p.style.display = (tab===k) ? '' : 'none';
+  });
   bitRenderContador();
 }
 window._bitSetTabContador = window.bitSetTabContador = bitSetTabContador;
@@ -14019,9 +14082,53 @@ function bitRenderContador(){
         cont.innerHTML = hoyRegs.map(bitTarjetaActividad).join('');
       }
     }
-  } else {
+  } else if (_bitState.tabContador === 'historial'){
     bitRenderHistorialDia(mios);
+  } else {
+    bitRenderSemanal(mios, 'bit-lista-semanal');
   }
+  bitRenderProgresoMensual();
+}
+
+// Lunes de la semana ISO a la que pertenece una fecha 'YYYY-MM-DD'
+function bitSemanaDe(fechaISO){
+  var d = new Date(fechaISO+'T00:00:00');
+  var dow = d.getDay() || 7; // domingo=0 -> 7
+  d.setDate(d.getDate() - dow + 1);
+  return d.toISOString().slice(0,10);
+}
+function bitFmtRangoSemana(lunesISO){
+  var l = new Date(lunesISO+'T00:00:00');
+  var dom = new Date(l); dom.setDate(l.getDate()+6);
+  return bitFmtFecha(lunesISO) + ' – ' + bitFmtFecha(dom.toISOString().slice(0,10));
+}
+
+function bitRenderSemanal(regs, contId){
+  var porSemana = {};
+  regs.forEach(function(r){
+    var key = bitSemanaDe(r.fechaCreacion);
+    if (!porSemana[key]) porSemana[key] = {est:0, real:0, n:0, completadas:0};
+    porSemana[key].est += (r.tiempoEstimado||0);
+    porSemana[key].real += bitTiempoRealMin(r);
+    porSemana[key].n++;
+    if (r.estado==='completada') porSemana[key].completadas++;
+  });
+  var semanas = Object.keys(porSemana).sort().reverse();
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  if (!semanas.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">Sin actividades registradas todavía.</div>'; return; }
+  cont.innerHTML = semanas.map(function(sem){
+    var d = porSemana[sem];
+    var maxV = Math.max(d.est, d.real, 1);
+    return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--bd);margin-bottom:8px;">'
+      + '<span>Semana '+bitFmtRangoSemana(sem)+'</span><span style="color:var(--t2);font-weight:600;">'+d.completadas+' / '+d.n+' completadas</span></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Estimado: '+bitFmtMin(d.est)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;margin-bottom:6px;"><div style="background:#a07c10;height:8px;border-radius:4px;width:'+Math.min(100,d.est/maxV*100)+'%;"></div></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Real: '+bitFmtMin(d.real)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;"><div style="background:#1a2580;height:8px;border-radius:4px;width:'+Math.min(100,d.real/maxV*100)+'%;"></div></div>'
+      + '</div>';
+  }).join('');
 }
 
 function bitKpiCard(label, val, color){
@@ -14039,6 +14146,7 @@ function bitTarjetaActividad(r){
   var acciones = '';
   if (r.estado === 'pendiente') acciones = '<button class="btn btn-sm" onclick="bitCambiarEstado(\''+r.id+'\',\'en_progreso\')" style="background:#1e40af;color:#fff;">▶ Iniciar</button>';
   else if (r.estado === 'en_progreso') acciones = '<button class="btn btn-sm" onclick="bitCambiarEstado(\''+r.id+'\',\'completada\')" style="background:#166534;color:#fff;">✔ Completar</button>';
+  acciones += ' <button class="btn btn-ol btn-sm" onclick="bitAbrirModalEditar(\''+r.id+'\')">✎ Editar</button>';
   return '<div style="background:var(--sf);border:1px solid '+(atrasada?'#fecaca':'var(--br)')+';border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
     + '<div>'
@@ -14090,11 +14198,15 @@ function bitRenderHistorialDia(mios){
 }
 
 // ── Crear actividad ────────────────────────────────────────
+function bitSumarDias(fechaISO, dias){
+  var d = new Date(fechaISO+'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0,10);
+}
+
 function bitAbrirModalNueva(){
   var m = document.getElementById('bit-modal-nueva');
   if (m) m.style.display = 'flex';
-  var fi = document.getElementById('bit-nueva-fechaentrega');
-  if (fi) fi.min = bitHoy();
 }
 window._bitAbrirModalNueva = window.bitAbrirModalNueva = bitAbrirModalNueva;
 
@@ -14110,9 +14222,10 @@ function bitGuardarActividad(){
   var descripcion = (document.getElementById('bit-nueva-descripcion')||{}).value || '';
   var cliente = (document.getElementById('bit-nueva-cliente')||{}).value || '';
   var estimado = parseFloat((document.getElementById('bit-nueva-estimado')||{}).value) || 0;
-  var fechaEntrega = (document.getElementById('bit-nueva-fechaentrega')||{}).value || null;
+  var diasSel = (document.getElementById('bit-nueva-diasentrega')||{}).value || '';
   var uid = auth && auth.currentUser ? auth.currentUser.uid : '';
   var hoy = bitHoy();
+  var fechaEntrega = diasSel ? bitSumarDias(hoy, parseInt(diasSel,10)) : null;
   var nuevo = {
     contadorUid: uid,
     contadorNombre: (currentPerfil && currentPerfil.nombre) || (currentPerfil && currentPerfil.email) || '',
@@ -14132,7 +14245,7 @@ function bitGuardarActividad(){
     nuevo.id = ref.id;
     _bitState.registros.push(nuevo);
     bitCerrarModalNueva();
-    ['bit-nueva-titulo','bit-nueva-descripcion','bit-nueva-cliente','bit-nueva-estimado','bit-nueva-fechaentrega'].forEach(function(id){
+    ['bit-nueva-titulo','bit-nueva-descripcion','bit-nueva-cliente','bit-nueva-estimado','bit-nueva-diasentrega'].forEach(function(id){
       var el = document.getElementById(id); if (el) el.value = '';
     });
     bitRender();
@@ -14156,17 +14269,73 @@ function bitCambiarEstado(id, nuevoEstado){
 }
 window._bitCambiarEstado = window.bitCambiarEstado = bitCambiarEstado;
 
+// ── Editar actividad propia (corregir errores de digitación) ──
+// El plazo de entrega solo se puede ajustar mientras la actividad NO
+// esté completada y NO esté ya atrasada — una vez vencida, esa fecha
+// queda fija para efectos de puntualidad (no se puede "borrar" el
+// atraso editando la fecha después de que ya pasó).
+function bitAbrirModalEditar(id){
+  var reg = _bitState.registros.find(function(r){ return r.id===id; });
+  if (!reg) return;
+  _bitState.editandoId = id;
+  document.getElementById('bit-editar-titulo').value = reg.titulo || '';
+  document.getElementById('bit-editar-descripcion').value = reg.descripcion || '';
+  document.getElementById('bit-editar-cliente').value = reg.clienteNombre || '';
+  document.getElementById('bit-editar-estimado').value = reg.tiempoEstimado || '';
+  var puedeCambiarFecha = reg.estado !== 'completada' && !bitEsAtrasada(reg);
+  var wrapFecha = document.getElementById('bit-editar-dias-wrap');
+  if (wrapFecha) wrapFecha.style.display = puedeCambiarFecha ? '' : 'none';
+  var avisoFecha = document.getElementById('bit-editar-dias-bloqueado');
+  if (avisoFecha) avisoFecha.style.display = puedeCambiarFecha ? 'none' : '';
+  document.getElementById('bit-editar-dias').value = '';
+  var m = document.getElementById('bit-modal-editar');
+  if (m) m.style.display = 'flex';
+}
+window._bitAbrirModalEditar = window.bitAbrirModalEditar = bitAbrirModalEditar;
+
+function bitCerrarModalEditar(){
+  var m = document.getElementById('bit-modal-editar');
+  if (m) m.style.display = 'none';
+  _bitState.editandoId = null;
+}
+window._bitCerrarModalEditar = window.bitCerrarModalEditar = bitCerrarModalEditar;
+
+function bitGuardarEdicion(){
+  var id = _bitState.editandoId;
+  var reg = _bitState.registros.find(function(r){ return r.id===id; });
+  if (!reg) return;
+  var titulo = (document.getElementById('bit-editar-titulo')||{}).value || '';
+  if (!titulo.trim()){ alert('El título no puede quedar vacío.'); return; }
+  var update = {
+    titulo: titulo.trim(),
+    descripcion: ((document.getElementById('bit-editar-descripcion')||{}).value || '').trim(),
+    clienteNombre: ((document.getElementById('bit-editar-cliente')||{}).value || '').trim(),
+    tiempoEstimado: parseFloat((document.getElementById('bit-editar-estimado')||{}).value) || 0
+  };
+  var puedeCambiarFecha = reg.estado !== 'completada' && !bitEsAtrasada(reg);
+  if (puedeCambiarFecha){
+    var dias = (document.getElementById('bit-editar-dias')||{}).value || '';
+    if (dias) update.fechaEntrega = bitSumarDias(bitHoy(), parseInt(dias,10));
+  }
+  db.collection('bitacora_registros').doc(id).update(update).then(function(){
+    Object.assign(reg, update);
+    bitCerrarModalEditar();
+    bitRender();
+  }).catch(function(err){ alert('Error guardando los cambios: '+err.message); });
+}
+window._bitGuardarEdicion = window.bitGuardarEdicion = bitGuardarEdicion;
+
 // ── VISTA ADMIN: "Panel de supervisión" ───────────────────
 function bitSetTabAdmin(tab){
   _bitState.tabAdmin = tab;
-  var t1 = document.getElementById('bit-atab-actividades');
-  var t2 = document.getElementById('bit-atab-resumen');
-  if (t1) { t1.style.borderBottomColor = tab==='actividades' ? '#1a2580' : 'transparent'; t1.style.color = tab==='actividades' ? '#1a2580' : 'var(--t2)'; }
-  if (t2) { t2.style.borderBottomColor = tab==='resumen' ? '#1a2580' : 'transparent'; t2.style.color = tab==='resumen' ? '#1a2580' : 'var(--t2)'; }
-  var p1 = document.getElementById('bit-apanel-actividades');
-  var p2 = document.getElementById('bit-apanel-resumen');
-  if (p1) p1.style.display = tab==='actividades' ? '' : 'none';
-  if (p2) p2.style.display = tab==='resumen' ? '' : 'none';
+  var tabs = {actividades:'bit-atab-actividades', resumen:'bit-atab-resumen', semanal:'bit-atab-semanal'};
+  var paneles = {actividades:'bit-apanel-actividades', resumen:'bit-apanel-resumen', semanal:'bit-apanel-semanal'};
+  Object.keys(tabs).forEach(function(k){
+    var el = document.getElementById(tabs[k]);
+    if (el) { el.style.borderBottomColor = (tab===k) ? '#1a2580' : 'transparent'; el.style.color = (tab===k) ? '#1a2580' : 'var(--t2)'; }
+    var p = document.getElementById(paneles[k]);
+    if (p) p.style.display = (tab===k) ? '' : 'none';
+  });
   bitRenderAdmin();
 }
 window._bitSetTabAdmin = window.bitSetTabAdmin = bitSetTabAdmin;
@@ -14174,7 +14343,8 @@ window._bitSetTabAdmin = window.bitSetTabAdmin = bitSetTabAdmin;
 function bitPoblarSelectContadores(){
   var sel1 = document.getElementById('bit-filtro-contador');
   var sel2 = document.getElementById('bit-filtro-contador-resumen');
-  [sel1, sel2].forEach(function(sel){
+  var sel3 = document.getElementById('bit-filtro-contador-semanal');
+  [sel1, sel2, sel3].forEach(function(sel){
     if (!sel) return;
     var actual = sel.value;
     sel.innerHTML = '<option value="">— Todos los contadores —</option>' +
@@ -14186,7 +14356,44 @@ function bitPoblarSelectContadores(){
 function bitRenderAdmin(){
   bitPoblarSelectContadores();
   if (_bitState.tabAdmin === 'actividades') bitRenderAdminActividades();
-  else bitRenderAdminResumenDia();
+  else if (_bitState.tabAdmin === 'resumen') bitRenderAdminResumenDia();
+  else bitRenderAdminSemanal();
+  bitRenderProgresoMensual();
+}
+
+function bitRenderAdminSemanal(){
+  var contadorId = (document.getElementById('bit-filtro-contador-semanal')||{}).value || '';
+  var lista = _bitState.registros.filter(function(r){ return !contadorId || r.contadorUid === contadorId; });
+  // Si hay un contador filtrado, mostramos igual que la vista del colaborador;
+  // si son "todos", agrupamos por semana + contador para no mezclar equipos.
+  var cont = document.getElementById('bit-alista-semanal');
+  if (!cont) return;
+  if (contadorId){
+    bitRenderSemanal(lista, 'bit-alista-semanal');
+    return;
+  }
+  var porSemana = {};
+  lista.forEach(function(r){
+    var key = bitSemanaDe(r.fechaCreacion) + '|' + r.contadorUid;
+    if (!porSemana[key]) porSemana[key] = {semana:bitSemanaDe(r.fechaCreacion), contador:r.contadorNombre, est:0, real:0, n:0, completadas:0};
+    porSemana[key].est += (r.tiempoEstimado||0);
+    porSemana[key].real += bitTiempoRealMin(r);
+    porSemana[key].n++;
+    if (r.estado==='completada') porSemana[key].completadas++;
+  });
+  var filas = Object.values(porSemana).sort(function(a,b){ return b.semana.localeCompare(a.semana); });
+  if (!filas.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">Sin datos para este filtro.</div>'; return; }
+  cont.innerHTML = filas.map(function(f){
+    var maxV = Math.max(f.est, f.real, 1);
+    return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--bd);margin-bottom:8px;">'
+      + '<span>Semana '+bitFmtRangoSemana(f.semana)+' — '+bitEsc(f.contador)+'</span><span style="color:var(--t2);font-weight:600;">'+f.completadas+' / '+f.n+'</span></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Estimado: '+bitFmtMin(f.est)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;margin-bottom:6px;"><div style="background:#a07c10;height:8px;border-radius:4px;width:'+Math.min(100,f.est/maxV*100)+'%;"></div></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Real: '+bitFmtMin(f.real)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;"><div style="background:#1a2580;height:8px;border-radius:4px;width:'+Math.min(100,f.real/maxV*100)+'%;"></div></div>'
+      + '</div>';
+  }).join('');
 }
 
 function bitRenderAdminActividades(){
@@ -14305,6 +14512,73 @@ function bitGuardarComentario(){
     bitRenderComentarios(reg);
     bitRenderAdmin();
   }).catch(function(err){ alert('Error guardando el comentario: '+err.message); });
+}
+
+// ── Progreso mensual y ranking (premio del mes) ────────────
+// Puntaje por actividad completada: entregada a tiempo (respetando la
+// fecha de entrega vigente al momento de completarla, incluyendo un
+// plazo que el colaborador haya ajustado ANTES de vencerse) = puntaje
+// completo; entregada después de vencido el plazo = puntaje reducido.
+// Los ajustes de fecha solo son posibles antes de que la actividad
+// quede atrasada (ver bitAbrirModalEditar), así que no se puede borrar
+// un atraso ya ocurrido editando la fecha después.
+var BIT_PTS_A_TIEMPO = 10;
+var BIT_PTS_TARDE = 4;
+
+function bitPuntaje(reg){
+  if (reg.estado !== 'completada') return 0;
+  if (!reg.fechaEntrega) return BIT_PTS_A_TIEMPO;
+  return reg.fechaCompletada <= reg.fechaEntrega ? BIT_PTS_A_TIEMPO : BIT_PTS_TARDE;
+}
+
+function bitMesActual(){ return bitHoy().slice(0,7); }
+
+function bitRankingMes(){
+  var mes = bitMesActual();
+  var porContador = {};
+  _bitState.registros.forEach(function(r){
+    if (r.estado !== 'completada' || !r.fechaCompletada || r.fechaCompletada.slice(0,7) !== mes) return;
+    var key = r.contadorUid;
+    if (!porContador[key]) porContador[key] = {uid:key, nombre:r.contadorNombre, score:0, completadas:0, aTiempo:0};
+    var pts = bitPuntaje(r);
+    porContador[key].score += pts;
+    porContador[key].completadas++;
+    if (pts === BIT_PTS_A_TIEMPO) porContador[key].aTiempo++;
+  });
+  return Object.values(porContador).sort(function(a,b){ return b.score - a.score; });
+}
+
+var BIT_MESES_NOMBRE = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function bitRenderProgresoMensual(){
+  var cont = document.getElementById('bit-progreso-lista');
+  if (!cont) return;
+  var nombreMes = document.getElementById('bit-progreso-mes-nombre');
+  if (nombreMes){
+    var m = bitMesActual().split('-');
+    nombreMes.textContent = BIT_MESES_NOMBRE[parseInt(m[1],10)-1] + ' de ' + m[0];
+  }
+  var ranking = bitRankingMes();
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  var uidPropio = auth && auth.currentUser ? auth.currentUser.uid : null;
+  if (!ranking.length){
+    cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:1.5rem;font-size:12px;">Todavía no hay actividades completadas este mes.</div>';
+    return;
+  }
+  var maxScore = ranking[0].score || 1;
+  cont.innerHTML = ranking.map(function(r, i){
+    var pct = Math.max(6, Math.round(r.score / maxScore * 100));
+    var esYo = r.uid === uidPropio;
+    var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
+    var barColor = i===0 ? '#c9a227' : '#1a2580';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<div style="width:26px;text-align:center;font-size:13px;">'+medalla+'</div>'
+      + '<div style="width:140px;font-size:11px;font-weight:'+(esYo?'800':'600')+';color:'+(esYo?'var(--bd)':'var(--tx)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+bitEsc(r.nombre)+(esYo?' (tú)':'')+'</div>'
+      + '<div style="flex:1;background:#e8eaf6;border-radius:6px;height:16px;position:relative;overflow:hidden;">'
+      + '<div style="background:'+barColor+';height:100%;border-radius:6px;width:'+pct+'%;"></div></div>'
+      + (esAdmin ? '<div style="width:110px;font-size:10px;color:var(--t2);text-align:right;">'+r.score+' pts · '+r.aTiempo+'/'+r.completadas+' a tiempo</div>' : '')
+      + '</div>';
+  }).join('');
 }
 window._bitGuardarComentario = window.bitGuardarComentario = bitGuardarComentario;
 
