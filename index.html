@@ -14684,6 +14684,12 @@ function bitToggleProgreso(){
   if (abrir){
     bitRenderProgresoMensual();
     bitRenderGanadorMes();
+    // Al desplegarse, la sección puede quedar más abajo de lo que se ve
+    // en pantalla — se desplaza suavemente para que quede visible.
+    var header = document.getElementById('bit-progreso-header');
+    if (header && header.scrollIntoView){
+      setTimeout(function(){ header.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+    }
   }
 }
 window._bitToggleProgreso = window.bitToggleProgreso = bitToggleProgreso;
@@ -14704,18 +14710,27 @@ function bitRenderProgresoMensual(){
     return;
   }
   var maxScore = ranking[0].score || 1;
+  // Cada corredor arranca un poco después que el anterior (como en una
+  // carrera real, "uno se pasa al otro"), y cada uno tarda varios
+  // segundos en llegar a su puesto — entre el escalonado y la duración,
+  // toda la animación completa dura unos 8 segundos en total.
+  var DURACION = 6;      // segundos que tarda CADA corredor en moverse
+  var RETRASO_ENTRE = .6; // segundos de diferencia entre un corredor y el siguiente
   cont.innerHTML = '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:16px;">🏃 Carrera del mes — quién llega primero a la meta</div>'
     + ranking.map(function(r, i){
       var pct = Math.max(6, Math.round(r.score / maxScore * 100));
       var esYo = r.uid === uidPropio;
       var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
+      var retraso = (i * RETRASO_ENTRE).toFixed(2);
+      var transBarra = 'width '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
+      var transPunto = 'left '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
       return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">'
         + '<div style="width:20px;text-align:center;font-size:14px;">'+medalla+'</div>'
         + '<div style="width:90px;font-size:10px;font-weight:800;color:#f0d060;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+bitEsc(r.nombre)+(esYo?' (tú)':'')+'</div>'
         + '<div class="bit-pista" style="flex:1;position:relative;height:30px;">'
         +   '<div style="position:absolute;left:0;right:38px;top:50%;height:3px;background:rgba(255,255,255,.2);border-radius:2px;"></div>'
-        +   '<div class="bit-corredor-barra" data-pct="'+pct+'" style="position:absolute;left:0;top:50%;height:3px;background:linear-gradient(90deg,#f0d060,#fff);border-radius:2px;width:0%;transition:width 1.1s cubic-bezier(.22,.9,.34,1);"></div>'
-        +   '<div class="bit-corredor-punto" data-pct="'+pct+'" style="position:absolute;top:-6px;left:0%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#f0d060,#c9a227);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.9);transition:left 1.1s cubic-bezier(.22,.9,.34,1);">'
+        +   '<div class="bit-corredor-barra" data-pct="'+pct+'" style="position:absolute;left:0;top:50%;height:3px;background:linear-gradient(90deg,#f0d060,#fff);border-radius:2px;width:0%;transition:'+transBarra+';"></div>'
+        +   '<div class="bit-corredor-punto" data-pct="'+pct+'" style="position:absolute;top:-6px;left:0%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#f0d060,#c9a227);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.9);transition:'+transPunto+';">'
         +     '<span style="font-size:14px;transform:scaleX(-1);">🏃</span></div>'
         +   '<div style="position:absolute;right:0;top:1px;bottom:1px;width:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;">🏁</span></div>'
         + '</div>'
