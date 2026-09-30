@@ -2181,9 +2181,27 @@ window.addEventListener('online', function(){
 
   <!-- ═══ PROGRESO MENSUAL Y RANKING (visible para todos) ═══ -->
   <div style="margin-top:28px;border-top:2px solid var(--br);padding-top:20px;">
-    <div style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:4px;">🏆 Progreso del mes</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:14px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
-    <div id="bit-progreso-lista"></div>
+    <div id="bit-progreso-header" onclick="bitToggleProgreso()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;">
+      <span id="bit-progreso-flecha" style="font-size:11px;color:var(--t2);transition:transform .2s;display:inline-block;">▶</span>
+      <span style="font-size:14px;font-weight:800;color:var(--bd);">🏆 Progreso del mes</span>
+    </div>
+    <div id="bit-progreso-contenido" style="display:none;margin-top:14px;">
+      <div style="font-size:11px;color:var(--t2);margin-bottom:14px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
+
+      <!-- Tarjeta de la carrera -->
+      <div style="position:relative;border-radius:16px;padding:20px 24px;overflow:hidden;margin-bottom:16px;
+        background:linear-gradient(135deg,#0891b2 0%,#0e7490 45%,#155e75 100%);box-shadow:0 10px 24px rgba(8,145,178,.3);">
+        <div style="position:absolute;inset:0;opacity:.5;background-image:repeating-radial-gradient(circle at 50% 120%, transparent 0 18px, rgba(255,255,255,.08) 18px 20px);"></div>
+        <div style="position:absolute;top:-50px;right:-30px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(240,208,96,.3),transparent 70%);"></div>
+        <div id="bit-progreso-lista" style="position:relative;"></div>
+      </div>
+
+      <!-- Foto del ganador del mes -->
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:14px;padding:16px 20px;">
+        <div style="font-size:11px;font-weight:800;color:var(--bd);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">📸 Ganador(a) de <span id="bit-ganador-mes-nombre"></span></div>
+        <div id="bit-ganador-contenido"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -14155,7 +14173,6 @@ function bitRenderContador(){
   } else {
     bitRenderSemanal(mios, 'bit-lista-semanal');
   }
-  bitRenderProgresoMensual();
 }
 
 // Lunes de la semana ISO a la que pertenece una fecha 'YYYY-MM-DD'
@@ -14412,7 +14429,26 @@ function bitPoblarSelectContadores(){
   var sel1 = document.getElementById('bit-filtro-contador');
   var sel2 = document.getElementById('bit-filtro-contador-resumen');
   var sel3 = document.getElementById('bit-filtro-contador-semanal');
-  [sel1, sel2, sel3].forEach(function(sel){
+  if (sel1 && !sel1.getAttribute('data-poblado')){
+    sel1.setAttribute('data-poblado','1');
+    sel1.innerHTML = '<option value="">— Selecciona un contador —</option>' +
+      '<option value="TODOS">— Todos los contadores —</option>' +
+      _bitState.contadores.map(function(c){ return '<option value="'+c.uid+'">'+bitEsc(c.nombre||c.email)+'</option>'; }).join('');
+  } else if (sel1) {
+    // Ya se pobló antes: solo se agregan contadores nuevos que hayan
+    // aparecido, sin tocar la opción que el admin ya tenga seleccionada.
+    var actual1 = sel1.value;
+    var yaTiene = Array.from(sel1.options).map(function(o){return o.value;});
+    _bitState.contadores.forEach(function(c){
+      if (yaTiene.indexOf(c.uid) === -1){
+        var op = document.createElement('option');
+        op.value = c.uid; op.textContent = c.nombre||c.email;
+        sel1.appendChild(op);
+      }
+    });
+    sel1.value = actual1;
+  }
+  [sel2, sel3].forEach(function(sel){
     if (!sel) return;
     var actual = sel.value;
     sel.innerHTML = '<option value="">— Todos los contadores —</option>' +
@@ -14426,7 +14462,6 @@ function bitRenderAdmin(){
   if (_bitState.tabAdmin === 'actividades') bitRenderAdminActividades();
   else if (_bitState.tabAdmin === 'resumen') bitRenderAdminResumenDia();
   else bitRenderAdminSemanal();
-  bitRenderProgresoMensual();
 }
 
 function bitRenderAdminSemanal(){
@@ -14468,9 +14503,21 @@ function bitRenderAdminActividades(){
   var fecha = (document.getElementById('bit-filtro-fecha')||{}).value || '';
   var contadorId = (document.getElementById('bit-filtro-contador')||{}).value || '';
   var estadoFiltro = (document.getElementById('bit-filtro-estado')||{}).value || '';
+
+  // Mientras no se elija un contador puntual o "Todos" explícitamente,
+  // no se carga la tabla completa — evita tener que bajar por decenas
+  // de filas cada vez que se entra a esta pestaña.
+  var kpiEl = document.getElementById('bit-akpi');
+  var tbodyEl = document.getElementById('bit-atabla-body');
+  if (!contadorId){
+    if (kpiEl) kpiEl.innerHTML = '';
+    if (tbodyEl) tbodyEl.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:2.5rem;font-size:12px;">👆 Selecciona un contador o "Todos los contadores" arriba para ver sus actividades.</td></tr>';
+    return;
+  }
+
   var lista = _bitState.registros.filter(function(r){
     if (fecha && r.fechaCreacion !== fecha) return false;
-    if (contadorId && r.contadorUid !== contadorId) return false;
+    if (contadorId !== 'TODOS' && r.contadorUid !== contadorId) return false;
     return true;
   });
   var completadas = lista.filter(function(r){ return r.estado==='completada'; }).length;
@@ -14625,6 +14672,22 @@ function bitRankingMes(){
 
 var BIT_MESES_NOMBRE = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+// Plegado por defecto; se despliega y arranca la animación de la carrera
+// cada vez que se le da clic al título "🏆 Progreso del mes".
+function bitToggleProgreso(){
+  var cont = document.getElementById('bit-progreso-contenido');
+  var flecha = document.getElementById('bit-progreso-flecha');
+  if (!cont) return;
+  var abrir = cont.style.display === 'none';
+  cont.style.display = abrir ? '' : 'none';
+  if (flecha) flecha.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
+  if (abrir){
+    bitRenderProgresoMensual();
+    bitRenderGanadorMes();
+  }
+}
+window._bitToggleProgreso = window.bitToggleProgreso = bitToggleProgreso;
+
 function bitRenderProgresoMensual(){
   var cont = document.getElementById('bit-progreso-lista');
   if (!cont) return;
@@ -14637,25 +14700,126 @@ function bitRenderProgresoMensual(){
   var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
   var uidPropio = auth && auth.currentUser ? auth.currentUser.uid : null;
   if (!ranking.length){
-    cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:1.5rem;font-size:12px;">Todavía no hay actividades completadas este mes.</div>';
+    cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">Todavía no hay actividades completadas este mes.</div>';
     return;
   }
   var maxScore = ranking[0].score || 1;
-  cont.innerHTML = ranking.map(function(r, i){
-    var pct = Math.max(6, Math.round(r.score / maxScore * 100));
-    var esYo = r.uid === uidPropio;
-    var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
-    var barColor = i===0 ? '#c9a227' : '#1a2580';
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
-      + '<div style="width:26px;text-align:center;font-size:13px;">'+medalla+'</div>'
-      + '<div style="width:140px;font-size:11px;font-weight:'+(esYo?'800':'600')+';color:'+(esYo?'var(--bd)':'var(--tx)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+bitEsc(r.nombre)+(esYo?' (tú)':'')+'</div>'
-      + '<div style="flex:1;background:#e8eaf6;border-radius:6px;height:16px;position:relative;overflow:hidden;">'
-      + '<div style="background:'+barColor+';height:100%;border-radius:6px;width:'+pct+'%;"></div></div>'
-      + (esAdmin ? '<div style="width:110px;font-size:10px;color:var(--t2);text-align:right;">'+r.score+' pts · '+r.aTiempo+'/'+r.completadas+' a tiempo</div>' : '')
-      + '</div>';
-  }).join('');
+  cont.innerHTML = '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:16px;">🏃 Carrera del mes — quién llega primero a la meta</div>'
+    + ranking.map(function(r, i){
+      var pct = Math.max(6, Math.round(r.score / maxScore * 100));
+      var esYo = r.uid === uidPropio;
+      var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">'
+        + '<div style="width:20px;text-align:center;font-size:14px;">'+medalla+'</div>'
+        + '<div style="width:90px;font-size:10px;font-weight:800;color:#f0d060;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+bitEsc(r.nombre)+(esYo?' (tú)':'')+'</div>'
+        + '<div class="bit-pista" style="flex:1;position:relative;height:30px;">'
+        +   '<div style="position:absolute;left:0;right:38px;top:50%;height:3px;background:rgba(255,255,255,.2);border-radius:2px;"></div>'
+        +   '<div class="bit-corredor-barra" data-pct="'+pct+'" style="position:absolute;left:0;top:50%;height:3px;background:linear-gradient(90deg,#f0d060,#fff);border-radius:2px;width:0%;transition:width 1.1s cubic-bezier(.22,.9,.34,1);"></div>'
+        +   '<div class="bit-corredor-punto" data-pct="'+pct+'" style="position:absolute;top:-6px;left:0%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#f0d060,#c9a227);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.9);transition:left 1.1s cubic-bezier(.22,.9,.34,1);">'
+        +     '<span style="font-size:14px;transform:scaleX(-1);">🏃</span></div>'
+        +   '<div style="position:absolute;right:0;top:1px;bottom:1px;width:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;">🏁</span></div>'
+        + '</div>'
+        + (esAdmin ? '<div style="width:100px;font-size:9px;color:rgba(255,255,255,.75);text-align:right;">'+r.score+' pts · '+r.aTiempo+'/'+r.completadas+'</div>' : '')
+        + '</div>';
+    }).join('');
+
+  // Animación: arranca en 0% y, un instante después, se mueve hasta el
+  // valor real — así cada vez que se abre la sección se ve la carrera
+  // avanzar desde el principio.
+  setTimeout(function(){
+    cont.querySelectorAll('.bit-corredor-barra').forEach(function(el){ el.style.width = el.getAttribute('data-pct')+'%'; });
+    cont.querySelectorAll('.bit-corredor-punto').forEach(function(el){ el.style.left = el.getAttribute('data-pct')+'%'; });
+  }, 80);
 }
 window._bitGuardarComentario = window.bitGuardarComentario = bitGuardarComentario;
+
+// ── Foto del ganador del mes ────────────────────────────────
+// Un documento por mes en su propia colección (bitacora_ganadores),
+// con la foto en base64 (comprimida en el navegador antes de guardar)
+// y el nombre que el administrador escriba como ganador(a).
+function bitRenderGanadorMes(){
+  var cont = document.getElementById('bit-ganador-contenido');
+  var nombreMesEl = document.getElementById('bit-ganador-mes-nombre');
+  if (!cont) return;
+  var mes = bitMesActual();
+  var mpart = mes.split('-');
+  if (nombreMesEl) nombreMesEl.textContent = BIT_MESES_NOMBRE[parseInt(mpart[1],10)-1] + ' de ' + mpart[0];
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+
+  cont.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:11px;padding:1rem;">Cargando…</div>';
+  db.collection('bitacora_ganadores').doc(mes).get().then(function(doc){
+    var data = doc.exists ? doc.data() : null;
+    var html = '';
+    if (data && data.fotoBase64){
+      html += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">'
+        + '<img src="'+data.fotoBase64+'" style="width:96px;height:96px;object-fit:cover;border-radius:12px;border:3px solid #c9a227;box-shadow:0 4px 10px rgba(0,0,0,.15);">'
+        + '<div><div style="font-size:15px;font-weight:800;color:var(--bd);">🏆 '+bitEsc(data.nombre||'')+'</div>'
+        + '<div style="font-size:10px;color:var(--t2);margin-top:2px;">Publicado por '+bitEsc(data.subidoPor||'')+'</div></div>'
+        + '</div>';
+    } else {
+      html += '<div style="font-size:11px;color:var(--t3);padding:.5rem 0;">Aún no se ha definido el ganador(a) de este mes.</div>';
+    }
+    if (esAdmin){
+      html += '<div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--br);">'
+        + '<label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Nombre del ganador(a)</label>'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px;max-width:340px;">'
+        + '<input id="bit-ganador-nombre" type="text" value="'+bitEsc(data?data.nombre||'':'')+'" style="flex:1;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">'
+        + '<button class="btn btn-ol btn-sm" onclick="bitGuardarNombreGanador()">💾</button></div>'
+        + '<label class="btn btn-ol btn-sm" style="display:inline-block;cursor:pointer;">📷 '+(data&&data.fotoBase64?'Cambiar foto':'Subir foto')
+        + '<input type="file" accept="image/*" style="display:none;" onchange="bitSubirFotoGanador(this)"></label>'
+        + '</div>';
+    }
+    cont.innerHTML = html;
+  }).catch(function(err){
+    cont.innerHTML = '<div style="font-size:11px;color:#b91c1c;">Error cargando la foto: '+err.message+'</div>';
+  });
+}
+window._bitRenderGanadorMes = window.bitRenderGanadorMes = bitRenderGanadorMes;
+
+function bitGuardarNombreGanador(){
+  var nombre = (document.getElementById('bit-ganador-nombre')||{}).value || '';
+  var mes = bitMesActual();
+  db.collection('bitacora_ganadores').doc(mes).set({
+    nombre: nombre.trim(),
+    subidoPor: (currentPerfil && currentPerfil.nombre) || 'Administrador',
+    ts: new Date().toISOString()
+  }, {merge:true}).then(function(){
+    bitRenderGanadorMes();
+  }).catch(function(err){ alert('Error guardando el nombre: '+err.message); });
+}
+window._bitGuardarNombreGanador = window.bitGuardarNombreGanador = bitGuardarNombreGanador;
+
+function bitSubirFotoGanador(input){
+  var file = input.files[0];
+  if (!file) return;
+  var nombre = (document.getElementById('bit-ganador-nombre')||{}).value || '';
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var maxW = 300;
+      var escala = Math.min(1, maxW / img.width);
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width * escala;
+      canvas.height = img.height * escala;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var base64 = canvas.toDataURL('image/jpeg', 0.75);
+      var mes = bitMesActual();
+      db.collection('bitacora_ganadores').doc(mes).set({
+        fotoBase64: base64,
+        nombre: nombre.trim(),
+        subidoPor: (currentPerfil && currentPerfil.nombre) || 'Administrador',
+        ts: new Date().toISOString()
+      }).then(function(){
+        bitRenderGanadorMes();
+      }).catch(function(err){ alert('Error guardando la foto: '+err.message); });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window._bitSubirFotoGanador = window.bitSubirFotoGanador = bitSubirFotoGanador;
 
 </script>
 </body>
