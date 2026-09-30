@@ -2124,7 +2124,16 @@ window.addEventListener('online', function(){
           <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
           <select id="bit-filtro-contador" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:180px;"></select>
         </div>
-        <button class="btn btn-ol btn-sm" onclick="document.getElementById('bit-filtro-fecha').value='';document.getElementById('bit-filtro-contador').value='';bitRenderAdminActividades();">Limpiar filtros</button>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Estado</label>
+          <select id="bit-filtro-estado" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:140px;">
+            <option value="">— Todos —</option>
+            <option value="completada">Completadas</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="atrasada">Atrasadas</option>
+          </select>
+        </div>
+        <button class="btn btn-ol btn-sm" onclick="document.getElementById('bit-filtro-fecha').value='';document.getElementById('bit-filtro-contador').value='';document.getElementById('bit-filtro-estado').value='';bitRenderAdminActividades();">Limpiar filtros</button>
       </div>
       <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
@@ -14458,6 +14467,7 @@ function bitRenderAdminSemanal(){
 function bitRenderAdminActividades(){
   var fecha = (document.getElementById('bit-filtro-fecha')||{}).value || '';
   var contadorId = (document.getElementById('bit-filtro-contador')||{}).value || '';
+  var estadoFiltro = (document.getElementById('bit-filtro-estado')||{}).value || '';
   var lista = _bitState.registros.filter(function(r){
     if (fecha && r.fechaCreacion !== fecha) return false;
     if (contadorId && r.contadorUid !== contadorId) return false;
@@ -14466,6 +14476,12 @@ function bitRenderAdminActividades(){
   var completadas = lista.filter(function(r){ return r.estado==='completada'; }).length;
   var pendientes = lista.filter(function(r){ return r.estado!=='completada'; }).length;
   var atrasadas = lista.filter(bitEsAtrasada).length;
+  // El filtro de Estado (Completadas/Pendientes/Atrasadas) solo afecta
+  // la tabla de abajo — los KPI de arriba siguen mostrando el desglose
+  // completo del resto de filtros (fecha/contador).
+  if (estadoFiltro === 'completada') lista = lista.filter(function(r){ return r.estado==='completada'; });
+  else if (estadoFiltro === 'atrasada') lista = lista.filter(bitEsAtrasada);
+  else if (estadoFiltro === 'pendiente') lista = lista.filter(function(r){ return r.estado!=='completada' && !bitEsAtrasada(r); });
   var kpi = document.getElementById('bit-akpi');
   if (kpi){
     kpi.innerHTML = bitKpiCard('Total', lista.length, '#1a2580') +
