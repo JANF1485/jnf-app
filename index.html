@@ -14012,15 +14012,74 @@ function bitacoraOpen(){
 }
 window._bitacoraOpen = window.bitacoraOpen = bitacoraOpen;
 
+// La Bitácora anterior (antes de perderse y reconstruirse) usaba otros
+// nombres de campo: usuarioNombre/usuarioId en vez de contadorNombre/
+// contadorUid, "fecha" en vez de fechaCreacion, estimadoMin en vez de
+// tiempoEstimado, y no tenía un campo "título" propio (solo descripción).
+// Esta función traduce cualquiera de los dos formatos al que usa el
+// código actual, sin necesidad de migrar los registros ya guardados.
+function bitNormalizarRegistro(id, raw){
+  var historial = (raw.historial || []).map(function(h){
+    return { estado: h.estado, ts: h.ts || h.en || null };
+  });
+  var tieneTituloPropio = !!raw.titulo;
+  var titulo = raw.titulo || raw.descripcion || '(Sin título)';
+  var descripcion = tieneTituloPropio ? (raw.descripcion || '') : '';
+  var fechaCompletada = raw.fechaCompletada || null;
+  if (!fechaCompletada && raw.estado === 'completada'){
+    var ultCompletada = historial.filter(function(h){ return h.estado==='completada' && h.ts; }).pop();
+    if (ultCompletada) fechaCompletada = ultCompletada.ts.slice(0,10);
+  }
+  return {
+    id: id,
+    contadorUid: raw.contadorUid || raw.usuarioId || '',
+    contadorNombre: raw.contadorNombre || raw.usuarioNombre || '',
+    contadorEmail: raw.contadorEmail || '',
+    titulo: titulo,
+    descripcion: descripcion,
+    clienteNombre: raw.clienteNombre || '',
+    tiempoEstimado: (raw.tiempoEstimado != null ? raw.tiempoEstimado : raw.estimadoMin) || 0,
+    fechaCreacion: raw.fechaCreacion || raw.fecha || bitHoy(),
+    fechaEntrega: raw.fechaEntrega || null,
+    estado: raw.estado || 'pendiente',
+    fechaCompletada: fechaCompletada,
+    historial: historial,
+    comentarios: raw.comentarios || [],
+    refFolio: raw.refFolio || '',
+    refCufe: raw.refCufe || ''
+  };
+}
+
 function bitCargarRegistros(){
   var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
-  var ref = db.collection('bitacora_registros');
-  if (!esAdmin && auth && auth.currentUser){
-    ref = ref.where('contadorUid','==',auth.currentUser.uid);
+  if (esAdmin){
+    db.collection('bitacora_registros').get().then(function(snap){
+      var regs = [];
+      snap.forEach(function(doc){ regs.push(bitNormalizarRegistro(doc.id, doc.data())); });
+      _bitState.registros = regs;
+      _bitState.cargado = true;
+      bitRender();
+    }).catch(function(err){ console.warn('[Bitácora] Error cargando registros:', err); });
+    return;
   }
-  ref.get().then(function(snap){
+  // Contador: los registros antiguos guardan su NIT propio con el nombre
+  // "usuarioId" en vez de "contadorUid" — se consultan ambos campos y se
+  // combinan, para que también vea su historial de antes de la reconstrucción.
+  var uid = auth && auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid){ _bitState.registros = []; _bitState.cargado = true; bitRender(); return; }
+  Promise.all([
+    db.collection('bitacora_registros').where('contadorUid','==',uid).get(),
+    db.collection('bitacora_registros').where('usuarioId','==',uid).get()
+  ]).then(function(snaps){
+    var vistos = {};
     var regs = [];
-    snap.forEach(function(doc){ regs.push(Object.assign({id:doc.id}, doc.data())); });
+    snaps.forEach(function(snap){
+      snap.forEach(function(doc){
+        if (vistos[doc.id]) return;
+        vistos[doc.id] = true;
+        regs.push(bitNormalizarRegistro(doc.id, doc.data()));
+      });
+    });
     _bitState.registros = regs;
     _bitState.cargado = true;
     bitRender();
