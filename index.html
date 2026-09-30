@@ -1935,6 +1935,7 @@ window.addEventListener('online', function(){
       <div id="hdr-user-role" style="color:rgba(255,255,255,.5);font-size:9px;"></div>
       <div style="font-size:9px;color:rgba(255,255,255,0.35);">✏ Editar nombre</div>
     </div>
+    <button id="bitacora-menu-btn" onclick="bitacoraOpen()" style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">📔 Bitácora</button>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
     <button id="audit-menu-btn" onclick="openAuditoria()" style="display:none;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">📋 Auditoría</button>
     <button id="cc-menu-btn" onclick="ccOpen()" style="display:none;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">🧾 Cuenta de Cobro</button>
@@ -2057,6 +2058,145 @@ window.addEventListener('online', function(){
   <div id="cc-progress" style="display:none;font-size:11px;font-weight:700;color:var(--bd);background:var(--bl);border-radius:7px;padding:9px 13px;margin-bottom:14px;"></div>
 
   <button class="btn" onclick="ccGenerarTodas()" style="background:linear-gradient(90deg,#c9a227,#f0d060);color:var(--bd);box-shadow:0 8px 20px rgba(201,162,39,.45);font-size:12px;font-weight:800;padding:12px 26px;border-radius:10px;border:none;cursor:pointer;">🧾 Generar Cuenta(s) de Cobro</button>
+</div>
+
+<!-- ═══ PANTALLA: BITÁCORA ═════════════════════════════ -->
+<div id="screen-bitacora" class="main" style="display:none;">
+  <div class="gold-bar"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+    <button class="btn btn-ol btn-sm" onclick="showScreen('clientes')" style="gap:5px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <span style="font-size:10px;color:var(--t3);">›</span>
+    <span style="font-size:10px;font-weight:700;color:var(--bd);">📔 Bitácora</span>
+  </div>
+
+  <!-- ═══ VISTA CONTADOR: MI DÍA ═══ -->
+  <div id="bit-vista-contador">
+    <div class="page-title">Mi día</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:18px;">Registra y da seguimiento a tus actividades diarias.</div>
+
+    <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--br);">
+      <button id="bit-tab-hoy" onclick="bitSetTabContador('hoy')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Hoy</button>
+      <button id="bit-tab-historial" onclick="bitSetTabContador('historial')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Historial por día</button>
+    </div>
+
+    <div id="bit-panel-hoy">
+      <div id="bit-kpi-hoy" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px;"></div>
+      <button class="btn btn-gold" onclick="bitAbrirModalNueva()" style="margin-bottom:16px;">+ Nueva actividad</button>
+      <div id="bit-lista-hoy"></div>
+    </div>
+    <div id="bit-panel-historial" style="display:none;">
+      <div id="bit-lista-historial"></div>
+    </div>
+  </div>
+
+  <!-- ═══ VISTA ADMIN: PANEL DE SUPERVISIÓN ═══ -->
+  <div id="bit-vista-admin" style="display:none;">
+    <div class="page-title">Panel de supervisión — Bitácora</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:18px;">Actividades registradas por todos los contadores.</div>
+
+    <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--br);">
+      <button id="bit-atab-actividades" onclick="bitSetTabAdmin('actividades')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Actividades</button>
+      <button id="bit-atab-resumen" onclick="bitSetTabAdmin('resumen')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Resumen por día</button>
+    </div>
+
+    <div id="bit-apanel-actividades">
+      <div id="bit-akpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px;"></div>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha</label>
+          <input type="date" id="bit-filtro-fecha" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
+          <select id="bit-filtro-contador" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:180px;"></select>
+        </div>
+        <button class="btn btn-ol btn-sm" onclick="document.getElementById('bit-filtro-fecha').value='';document.getElementById('bit-filtro-contador').value='';bitRenderAdminActividades();">Limpiar filtros</button>
+      </div>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--bd);color:#fff;">
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Fecha</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Contador</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Título</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Cliente</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Estado</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Est. / Real</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Comentarios</th>
+          </tr></thead>
+          <tbody id="bit-atabla-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="bit-apanel-resumen" style="display:none;">
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;">
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
+        <select id="bit-filtro-contador-resumen" onchange="bitRenderAdminResumenDia()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:220px;"></select>
+      </div>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--bd);color:#fff;">
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Fecha</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Contador</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Completadas</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Estimado</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Real</th>
+          </tr></thead>
+          <tbody id="bit-aresumen-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: NUEVA ACTIVIDAD ═══ -->
+<div id="bit-modal-nueva" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10005;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;">
+    <div style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:14px;">+ Nueva actividad</div>
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Título</label>
+    <input id="bit-nueva-titulo" type="text" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Descripción (opcional)</label>
+    <textarea id="bit-nueva-descripcion" rows="2" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;resize:vertical;"></textarea>
+    <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Cliente (opcional)</label>
+    <input id="bit-nueva-cliente" type="text" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Tiempo estimado (min)</label>
+        <input id="bit-nueva-estimado" type="number" min="0" step="5" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha de entrega (opcional)</label>
+        <input id="bit-nueva-fechaentrega" type="date" style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ol btn-sm" onclick="bitCerrarModalNueva()">Cancelar</button>
+      <button class="btn btn-gold" onclick="bitGuardarActividad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: COMENTARIOS (admin) ═══ -->
+<div id="bit-modal-comentarios" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10005;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--t2);">Comentarios sobre:</div>
+    <div id="bit-com-titulo" style="font-size:14px;font-weight:800;color:var(--bd);margin-bottom:14px;"></div>
+    <div id="bit-com-lista" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input id="bit-com-input" type="text" placeholder="Escribe un comentario…" style="flex:1;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;">
+      <button class="btn btn-gold btn-sm" onclick="bitGuardarComentario()">Enviar</button>
+    </div>
+    <div style="text-align:right;margin-top:12px;">
+      <button class="btn btn-ol btn-sm" onclick="bitCerrarModalComentarios()">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ PANTALLA 1: LISTA DE CLIENTES ═══════════════════ -->
@@ -3521,7 +3661,7 @@ window._editClient = window.editClient = function editClient(id){
 // ═══════════════════════════════════════════════════════
 // NAVEGACIÓN DE PANTALLAS
 // ═══════════════════════════════════════════════════════
-const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria','estados','cufe','cuentacobro'];
+const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria','estados','cufe','cuentacobro','bitacora'];
 let activeClientId = null;
 let activeYear = null;
 let _currentAnios = [];
@@ -13730,5 +13870,444 @@ window._ccToggleTodos = window.ccToggleTodos = ccToggleTodos;
 window._ccRenderTablaHonorarios = window.ccRenderTablaHonorarios = ccRenderTablaHonorarios;
 </script>
 
+<script>
+// ═══════════════════════════════════════════════════════
+// MÓDULO: BITÁCORA (registro diario de actividades)
+// Autocontenido — todos los identificadores usan el prefijo "bit"
+// para no tocar ningún otro módulo.
+// ═══════════════════════════════════════════════════════
+var _bitState = {
+  registros: [],
+  contadores: [],
+  cargado: false,
+  tabContador: 'hoy',
+  tabAdmin: 'actividades',
+  filtroFechaAdmin: '',
+  filtroContadorAdmin: '',
+  filtroContadorHist: '',
+  comentariosId: null
+};
+
+function bitHoy(){ return new Date().toISOString().slice(0,10); }
+
+function bitFmtMin(min){
+  min = Math.round(min||0);
+  if (min < 0) min = 0;
+  var h = Math.floor(min/60), m = min%60;
+  return h>0 ? (h+'h '+m+'m') : (m+'m');
+}
+
+function bitFmtFecha(f){
+  if (!f) return '';
+  var p = f.split('-');
+  return p[2]+'/'+p[1]+'/'+p[0];
+}
+
+// Tiempo real: suma los tramos en que el registro estuvo "en_progreso"
+// según su historial de cambios de estado. Si sigue en_progreso ahora
+// mismo, suma también desde el último cambio hasta el momento actual.
+function bitTiempoRealMin(reg){
+  var hist = reg.historial || [];
+  var totalMs = 0;
+  for (var i=0; i<hist.length-1; i++){
+    if (hist[i].estado === 'en_progreso'){
+      totalMs += new Date(hist[i+1].ts) - new Date(hist[i].ts);
+    }
+  }
+  if (hist.length && hist[hist.length-1].estado === 'en_progreso'){
+    totalMs += new Date() - new Date(hist[hist.length-1].ts);
+  }
+  return totalMs / 60000;
+}
+
+// "Atrasada" es un estado DERIVADO solo para mostrar — el campo real
+// "estado" del registro sigue siendo pendiente/en_progreso/completada.
+function bitEsAtrasada(reg){
+  if (reg.estado === 'completada') return false;
+  if (!reg.fechaEntrega) return false;
+  return reg.fechaEntrega < bitHoy();
+}
+
+// Un registro se muestra en "Hoy" todos los días hasta completarse;
+// una vez completado, solo se muestra el día en que se completó.
+function bitVisibleHoy(reg){
+  var hoy = bitHoy();
+  if (reg.estado === 'completada') return reg.fechaCompletada === hoy;
+  return reg.fechaCreacion <= hoy;
+}
+
+// ── Apertura del módulo ───────────────────────────────────
+function bitacoraOpen(){
+  showScreen('bitacora');
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  var elC = document.getElementById('bit-vista-contador');
+  var elA = document.getElementById('bit-vista-admin');
+  if (elC) elC.style.display = esAdmin ? 'none' : '';
+  if (elA) elA.style.display = esAdmin ? '' : 'none';
+  bitCargarRegistros();
+  if (esAdmin) bitCargarContadores();
+}
+window._bitacoraOpen = window.bitacoraOpen = bitacoraOpen;
+
+function bitCargarRegistros(){
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  var ref = db.collection('bitacora_registros');
+  if (!esAdmin && auth && auth.currentUser){
+    ref = ref.where('contadorUid','==',auth.currentUser.uid);
+  }
+  ref.get().then(function(snap){
+    var regs = [];
+    snap.forEach(function(doc){ regs.push(Object.assign({id:doc.id}, doc.data())); });
+    _bitState.registros = regs;
+    _bitState.cargado = true;
+    bitRender();
+  }).catch(function(err){
+    console.warn('[Bitácora] Error cargando registros:', err);
+  });
+}
+
+function bitCargarContadores(){
+  db.collection('usuarios').where('rol','==','contador').get().then(function(snap){
+    var lista = [];
+    snap.forEach(function(doc){ lista.push(Object.assign({uid:doc.id}, doc.data())); });
+    _bitState.contadores = lista;
+    bitRender();
+  }).catch(function(err){ console.warn('[Bitácora] Error cargando contadores:', err); });
+}
+
+function bitRender(){
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  if (esAdmin) bitRenderAdmin(); else bitRenderContador();
+}
+
+// ── VISTA CONTADOR: "Mi día" ──────────────────────────────
+function bitSetTabContador(tab){
+  _bitState.tabContador = tab;
+  var t1 = document.getElementById('bit-tab-hoy');
+  var t2 = document.getElementById('bit-tab-historial');
+  if (t1) { t1.style.borderBottomColor = tab==='hoy' ? '#1a2580' : 'transparent'; t1.style.color = tab==='hoy' ? '#1a2580' : 'var(--t2)'; }
+  if (t2) { t2.style.borderBottomColor = tab==='historial' ? '#1a2580' : 'transparent'; t2.style.color = tab==='historial' ? '#1a2580' : 'var(--t2)'; }
+  var p1 = document.getElementById('bit-panel-hoy');
+  var p2 = document.getElementById('bit-panel-historial');
+  if (p1) p1.style.display = tab==='hoy' ? '' : 'none';
+  if (p2) p2.style.display = tab==='historial' ? '' : 'none';
+  bitRenderContador();
+}
+window._bitSetTabContador = window.bitSetTabContador = bitSetTabContador;
+
+function bitRenderContador(){
+  var uid = auth && auth.currentUser ? auth.currentUser.uid : null;
+  var mios = _bitState.registros.filter(function(r){ return r.contadorUid === uid; });
+
+  if (_bitState.tabContador === 'hoy'){
+    var hoyRegs = mios.filter(bitVisibleHoy);
+    var completadas = hoyRegs.filter(function(r){ return r.estado==='completada'; }).length;
+    var pendientes = hoyRegs.filter(function(r){ return r.estado!=='completada'; }).length;
+    var atrasadas = hoyRegs.filter(bitEsAtrasada).length;
+    var kpi = document.getElementById('bit-kpi-hoy');
+    if (kpi){
+      kpi.innerHTML = bitKpiCard('Total hoy', hoyRegs.length, '#1a2580') +
+        bitKpiCard('Completadas', completadas, '#166534') +
+        bitKpiCard('Pendientes', pendientes, '#a07c10') +
+        bitKpiCard('Atrasadas', atrasadas, '#b91c1c');
+    }
+    var cont = document.getElementById('bit-lista-hoy');
+    if (cont){
+      if (!hoyRegs.length){
+        cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">No tienes actividades registradas hoy.</div>';
+      } else {
+        cont.innerHTML = hoyRegs.map(bitTarjetaActividad).join('');
+      }
+    }
+  } else {
+    bitRenderHistorialDia(mios);
+  }
+}
+
+function bitKpiCard(label, val, color){
+  return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:12px 14px;text-align:center;">'
+    + '<div style="font-size:20px;font-weight:800;color:'+color+';">'+val+'</div>'
+    + '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:2px;">'+label+'</div></div>';
+}
+
+function bitTarjetaActividad(r){
+  var atrasada = bitEsAtrasada(r);
+  var badgeColor = r.estado==='completada' ? '#166534' : (r.estado==='en_progreso' ? '#1e40af' : '#a07c10');
+  var badgeBg = r.estado==='completada' ? '#dcfce7' : (r.estado==='en_progreso' ? '#dbeafe' : '#fef3c7');
+  var badgeTxt = r.estado==='completada' ? 'Completada' : (r.estado==='en_progreso' ? 'En progreso' : 'Pendiente');
+  var real = bitTiempoRealMin(r);
+  var acciones = '';
+  if (r.estado === 'pendiente') acciones = '<button class="btn btn-sm" onclick="bitCambiarEstado(\''+r.id+'\',\'en_progreso\')" style="background:#1e40af;color:#fff;">▶ Iniciar</button>';
+  else if (r.estado === 'en_progreso') acciones = '<button class="btn btn-sm" onclick="bitCambiarEstado(\''+r.id+'\',\'completada\')" style="background:#166534;color:#fff;">✔ Completar</button>';
+  return '<div style="background:var(--sf);border:1px solid '+(atrasada?'#fecaca':'var(--br)')+';border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
+    + '<div>'
+    + '<div style="font-weight:700;font-size:13px;color:var(--tx);">'+bitEsc(r.titulo)+'</div>'
+    + (r.clienteNombre ? '<div style="font-size:11px;color:var(--t2);">Cliente: '+bitEsc(r.clienteNombre)+'</div>' : '')
+    + (r.descripcion ? '<div style="font-size:11px;color:var(--t2);margin-top:4px;">'+bitEsc(r.descripcion)+'</div>' : '')
+    + '</div>'
+    + '<span style="background:'+badgeBg+';color:'+badgeColor+';font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px;white-space:nowrap;">'+badgeTxt+'</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:var(--t2);">'
+    + '<span>Estimado: <strong>'+bitFmtMin(r.tiempoEstimado)+'</strong></span>'
+    + '<span>Real: <strong>'+bitFmtMin(real)+'</strong></span>'
+    + (r.fechaEntrega ? '<span style="'+(atrasada?'color:#b91c1c;font-weight:700;':'')+'">'+(atrasada?'⚠ Atrasada — vencía':'Vence')+' '+bitFmtFecha(r.fechaEntrega)+'</span>' : '')
+    + '</div>'
+    + (acciones ? '<div style="margin-top:10px;">'+acciones+'</div>' : '')
+    + '</div>';
+}
+
+function bitEsc(s){
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function bitRenderHistorialDia(mios){
+  var porDia = {};
+  mios.forEach(function(r){
+    var f = r.fechaCreacion;
+    if (!porDia[f]) porDia[f] = {est:0, real:0, n:0};
+    porDia[f].est += (r.tiempoEstimado||0);
+    porDia[f].real += bitTiempoRealMin(r);
+    porDia[f].n++;
+  });
+  var dias = Object.keys(porDia).sort().reverse();
+  var cont = document.getElementById('bit-lista-historial');
+  if (!cont) return;
+  if (!dias.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">Sin actividades registradas todavía.</div>'; return; }
+  cont.innerHTML = dias.map(function(f){
+    var d = porDia[f];
+    var maxV = Math.max(d.est, d.real, 1);
+    return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--bd);margin-bottom:8px;">'
+      + '<span>'+bitFmtFecha(f)+'</span><span style="color:var(--t2);font-weight:600;">'+d.n+' actividad(es)</span></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Estimado: '+bitFmtMin(d.est)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;margin-bottom:6px;"><div style="background:#a07c10;height:8px;border-radius:4px;width:'+Math.min(100,d.est/maxV*100)+'%;"></div></div>'
+      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Real: '+bitFmtMin(d.real)+'</div>'
+      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;"><div style="background:#1a2580;height:8px;border-radius:4px;width:'+Math.min(100,d.real/maxV*100)+'%;"></div></div>'
+      + '</div>';
+  }).join('');
+}
+
+// ── Crear actividad ────────────────────────────────────────
+function bitAbrirModalNueva(){
+  var m = document.getElementById('bit-modal-nueva');
+  if (m) m.style.display = 'flex';
+  var fi = document.getElementById('bit-nueva-fechaentrega');
+  if (fi) fi.min = bitHoy();
+}
+window._bitAbrirModalNueva = window.bitAbrirModalNueva = bitAbrirModalNueva;
+
+function bitCerrarModalNueva(){
+  var m = document.getElementById('bit-modal-nueva');
+  if (m) m.style.display = 'none';
+}
+window._bitCerrarModalNueva = window.bitCerrarModalNueva = bitCerrarModalNueva;
+
+function bitGuardarActividad(){
+  var titulo = (document.getElementById('bit-nueva-titulo')||{}).value || '';
+  if (!titulo.trim()){ alert('Escribe un título para la actividad.'); return; }
+  var descripcion = (document.getElementById('bit-nueva-descripcion')||{}).value || '';
+  var cliente = (document.getElementById('bit-nueva-cliente')||{}).value || '';
+  var estimado = parseFloat((document.getElementById('bit-nueva-estimado')||{}).value) || 0;
+  var fechaEntrega = (document.getElementById('bit-nueva-fechaentrega')||{}).value || null;
+  var uid = auth && auth.currentUser ? auth.currentUser.uid : '';
+  var hoy = bitHoy();
+  var nuevo = {
+    contadorUid: uid,
+    contadorNombre: (currentPerfil && currentPerfil.nombre) || (currentPerfil && currentPerfil.email) || '',
+    contadorEmail: (currentPerfil && currentPerfil.email) || '',
+    titulo: titulo.trim(),
+    descripcion: descripcion.trim(),
+    clienteNombre: cliente.trim(),
+    tiempoEstimado: estimado,
+    fechaCreacion: hoy,
+    fechaEntrega: fechaEntrega || null,
+    estado: 'pendiente',
+    fechaCompletada: null,
+    historial: [{estado:'pendiente', ts:new Date().toISOString()}],
+    comentarios: []
+  };
+  db.collection('bitacora_registros').add(nuevo).then(function(ref){
+    nuevo.id = ref.id;
+    _bitState.registros.push(nuevo);
+    bitCerrarModalNueva();
+    ['bit-nueva-titulo','bit-nueva-descripcion','bit-nueva-cliente','bit-nueva-estimado','bit-nueva-fechaentrega'].forEach(function(id){
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    bitRender();
+  }).catch(function(err){ alert('Error guardando la actividad: '+err.message); });
+}
+window._bitGuardarActividad = window.bitGuardarActividad = bitGuardarActividad;
+
+function bitCambiarEstado(id, nuevoEstado){
+  var reg = _bitState.registros.find(function(r){ return r.id===id; });
+  if (!reg) return;
+  var ts = new Date().toISOString();
+  var hist = (reg.historial||[]).concat([{estado:nuevoEstado, ts:ts}]);
+  var update = { estado: nuevoEstado, historial: hist };
+  if (nuevoEstado === 'completada') update.fechaCompletada = bitHoy();
+  db.collection('bitacora_registros').doc(id).update(update).then(function(){
+    reg.estado = nuevoEstado;
+    reg.historial = hist;
+    if (nuevoEstado === 'completada') reg.fechaCompletada = bitHoy();
+    bitRender();
+  }).catch(function(err){ alert('Error actualizando la actividad: '+err.message); });
+}
+window._bitCambiarEstado = window.bitCambiarEstado = bitCambiarEstado;
+
+// ── VISTA ADMIN: "Panel de supervisión" ───────────────────
+function bitSetTabAdmin(tab){
+  _bitState.tabAdmin = tab;
+  var t1 = document.getElementById('bit-atab-actividades');
+  var t2 = document.getElementById('bit-atab-resumen');
+  if (t1) { t1.style.borderBottomColor = tab==='actividades' ? '#1a2580' : 'transparent'; t1.style.color = tab==='actividades' ? '#1a2580' : 'var(--t2)'; }
+  if (t2) { t2.style.borderBottomColor = tab==='resumen' ? '#1a2580' : 'transparent'; t2.style.color = tab==='resumen' ? '#1a2580' : 'var(--t2)'; }
+  var p1 = document.getElementById('bit-apanel-actividades');
+  var p2 = document.getElementById('bit-apanel-resumen');
+  if (p1) p1.style.display = tab==='actividades' ? '' : 'none';
+  if (p2) p2.style.display = tab==='resumen' ? '' : 'none';
+  bitRenderAdmin();
+}
+window._bitSetTabAdmin = window.bitSetTabAdmin = bitSetTabAdmin;
+
+function bitPoblarSelectContadores(){
+  var sel1 = document.getElementById('bit-filtro-contador');
+  var sel2 = document.getElementById('bit-filtro-contador-resumen');
+  [sel1, sel2].forEach(function(sel){
+    if (!sel) return;
+    var actual = sel.value;
+    sel.innerHTML = '<option value="">— Todos los contadores —</option>' +
+      _bitState.contadores.map(function(c){ return '<option value="'+c.uid+'">'+bitEsc(c.nombre||c.email)+'</option>'; }).join('');
+    sel.value = actual || '';
+  });
+}
+
+function bitRenderAdmin(){
+  bitPoblarSelectContadores();
+  if (_bitState.tabAdmin === 'actividades') bitRenderAdminActividades();
+  else bitRenderAdminResumenDia();
+}
+
+function bitRenderAdminActividades(){
+  var fecha = (document.getElementById('bit-filtro-fecha')||{}).value || '';
+  var contadorId = (document.getElementById('bit-filtro-contador')||{}).value || '';
+  var lista = _bitState.registros.filter(function(r){
+    if (fecha && r.fechaCreacion !== fecha) return false;
+    if (contadorId && r.contadorUid !== contadorId) return false;
+    return true;
+  });
+  var completadas = lista.filter(function(r){ return r.estado==='completada'; }).length;
+  var pendientes = lista.filter(function(r){ return r.estado!=='completada'; }).length;
+  var atrasadas = lista.filter(bitEsAtrasada).length;
+  var kpi = document.getElementById('bit-akpi');
+  if (kpi){
+    kpi.innerHTML = bitKpiCard('Total', lista.length, '#1a2580') +
+      bitKpiCard('Completadas', completadas, '#166534') +
+      bitKpiCard('Pendientes', pendientes, '#a07c10') +
+      bitKpiCard('Atrasadas', atrasadas, '#b91c1c');
+  }
+  var tbody = document.getElementById('bit-atabla-body');
+  if (!tbody) return;
+  if (!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:2rem;">Sin actividades para este filtro.</td></tr>'; return; }
+  tbody.innerHTML = lista.map(function(r){
+    var atrasada = bitEsAtrasada(r);
+    var real = bitTiempoRealMin(r);
+    var badgeColor = r.estado==='completada' ? '#166534' : (r.estado==='en_progreso' ? '#1e40af' : '#a07c10');
+    var badgeTxt = r.estado==='completada' ? 'Completada' : (r.estado==='en_progreso' ? 'En progreso' : 'Pendiente');
+    return '<tr>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtFecha(r.fechaCreacion)
+      +   (r.fechaEntrega ? '<div style="font-size:9px;'+(atrasada?'color:#b91c1c;font-weight:700;':'color:var(--t3);')+'">'+(atrasada?'vencía':'vence')+' '+bitFmtFecha(r.fechaEntrega)+'</div>' : '')
+      + '</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(r.contadorNombre)+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;font-weight:700;">'+bitEsc(r.titulo)+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(r.clienteNombre||'—')+'</td>'
+      + '<td style="padding:7px 10px;font-size:10px;font-weight:700;color:'+badgeColor+';">'+badgeTxt+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(r.tiempoEstimado)+' / '+bitFmtMin(real)+'</td>'
+      + '<td style="padding:7px 10px;"><button class="btn btn-ol btn-sm" onclick="bitAbrirComentarios(\''+r.id+'\')">💬 '+((r.comentarios||[]).length)+'</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function bitRenderAdminResumenDia(){
+  var contadorId = (document.getElementById('bit-filtro-contador-resumen')||{}).value || '';
+  var lista = _bitState.registros.filter(function(r){
+    return !contadorId || r.contadorUid === contadorId;
+  });
+  var grupos = {};
+  lista.forEach(function(r){
+    var key = r.fechaCreacion + '|' + r.contadorUid;
+    if (!grupos[key]) grupos[key] = {fecha:r.fechaCreacion, contador:r.contadorNombre, est:0, real:0, completadas:0, total:0};
+    grupos[key].est += (r.tiempoEstimado||0);
+    grupos[key].real += bitTiempoRealMin(r);
+    grupos[key].total++;
+    if (r.estado==='completada') grupos[key].completadas++;
+  });
+  var filas = Object.values(grupos).sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+  var tbody = document.getElementById('bit-aresumen-body');
+  if (!tbody) return;
+  if (!filas.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:2rem;">Sin datos para este filtro.</td></tr>'; return; }
+  tbody.innerHTML = filas.map(function(g){
+    return '<tr>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtFecha(g.fecha)+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(g.contador)+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+g.completadas+' / '+g.total+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(g.est)+'</td>'
+      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(g.real)+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ── Comentarios (admin) ────────────────────────────────────
+function bitAbrirComentarios(id){
+  _bitState.comentariosId = id;
+  var reg = _bitState.registros.find(function(r){ return r.id===id; });
+  if (!reg) return;
+  var m = document.getElementById('bit-modal-comentarios');
+  if (m) m.style.display = 'flex';
+  var tit = document.getElementById('bit-com-titulo');
+  if (tit) tit.textContent = reg.titulo;
+  bitRenderComentarios(reg);
+}
+window._bitAbrirComentarios = window.bitAbrirComentarios = bitAbrirComentarios;
+
+function bitRenderComentarios(reg){
+  var cont = document.getElementById('bit-com-lista');
+  if (!cont) return;
+  var coms = reg.comentarios || [];
+  cont.innerHTML = coms.length ? coms.map(function(c){
+    return '<div style="background:var(--bl);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+      + '<div style="font-size:10px;font-weight:700;color:var(--bd);">'+bitEsc(c.autor)+'</div>'
+      + '<div style="font-size:11px;color:var(--tx);">'+bitEsc(c.texto)+'</div></div>';
+  }).join('') : '<div style="font-size:11px;color:var(--t3);text-align:center;padding:1rem;">Sin comentarios todavía.</div>';
+}
+
+function bitCerrarModalComentarios(){
+  var m = document.getElementById('bit-modal-comentarios');
+  if (m) m.style.display = 'none';
+  _bitState.comentariosId = null;
+}
+window._bitCerrarModalComentarios = window.bitCerrarModalComentarios = bitCerrarModalComentarios;
+
+function bitGuardarComentario(){
+  var id = _bitState.comentariosId;
+  if (!id) return;
+  var input = document.getElementById('bit-com-input');
+  var texto = (input||{}).value || '';
+  if (!texto.trim()) return;
+  var reg = _bitState.registros.find(function(r){ return r.id===id; });
+  if (!reg) return;
+  var nuevo = { autor: (currentPerfil && currentPerfil.nombre) || 'Administrador', texto: texto.trim(), ts: new Date().toISOString() };
+  var coms = (reg.comentarios||[]).concat([nuevo]);
+  db.collection('bitacora_registros').doc(id).update({comentarios: coms}).then(function(){
+    reg.comentarios = coms;
+    if (input) input.value = '';
+    bitRenderComentarios(reg);
+    bitRenderAdmin();
+  }).catch(function(err){ alert('Error guardando el comentario: '+err.message); });
+}
+window._bitGuardarComentario = window.bitGuardarComentario = bitGuardarComentario;
+
+</script>
 </body>
 </html>
