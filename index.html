@@ -2186,7 +2186,20 @@ window.addEventListener('online', function(){
       <span style="font-size:14px;font-weight:800;color:var(--bd);">🏆 Progreso del mes</span>
     </div>
     <div id="bit-progreso-contenido" style="display:none;margin-top:14px;">
-      <div style="font-size:11px;color:var(--t2);margin-bottom:14px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:10px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
+
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;background:var(--bl);border-radius:10px;padding:10px 14px;">
+        <div>
+          <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:3px;">Verificar desde</label>
+          <input id="bit-progreso-desde" type="date" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px 8px;">
+        </div>
+        <div>
+          <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:3px;">Hasta</label>
+          <input id="bit-progreso-hasta" type="date" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px 8px;">
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="bitRenderProgresoMensual()">🔍 Verificar</button>
+        <button class="btn btn-ol btn-sm" onclick="bitRestablecerRangoProgreso()">Mes actual</button>
+      </div>
 
       <!-- Tarjeta de la carrera -->
       <div style="position:relative;border-radius:16px;padding:20px 24px;overflow:hidden;margin-bottom:16px;
@@ -14654,12 +14667,24 @@ function bitPuntaje(reg){
 }
 
 function bitMesActual(){ return bitHoy().slice(0,7); }
+function bitPrimerDiaMes(){ return bitMesActual()+'-01'; }
+function bitUltimoDiaMes(){
+  var m = bitMesActual().split('-');
+  var d = new Date(parseInt(m[0],10), parseInt(m[1],10), 0); // dia 0 del mes siguiente = ultimo dia del actual
+  return d.toISOString().slice(0,10);
+}
 
-function bitRankingMes(){
-  var mes = bitMesActual();
+// Por defecto se califica el mes calendario actual, pero el admin puede
+// verificar cualquier rango de fechas antes de definir el ganador (por
+// ejemplo, si el "mes" de la bitácora no coincide con el mes calendario,
+// o para revisar un período pasado).
+function bitRankingMes(desde, hasta){
+  desde = desde || bitPrimerDiaMes();
+  hasta = hasta || bitUltimoDiaMes();
   var porContador = {};
   _bitState.registros.forEach(function(r){
-    if (r.estado !== 'completada' || !r.fechaCompletada || r.fechaCompletada.slice(0,7) !== mes) return;
+    if (r.estado !== 'completada' || !r.fechaCompletada) return;
+    if (r.fechaCompletada < desde || r.fechaCompletada > hasta) return;
     var key = r.contadorUid;
     if (!porContador[key]) porContador[key] = {uid:key, nombre:r.contadorNombre, score:0, completadas:0, aTiempo:0};
     var pts = bitPuntaje(r);
@@ -14694,19 +14719,36 @@ function bitToggleProgreso(){
 }
 window._bitToggleProgreso = window.bitToggleProgreso = bitToggleProgreso;
 
+function bitRestablecerRangoProgreso(){
+  var elD = document.getElementById('bit-progreso-desde');
+  var elH = document.getElementById('bit-progreso-hasta');
+  if (elD) elD.value = bitPrimerDiaMes();
+  if (elH) elH.value = bitUltimoDiaMes();
+  bitRenderProgresoMensual();
+}
+window._bitRestablecerRangoProgreso = window.bitRestablecerRangoProgreso = bitRestablecerRangoProgreso;
+
 function bitRenderProgresoMensual(){
   var cont = document.getElementById('bit-progreso-lista');
   if (!cont) return;
+  var elD = document.getElementById('bit-progreso-desde');
+  var elH = document.getElementById('bit-progreso-hasta');
+  // La primera vez que se abre, los campos de fecha vienen vacíos —
+  // se inicializan con el mes actual sin disparar otro render.
+  if (elD && !elD.value) elD.value = bitPrimerDiaMes();
+  if (elH && !elH.value) elH.value = bitUltimoDiaMes();
+  var desde = elD ? elD.value : bitPrimerDiaMes();
+  var hasta = elH ? elH.value : bitUltimoDiaMes();
+
   var nombreMes = document.getElementById('bit-progreso-mes-nombre');
   if (nombreMes){
-    var m = bitMesActual().split('-');
-    nombreMes.textContent = BIT_MESES_NOMBRE[parseInt(m[1],10)-1] + ' de ' + m[0];
+    nombreMes.textContent = bitFmtFecha(desde) + ' al ' + bitFmtFecha(hasta);
   }
-  var ranking = bitRankingMes();
+  var ranking = bitRankingMes(desde, hasta);
   var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
   var uidPropio = auth && auth.currentUser ? auth.currentUser.uid : null;
   if (!ranking.length){
-    cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">Todavía no hay actividades completadas este mes.</div>';
+    cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">No hay actividades completadas en ese rango de fechas.</div>';
     return;
   }
   var maxScore = ranking[0].score || 1;
@@ -14732,7 +14774,7 @@ function bitRenderProgresoMensual(){
         +   '<div class="bit-corredor-barra" data-pct="'+pct+'" style="position:absolute;left:0;top:50%;height:3px;background:linear-gradient(90deg,#f0d060,#fff);border-radius:2px;width:0%;transition:'+transBarra+';"></div>'
         +   '<div class="bit-corredor-punto" data-pct="'+pct+'" style="position:absolute;top:-6px;left:0%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#f0d060,#c9a227);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.9);transition:'+transPunto+';">'
         +     '<span style="font-size:14px;transform:scaleX(-1);">🏃</span></div>'
-        +   '<div style="position:absolute;right:0;top:1px;bottom:1px;width:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;">🏁</span></div>'
+        +   '<div'+(i===0?' id="bit-meta-ganador"':'')+' style="position:absolute;right:0;top:1px;bottom:1px;width:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:visible;"><span style="font-size:14px;">🏁</span></div>'
         + '</div>'
         + (esAdmin ? '<div style="width:100px;font-size:9px;color:rgba(255,255,255,.75);text-align:right;">'+r.score+' pts · '+r.aTiempo+'/'+r.completadas+'</div>' : '')
         + '</div>';
@@ -14745,6 +14787,35 @@ function bitRenderProgresoMensual(){
     cont.querySelectorAll('.bit-corredor-barra').forEach(function(el){ el.style.width = el.getAttribute('data-pct')+'%'; });
     cont.querySelectorAll('.bit-corredor-punto').forEach(function(el){ el.style.left = el.getAttribute('data-pct')+'%'; });
   }, 80);
+
+  // El primer puesto arranca sin retraso, así que llega a la meta
+  // justo quando termina su propia transición (DURACION segundos).
+  setTimeout(function(){ bitFuegosArtificiales('bit-meta-ganador'); }, 80 + DURACION*1000);
+}
+
+// Ráfaga de chispas de colores sobre el elemento indicado (la meta del
+// ganador), usando una animación CSS creada una sola vez.
+function bitFuegosArtificiales(idMeta){
+  var meta = document.getElementById(idMeta);
+  if (!meta) return;
+  if (!document.getElementById('bit-fuegos-estilo')){
+    var st = document.createElement('style');
+    st.id = 'bit-fuegos-estilo';
+    st.textContent = '@keyframes bitChispa{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--bx),var(--by)) scale(0);opacity:0;}}';
+    document.head.appendChild(st);
+  }
+  var colores = ['#f0d060','#c9a227','#fff','#22d3ee','#f472b6'];
+  for (var i=0; i<16; i++){
+    var chispa = document.createElement('span');
+    var ang = (Math.PI*2/16)*i;
+    var dist = 30 + Math.random()*24;
+    chispa.style.cssText = 'position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;'
+      + 'background:'+colores[i%colores.length]+';pointer-events:none;'
+      + '--bx:'+(Math.cos(ang)*dist).toFixed(1)+'px;--by:'+(Math.sin(ang)*dist).toFixed(1)+'px;'
+      + 'animation:bitChispa .9s ease-out forwards;z-index:5;';
+    meta.appendChild(chispa);
+    (function(el){ setTimeout(function(){ el.remove(); }, 950); })(chispa);
+  }
 }
 window._bitGuardarComentario = window.bitGuardarComentario = bitGuardarComentario;
 
