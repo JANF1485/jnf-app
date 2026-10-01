@@ -2198,7 +2198,7 @@ window.addEventListener('online', function(){
           <input id="bit-progreso-hasta" type="date" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px 8px;">
         </div>
         <button class="btn btn-gold btn-sm" onclick="bitRenderProgresoMensual()">🔍 Verificar</button>
-        <button class="btn btn-ol btn-sm" onclick="bitRestablecerRangoProgreso()">Mes actual</button>
+        <button class="btn btn-ol btn-sm" onclick="bitRestablecerRangoProgreso()">Mes a calificar</button>
       </div>
 
       <!-- Tarjeta de la carrera -->
@@ -14674,6 +14674,22 @@ function bitUltimoDiaMes(){
   return d.toISOString().slice(0,10);
 }
 
+// El mes que se está "calificando" para el ganador(a) es el mes recién
+// terminado, no el mes calendario en curso (apenas empezando) — ej. el
+// 1 de octubre se premia septiembre, no octubre. Se usa como valor por
+// defecto del rango de verificación y de la tarjeta de ganador(a).
+function bitMesACalificar(){
+  var m = bitMesActual().split('-');
+  var d = new Date(parseInt(m[0],10), parseInt(m[1],10) - 1, 0); // dia 0 del mes actual = ultimo dia del mes anterior
+  return d.toISOString().slice(0,7);
+}
+function bitPrimerDiaMesCalificar(){ return bitMesACalificar()+'-01'; }
+function bitUltimoDiaMesCalificar(){
+  var m = bitMesACalificar().split('-');
+  var d = new Date(parseInt(m[0],10), parseInt(m[1],10), 0);
+  return d.toISOString().slice(0,10);
+}
+
 // Por defecto se califica el mes calendario actual, pero el admin puede
 // verificar cualquier rango de fechas antes de definir el ganador (por
 // ejemplo, si el "mes" de la bitácora no coincide con el mes calendario,
@@ -14722,8 +14738,8 @@ window._bitToggleProgreso = window.bitToggleProgreso = bitToggleProgreso;
 function bitRestablecerRangoProgreso(){
   var elD = document.getElementById('bit-progreso-desde');
   var elH = document.getElementById('bit-progreso-hasta');
-  if (elD) elD.value = bitPrimerDiaMes();
-  if (elH) elH.value = bitUltimoDiaMes();
+  if (elD) elD.value = bitPrimerDiaMesCalificar();
+  if (elH) elH.value = bitUltimoDiaMesCalificar();
   bitRenderProgresoMensual();
 }
 window._bitRestablecerRangoProgreso = window.bitRestablecerRangoProgreso = bitRestablecerRangoProgreso;
@@ -14734,11 +14750,12 @@ function bitRenderProgresoMensual(){
   var elD = document.getElementById('bit-progreso-desde');
   var elH = document.getElementById('bit-progreso-hasta');
   // La primera vez que se abre, los campos de fecha vienen vacíos —
-  // se inicializan con el mes actual sin disparar otro render.
-  if (elD && !elD.value) elD.value = bitPrimerDiaMes();
-  if (elH && !elH.value) elH.value = bitUltimoDiaMes();
-  var desde = elD ? elD.value : bitPrimerDiaMes();
-  var hasta = elH ? elH.value : bitUltimoDiaMes();
+  // se inicializan con el mes que se está calificando (el recién
+  // terminado, no el mes calendario en curso) sin disparar otro render.
+  if (elD && !elD.value) elD.value = bitPrimerDiaMesCalificar();
+  if (elH && !elH.value) elH.value = bitUltimoDiaMesCalificar();
+  var desde = elD ? elD.value : bitPrimerDiaMesCalificar();
+  var hasta = elH ? elH.value : bitUltimoDiaMesCalificar();
 
   var nombreMes = document.getElementById('bit-progreso-mes-nombre');
   if (nombreMes){
@@ -14752,6 +14769,11 @@ function bitRenderProgresoMensual(){
     return;
   }
   var maxScore = ranking[0].score || 1;
+  // Nadie debe cruzar visualmente la meta mientras el período evaluado
+  // siga en curso — solo una vez que ya pasó su último día (hasta) tiene
+  // sentido que el puntaje máximo se vea como el 100% real.
+  var periodoTerminado = bitHoy() >= hasta;
+  var TOPE_SI_EN_CURSO = 90; // tope visual mientras el período no ha terminado
   // Cada corredor arranca un poco después que el anterior (como en una
   // carrera real, "uno se pasa al otro"), y cada uno tarda varios
   // segundos en llegar a su puesto — entre el escalonado y la duración,
@@ -14760,7 +14782,8 @@ function bitRenderProgresoMensual(){
   var RETRASO_ENTRE = .6; // segundos de diferencia entre un corredor y el siguiente
   cont.innerHTML = '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:16px;">🏃 Carrera del mes — quién llega primero a la meta</div>'
     + ranking.map(function(r, i){
-      var pct = Math.max(6, Math.round(r.score / maxScore * 100));
+      var pctReal = Math.round(r.score / maxScore * 100);
+      var pct = Math.max(6, periodoTerminado ? pctReal : Math.min(pctReal, TOPE_SI_EN_CURSO));
       var esYo = r.uid === uidPropio;
       var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
       var retraso = (i * RETRASO_ENTRE).toFixed(2);
@@ -14789,8 +14812,12 @@ function bitRenderProgresoMensual(){
   }, 80);
 
   // El primer puesto arranca sin retraso, así que llega a la meta
-  // justo quando termina su propia transición (DURACION segundos).
-  setTimeout(function(){ bitFuegosArtificiales('bit-meta-ganador'); }, 80 + DURACION*1000);
+  // justo quando termina su propia transición (DURACION segundos) —
+  // pero los fuegos artificiales solo tienen sentido si de verdad llegó
+  // a la meta, es decir, si el período evaluado ya terminó.
+  if (periodoTerminado){
+    setTimeout(function(){ bitFuegosArtificiales('bit-meta-ganador'); }, 80 + DURACION*1000);
+  }
 }
 
 // Ráfaga de chispas de colores sobre el elemento indicado (la meta del
@@ -14827,7 +14854,7 @@ function bitRenderGanadorMes(){
   var cont = document.getElementById('bit-ganador-contenido');
   var nombreMesEl = document.getElementById('bit-ganador-mes-nombre');
   if (!cont) return;
-  var mes = bitMesActual();
+  var mes = bitMesACalificar();
   var mpart = mes.split('-');
   if (nombreMesEl) nombreMesEl.textContent = BIT_MESES_NOMBRE[parseInt(mpart[1],10)-1] + ' de ' + mpart[0];
   var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
@@ -14864,7 +14891,7 @@ window._bitRenderGanadorMes = window.bitRenderGanadorMes = bitRenderGanadorMes;
 
 function bitGuardarNombreGanador(){
   var nombre = (document.getElementById('bit-ganador-nombre')||{}).value || '';
-  var mes = bitMesActual();
+  var mes = bitMesACalificar();
   db.collection('bitacora_ganadores').doc(mes).set({
     nombre: nombre.trim(),
     subidoPor: (currentPerfil && currentPerfil.nombre) || 'Administrador',
@@ -14891,7 +14918,7 @@ function bitSubirFotoGanador(input){
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       var base64 = canvas.toDataURL('image/jpeg', 0.75);
-      var mes = bitMesActual();
+      var mes = bitMesACalificar();
       db.collection('bitacora_ganadores').doc(mes).set({
         fotoBase64: base64,
         nombre: nombre.trim(),
