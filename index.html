@@ -2084,6 +2084,8 @@ window.addEventListener('online', function(){
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Historial por día</button>
       <button id="bit-tab-semanal" onclick="bitSetTabContador('semanal')"
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Registro semanal</button>
+      <button id="bit-tab-actividades" onclick="bitSetTabContador('actividades')"
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Mis actividades</button>
     </div>
 
     <div id="bit-panel-hoy">
@@ -2096,6 +2098,30 @@ window.addEventListener('online', function(){
     </div>
     <div id="bit-panel-semanal" style="display:none;">
       <div id="bit-lista-semanal"></div>
+    </div>
+    <div id="bit-panel-actividades" style="display:none;">
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha inicio</label>
+          <input type="date" id="bit-mis-desde" onchange="bitRenderContador()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha final</label>
+          <input type="date" id="bit-mis-hasta" onchange="bitRenderContador()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Estado</label>
+          <select id="bit-mis-estado" onchange="bitRenderContador()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:140px;">
+            <option value="">— Todos —</option>
+            <option value="completada">Completadas</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="atrasada">Atrasadas</option>
+          </select>
+        </div>
+        <button class="btn btn-ol btn-sm" onclick="bitMisActividadesMesActual()">Mes actual</button>
+      </div>
+      <div id="bit-mis-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px;"></div>
+      <div id="bit-mis-lista"></div>
     </div>
   </div>
 
@@ -14135,6 +14161,7 @@ function bitCargarContadores(){
     snap.forEach(function(doc){ lista.push(Object.assign({uid:doc.id}, doc.data())); });
     _bitState.contadores = lista;
     bitRender();
+    if (_bitState.cargado) bitPublicarProgreso();
   }).catch(function(err){ console.warn('[Bitácora] Error cargando contadores:', err); });
 }
 
@@ -14146,8 +14173,8 @@ function bitRender(){
 // ── VISTA CONTADOR: "Mi día" ──────────────────────────────
 function bitSetTabContador(tab){
   _bitState.tabContador = tab;
-  var tabs = {hoy:'bit-tab-hoy', historial:'bit-tab-historial', semanal:'bit-tab-semanal'};
-  var paneles = {hoy:'bit-panel-hoy', historial:'bit-panel-historial', semanal:'bit-panel-semanal'};
+  var tabs = {hoy:'bit-tab-hoy', historial:'bit-tab-historial', semanal:'bit-tab-semanal', actividades:'bit-tab-actividades'};
+  var paneles = {hoy:'bit-panel-hoy', historial:'bit-panel-historial', semanal:'bit-panel-semanal', actividades:'bit-panel-actividades'};
   Object.keys(tabs).forEach(function(k){
     var el = document.getElementById(tabs[k]);
     if (el) { el.style.borderBottomColor = (tab===k) ? '#1a2580' : 'transparent'; el.style.color = (tab===k) ? '#1a2580' : 'var(--t2)'; }
@@ -14184,10 +14211,68 @@ function bitRenderContador(){
     }
   } else if (_bitState.tabContador === 'historial'){
     bitRenderHistorialDia(mios);
+  } else if (_bitState.tabContador === 'actividades'){
+    bitRenderMisActividades(mios);
   } else {
     bitRenderSemanal(mios, 'bit-lista-semanal');
   }
 }
+
+// "Mis actividades": registro completo del contador (solo las suyas) con
+// filtro de fecha inicio / fecha final (por fecha de registro) y estado.
+// Por defecto muestra del primer día del mes en curso hasta hoy.
+function bitRenderMisActividades(mios){
+  var elD = document.getElementById('bit-mis-desde');
+  var elH = document.getElementById('bit-mis-hasta');
+  if (elD && !elD.value) elD.value = bitPrimerDiaMes();
+  if (elH && !elH.value) elH.value = bitHoy();
+  var desde = elD ? elD.value : '';
+  var hasta = elH ? elH.value : '';
+  var estadoFiltro = (document.getElementById('bit-mis-estado')||{}).value || '';
+  var lista = mios.filter(function(r){
+    if (desde && r.fechaCreacion < desde) return false;
+    if (hasta && r.fechaCreacion > hasta) return false;
+    return true;
+  }).sort(function(a,b){ return String(b.fechaCreacion).localeCompare(String(a.fechaCreacion)); });
+  var completadas = lista.filter(function(r){ return r.estado==='completada'; }).length;
+  var pendientes = lista.filter(function(r){ return r.estado!=='completada'; }).length;
+  var atrasadas = lista.filter(bitEsAtrasada).length;
+  var kpi = document.getElementById('bit-mis-kpi');
+  if (kpi){
+    kpi.innerHTML = bitKpiCard('Total', lista.length, '#1a2580') +
+      bitKpiCard('Completadas', completadas, '#166534') +
+      bitKpiCard('Pendientes', pendientes, '#a07c10') +
+      bitKpiCard('Atrasadas', atrasadas, '#b91c1c');
+  }
+  if (estadoFiltro === 'completada') lista = lista.filter(function(r){ return r.estado==='completada'; });
+  else if (estadoFiltro === 'atrasada') lista = lista.filter(bitEsAtrasada);
+  else if (estadoFiltro === 'pendiente') lista = lista.filter(function(r){ return r.estado!=='completada' && !bitEsAtrasada(r); });
+  var cont = document.getElementById('bit-mis-lista');
+  if (!cont) return;
+  if (!lista.length){
+    cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">No tienes actividades registradas en ese rango de fechas.</div>';
+    return;
+  }
+  // Se agrupan por fecha de registro para que se lea como una bitácora.
+  var html = '', fechaAnt = null;
+  lista.forEach(function(r){
+    if (r.fechaCreacion !== fechaAnt){
+      fechaAnt = r.fechaCreacion;
+      html += '<div style="font-size:11px;font-weight:800;color:var(--bd);margin:14px 0 6px;">📅 '+bitFmtFecha(fechaAnt)+'</div>';
+    }
+    html += bitTarjetaActividad(r);
+  });
+  cont.innerHTML = html;
+}
+
+function bitMisActividadesMesActual(){
+  var elD = document.getElementById('bit-mis-desde');
+  var elH = document.getElementById('bit-mis-hasta');
+  if (elD) elD.value = bitPrimerDiaMes();
+  if (elH) elH.value = bitHoy();
+  bitRenderContador();
+}
+window._bitMisActividadesMesActual = window.bitMisActividadesMesActual = bitMisActividadesMesActual;
 
 // Lunes de la semana ISO a la que pertenece una fecha 'YYYY-MM-DD'
 function bitSemanaDe(fechaISO){
@@ -14803,6 +14888,7 @@ function bitRenderProgresoMensual(){
   var corredores = ranking.map(function(r){
     return {uid:r.uid, nombre:r.nombre, pct:Math.round(r.score / maxScore * 100), score:r.score, aTiempo:r.aTiempo, completadas:r.completadas};
   });
+  corredores = corredores.concat(bitContadoresSinPuntaje(corredores));
   bitDibujarCarrera(cont, corredores, bitHoy() >= hasta, true, uidPropio);
 }
 
@@ -14823,6 +14909,11 @@ function bitPublicarProgresoRango(mes, desde, hasta){
   var corredores = ranking.map(function(r){
     return {uid:r.uid || '', nombre:r.nombre || '', pct:Math.round(r.score / maxScore * 100)};
   });
+  // Todos los contadores aparecen en la carrera, aunque aún no tengan
+  // actividades completadas en el período (quedan en la salida, 0%).
+  corredores = corredores.concat(bitContadoresSinPuntaje(corredores).map(function(c){
+    return {uid:c.uid, nombre:c.nombre, pct:0};
+  }));
   db.collection('bitacora_progreso').doc(mes).set({
     desde: desde,
     hasta: hasta,
@@ -14830,6 +14921,18 @@ function bitPublicarProgresoRango(mes, desde, hasta){
     actualizado: new Date().toISOString(),
     actualizadoPor: (currentPerfil && currentPerfil.nombre) || ''
   }).catch(function(err){ console.warn('[Bitácora] No se pudo publicar el progreso:', err); });
+}
+
+// Contadores registrados (rol contador) que no figuran en el ranking del
+// período — se agregan al final con 0% para que todos vean su carril.
+function bitContadoresSinPuntaje(corredores){
+  var ya = {};
+  corredores.forEach(function(c){ ya[c.uid] = true; });
+  return (_bitState.contadores || []).filter(function(u){
+    return u.uid && !ya[u.uid] && u.activo !== false;
+  }).map(function(u){
+    return {uid:u.uid, nombre:u.nombre || u.email || '', pct:0, score:0, aTiempo:0, completadas:0};
+  });
 }
 
 // Dibuja la pista de carrera (misma vista para admin y contadores). Cada
@@ -14848,7 +14951,7 @@ function bitDibujarCarrera(cont, corredores, periodoTerminado, esAdmin, uidPropi
       var pctReal = r.pct || 0;
       var pct = Math.max(6, periodoTerminado ? pctReal : Math.min(pctReal, TOPE_SI_EN_CURSO));
       var esYo = r.uid === uidPropio;
-      var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
+      var medalla = !pctReal ? (i+1)+'.' : (i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.')));
       var retraso = (i * RETRASO_ENTRE).toFixed(2);
       var transBarra = 'width '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
       var transPunto = 'left '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
