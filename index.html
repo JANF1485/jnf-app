@@ -2188,7 +2188,7 @@ window.addEventListener('online', function(){
     <div id="bit-progreso-contenido" style="display:none;margin-top:14px;">
       <div style="font-size:11px;color:var(--t2);margin-bottom:10px;">Actividades entregadas a tiempo durante <span id="bit-progreso-mes-nombre"></span>.</div>
 
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;background:var(--bl);border-radius:10px;padding:10px 14px;">
+      <div id="bit-progreso-rango" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;background:var(--bl);border-radius:10px;padding:10px 14px;">
         <div>
           <label style="font-size:9px;font-weight:700;color:var(--t2);display:block;margin-bottom:3px;">Verificar desde</label>
           <input id="bit-progreso-desde" type="date" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px 8px;">
@@ -14099,6 +14099,7 @@ function bitCargarRegistros(){
       _bitState.registros = regs;
       _bitState.cargado = true;
       bitRender();
+      bitPublicarProgreso();
     }).catch(function(err){ console.warn('[Bitácora] Error cargando registros:', err); });
     return;
   }
@@ -14747,6 +14748,40 @@ window._bitRestablecerRangoProgreso = window.bitRestablecerRangoProgreso = bitRe
 function bitRenderProgresoMensual(){
   var cont = document.getElementById('bit-progreso-lista');
   if (!cont) return;
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  var uidPropio = auth && auth.currentUser ? auth.currentUser.uid : null;
+  var rango = document.getElementById('bit-progreso-rango');
+  if (rango) rango.style.display = esAdmin ? 'flex' : 'none';
+  var nombreMes = document.getElementById('bit-progreso-mes-nombre');
+
+  // CONTADOR: solo tiene acceso a sus propios registros, así que no puede
+  // calcular la carrera de los demás. Lee el resumen publicado por el admin
+  // (bitacora_progreso/{mes}), que trae únicamente nombre y % de avance —
+  // nunca puntos ni cantidad de actividades. Se le muestra el MES EN CURSO
+  // (avance a la fecha): mientras el mes no haya terminado nadie aparece en
+  // la meta (tope 90%) ni salen fuegos artificiales.
+  if (!esAdmin){
+    var mes = bitMesActual();
+    var dC = bitPrimerDiaMes(), hC = bitUltimoDiaMes();
+    if (nombreMes) nombreMes.textContent = bitFmtFecha(dC) + ' al ' + bitFmtFecha(bitHoy()) + ' (mes en curso)';
+    cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">Cargando…</div>';
+    db.collection('bitacora_progreso').doc(mes).get().then(function(doc){
+      var data = doc.exists ? doc.data() : null;
+      if (!data || !data.corredores || !data.corredores.length){
+        cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">Aún no hay avance publicado para este mes.</div>';
+        return;
+      }
+      // El mes solo se da por terminado cuando ya pasó su último día.
+      bitDibujarCarrera(cont, data.corredores, bitHoy() > (data.hasta || hC), false, uidPropio);
+      if (data.actualizado){
+        cont.insertAdjacentHTML('beforeend', '<div style="font-size:9px;color:rgba(255,255,255,.7);text-align:right;margin-top:-8px;">Avance actualizado al '+bitEsc(new Date(data.actualizado).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div>');
+      }
+    }).catch(function(err){
+      cont.innerHTML = '<div style="text-align:center;color:#fff;padding:1.5rem;font-size:12px;">Error cargando el progreso: '+bitEsc(err.message)+'</div>';
+    });
+    return;
+  }
+
   var elD = document.getElementById('bit-progreso-desde');
   var elH = document.getElementById('bit-progreso-hasta');
   // La primera vez que se abre, los campos de fecha vienen vacíos —
@@ -14756,23 +14791,51 @@ function bitRenderProgresoMensual(){
   if (elH && !elH.value) elH.value = bitUltimoDiaMesCalificar();
   var desde = elD ? elD.value : bitPrimerDiaMesCalificar();
   var hasta = elH ? elH.value : bitUltimoDiaMesCalificar();
-
-  var nombreMes = document.getElementById('bit-progreso-mes-nombre');
   if (nombreMes){
     nombreMes.textContent = bitFmtFecha(desde) + ' al ' + bitFmtFecha(hasta);
   }
   var ranking = bitRankingMes(desde, hasta);
-  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
-  var uidPropio = auth && auth.currentUser ? auth.currentUser.uid : null;
   if (!ranking.length){
     cont.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.85);padding:1.5rem;font-size:12px;">No hay actividades completadas en ese rango de fechas.</div>';
     return;
   }
   var maxScore = ranking[0].score || 1;
-  // Nadie debe cruzar visualmente la meta mientras el período evaluado
-  // siga en curso — solo una vez que ya pasó su último día (hasta) tiene
-  // sentido que el puntaje máximo se vea como el 100% real.
-  var periodoTerminado = bitHoy() >= hasta;
+  var corredores = ranking.map(function(r){
+    return {uid:r.uid, nombre:r.nombre, pct:Math.round(r.score / maxScore * 100), score:r.score, aTiempo:r.aTiempo, completadas:r.completadas};
+  });
+  bitDibujarCarrera(cont, corredores, bitHoy() >= hasta, true, uidPropio);
+}
+
+// Publica (solo el admin) el resumen de la carrera para que los contadores
+// la vean: nombre + % relativo al líder, sin puntos ni cantidades. Se
+// publican dos documentos cada vez que el admin carga la Bitácora: el mes
+// a calificar (cerrado) y el mes en curso (avance a la fecha).
+function bitPublicarProgreso(){
+  var esAdmin = currentPerfil && currentPerfil.rol === 'admin';
+  if (!esAdmin) return;
+  bitPublicarProgresoRango(bitMesACalificar(), bitPrimerDiaMesCalificar(), bitUltimoDiaMesCalificar());
+  bitPublicarProgresoRango(bitMesActual(), bitPrimerDiaMes(), bitUltimoDiaMes());
+}
+
+function bitPublicarProgresoRango(mes, desde, hasta){
+  var ranking = bitRankingMes(desde, hasta);
+  var maxScore = (ranking[0] && ranking[0].score) || 1;
+  var corredores = ranking.map(function(r){
+    return {uid:r.uid || '', nombre:r.nombre || '', pct:Math.round(r.score / maxScore * 100)};
+  });
+  db.collection('bitacora_progreso').doc(mes).set({
+    desde: desde,
+    hasta: hasta,
+    corredores: corredores,
+    actualizado: new Date().toISOString(),
+    actualizadoPor: (currentPerfil && currentPerfil.nombre) || ''
+  }).catch(function(err){ console.warn('[Bitácora] No se pudo publicar el progreso:', err); });
+}
+
+// Dibuja la pista de carrera (misma vista para admin y contadores). Cada
+// corredor trae pct (0-100 relativo al líder); la columna de puntos y
+// actividades solo se pinta para el admin.
+function bitDibujarCarrera(cont, corredores, periodoTerminado, esAdmin, uidPropio){
   var TOPE_SI_EN_CURSO = 90; // tope visual mientras el período no ha terminado
   // Cada corredor arranca un poco después que el anterior (como en una
   // carrera real, "uno se pasa al otro"), y cada uno tarda varios
@@ -14781,8 +14844,8 @@ function bitRenderProgresoMensual(){
   var DURACION = 6;      // segundos que tarda CADA corredor en moverse
   var RETRASO_ENTRE = .6; // segundos de diferencia entre un corredor y el siguiente
   cont.innerHTML = '<div style="font-size:11px;font-weight:800;color:#fff;margin-bottom:16px;">🏃 Carrera del mes — quién llega primero a la meta</div>'
-    + ranking.map(function(r, i){
-      var pctReal = Math.round(r.score / maxScore * 100);
+    + corredores.map(function(r, i){
+      var pctReal = r.pct || 0;
       var pct = Math.max(6, periodoTerminado ? pctReal : Math.min(pctReal, TOPE_SI_EN_CURSO));
       var esYo = r.uid === uidPropio;
       var medalla = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.'));
@@ -14811,10 +14874,9 @@ function bitRenderProgresoMensual(){
     cont.querySelectorAll('.bit-corredor-punto').forEach(function(el){ el.style.left = el.getAttribute('data-pct')+'%'; });
   }, 80);
 
-  // El primer puesto arranca sin retraso, así que llega a la meta
-  // justo quando termina su propia transición (DURACION segundos) —
-  // pero los fuegos artificiales solo tienen sentido si de verdad llegó
-  // a la meta, es decir, si el período evaluado ya terminó.
+  // El primer puesto arranca sin retraso, así que llega a la meta justo
+  // cuando termina su propia transición (DURACION segundos) — los fuegos
+  // artificiales solo si el período evaluado ya terminó.
   if (periodoTerminado){
     setTimeout(function(){ bitFuegosArtificiales('bit-meta-ganador'); }, 80 + DURACION*1000);
   }
