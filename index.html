@@ -1935,6 +1935,7 @@ window.addEventListener('online', function(){
       <div id="hdr-user-role" style="color:rgba(255,255,255,.5);font-size:9px;"></div>
       <div style="font-size:9px;color:rgba(255,255,255,0.35);">✏ Editar nombre</div>
     </div>
+    <button id="inicio-menu-btn" onclick="showScreen('inicio')" style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">🏠 Inicio</button>
     <button id="bitacora-menu-btn" onclick="bitacoraOpen()" style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">📔 Bitácora</button>
     <button id="admin-menu-btn" onclick="openAdminPanel()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">👥 Usuarios</button>
     <button id="audit-menu-btn" onclick="openAuditoria()" style="display:none;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);color:#f0d060;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;">📋 Auditoría</button>
@@ -1967,7 +1968,7 @@ window.addEventListener('online', function(){
 <div id="screen-cuentacobro" class="main" style="display:none;">
   <div style="background:linear-gradient(135deg,#0d1257 0%,#1a2580 45%,#2c1e6b 100%);border-radius:18px;padding:20px 24px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 12px 30px rgba(13,18,87,.30);">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative;">
-      <button class="btn btn-sm" onclick="showScreen('clientes')" style="gap:5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;">
+      <button class="btn btn-sm" onclick="showScreen('inicio')" style="gap:5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         Volver
       </button>
@@ -2064,7 +2065,7 @@ window.addEventListener('online', function(){
 <div id="screen-bitacora" class="main" style="display:none;">
   <div class="gold-bar"></div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-    <button class="btn btn-ol btn-sm" onclick="showScreen('clientes')" style="gap:5px;">
+    <button class="btn btn-ol btn-sm" onclick="showScreen('inicio')" style="gap:5px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       Volver
     </button>
@@ -2328,6 +2329,48 @@ window.addEventListener('online', function(){
 </div>
 
 <!-- ═══ PANTALLA 1: LISTA DE CLIENTES ═══════════════════ -->
+<!-- ═══ PANTALLA: INICIO (menú en cascada) ═══ -->
+<style>
+#screen-inicio .ini-wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+#screen-inicio .ini-sec{background:#fff;border:1px solid #d9ddee;border-radius:14px;overflow:hidden;}
+#screen-inicio .ini-head{width:100%;border:none;padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;min-height:68px;font-family:Montserrat,sans-serif;background:#fff;}
+#screen-inicio .ini-head.abierto{background:#f5f6fc;}
+#screen-inicio .ini-ico{width:42px;height:42px;border-radius:10px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#screen-inicio .ini-ico.prin{background:#1a2580;}
+#screen-inicio .ini-tit{display:block;font-size:16px;font-weight:800;color:#1a2580;}
+#screen-inicio .ini-sub{display:block;font-size:11px;color:#4a5068;margin-top:2px;}
+#screen-inicio .ini-cnt{font-size:11px;font-weight:700;color:#4a5068;background:#eef0f7;border-radius:20px;padding:4px 10px;white-space:nowrap;}
+#screen-inicio .ini-chev{transition:transform .2s;flex-shrink:0;}
+#screen-inicio .ini-head.abierto .ini-chev{transform:rotate(90deg);}
+#screen-inicio .ini-body{border-top:1px solid #e3e6f2;padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px;}
+#screen-inicio .ini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
+#screen-inicio .ini-op{background:#fff;border:1px solid #d9ddee;border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;min-height:62px;display:flex;flex-direction:column;gap:4px;font-family:Montserrat,sans-serif;}
+#screen-inicio .ini-op:hover{border-color:#c9a227;background:#fffdf5;}
+#screen-inicio .ini-op[disabled]{cursor:default;background:#f7f8fb;}
+#screen-inicio .ini-op[disabled]:hover{border-color:#d9ddee;}
+#screen-inicio .ini-op-t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#1a2580;}
+#screen-inicio .ini-op[disabled] .ini-op-t{color:#4a5068;}
+#screen-inicio .ini-dot{width:6px;height:6px;border-radius:50%;background:#c9a227;flex-shrink:0;}
+#screen-inicio .ini-op-d{font-size:11px;color:#4a5068;padding-left:14px;}
+#screen-inicio .ini-pronto{margin-left:auto;font-size:9px;font-weight:800;color:#4a5068;background:#eceef4;border-radius:20px;padding:2px 8px;white-space:nowrap;}
+#screen-inicio .ini-btn{font-family:Montserrat,sans-serif;border-radius:8px;padding:0 16px;min-height:42px;font-size:12px;font-weight:800;cursor:pointer;}
+#screen-inicio .ini-btn-oro{background:#c9a227;color:#1a2580;border:none;}
+#screen-inicio .ini-btn-ol{background:#fff;color:#1a2580;border:1.5px solid #1a2580;}
+#screen-inicio .ini-buscar{display:flex;align-items:center;gap:8px;border:2px solid #1a2580;border-radius:10px;padding:0 12px;background:#fff;}
+#screen-inicio .ini-buscar input{flex:1;min-width:0;font-family:Montserrat,sans-serif;font-size:14px;border:none;outline:none;padding:12px 0;min-height:42px;background:transparent;}
+#screen-inicio .ini-lista{display:flex;flex-direction:column;border:1px solid #e3e6f2;border-radius:10px;overflow:hidden;}
+#screen-inicio .ini-cli{background:#fff;border:none;border-bottom:1px solid #eef0f7;padding:10px 14px;min-height:52px;display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;font-family:Montserrat,sans-serif;}
+#screen-inicio .ini-cli:hover{background:#f5f6fc;}
+#screen-inicio .ini-av{width:34px;height:34px;border-radius:8px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#screen-inicio .ini-anio{font-family:Montserrat,sans-serif;border:1.5px solid #1a2580;border-radius:20px;padding:0 16px;min-height:42px;font-size:13px;font-weight:800;cursor:pointer;background:#fff;color:#1a2580;}
+#screen-inicio .ini-anio.sel{background:#1a2580;color:#f0d060;}
+#screen-inicio .ini-etq{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#6a5208;}
+</style>
+<div id="screen-inicio" class="main" style="display:none;">
+  <div class="gold-bar"></div>
+  <div id="ini-root" class="ini-wrap"></div>
+</div>
+
 <div id="screen-clientes" class="main">
   <div class="gold-bar"></div>
   <div class="page-title">Gestión de Clientes</div>
@@ -3054,7 +3097,7 @@ window.addEventListener('online', function(){
 
   <!-- Breadcrumb -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-    <button class="btn btn-ol btn-sm" onclick="showScreen('clientes')" style="gap:5px;">
+    <button class="btn btn-ol btn-sm" onclick="showScreen('inicio')" style="gap:5px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       Cerrar auditoría
     </button>
@@ -3789,7 +3832,7 @@ window._editClient = window.editClient = function editClient(id){
 // ═══════════════════════════════════════════════════════
 // NAVEGACIÓN DE PANTALLAS
 // ═══════════════════════════════════════════════════════
-const SCREENS = ['clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria','estados','cufe','cuentacobro','bitacora'];
+const SCREENS = ['inicio','clientes','anio','contabilidad','consolidador','f300','inc','guardado','calendario','obligaciones','f350','auditoria','estados','cufe','cuentacobro','bitacora'];
 let activeClientId = null;
 let activeYear = null;
 let _currentAnios = [];
@@ -3838,6 +3881,8 @@ window._showScreen = window.showScreen = function showScreen(name){
       el.style.display = 'none';
     }
   });
+  // Pantalla de Inicio (menú en cascada): se pinta cada vez que se muestra
+  if(name === 'inicio' && typeof inicioRender === 'function') inicioRender();
   // Re-registrar onclick del grid al volver a clientes
   if(name === 'clientes'){
     if(typeof renderClients === 'function') setTimeout(renderClients, 50);
@@ -4741,20 +4786,23 @@ function showApp(){
       window._showCambiarPassword ? window._showCambiarPassword() : null;
     };
   }
-  // Mostrar screen-clientes directamente como fallback
+  // Entrar a la pantalla de Inicio (menú en cascada); si fallara, se
+  // muestra Gestión de Clientes como antes.
   try {
-    showScreen('clientes');
+    showScreen('inicio');
   } catch(e) {
     console.error('[JNF] showScreen error:', e);
     var elC = document.getElementById('screen-clientes');
     if(elC) elC.style.display = '';
   }
-  // Asegurar que screen-clientes es visible
+  // Asegurar que alguna pantalla quede visible
   setTimeout(function(){
+    var elI = document.getElementById('screen-inicio');
     var elC = document.getElementById('screen-clientes');
-    if(elC && elC.style.display === 'none') {
-      console.warn('[JNF] screen-clientes aún oculto, forzando...');
-      elC.style.display = '';
+    if(elI && elI.style.display === 'none' && elC && elC.style.display === 'none') {
+      console.warn('[JNF] ninguna pantalla visible, forzando Inicio...');
+      elI.style.display = '';
+      if(typeof inicioRender === 'function') inicioRender();
     }
   }, 100);
   var nameEl = document.getElementById('hdr-user-name');
@@ -15107,5 +15155,330 @@ function bitSubirFotoGanador(input){
 window._bitSubirFotoGanador = window.bitSubirFotoGanador = bitSubirFotoGanador;
 
 </script>
+<script>
+// ═══ PANTALLA INICIO — menú en cascada ═══════════════════════════════
+// Todo con prefijo ini/ini-. Abre los módulos con las mismas funciones que
+// ya usa la app (openAnio + acción del módulo, bitacoraOpen, openAdminPanel,
+// etc.), así que "Volver" y el resto de la navegación funcionan igual.
+var _ini = { abiertos: {}, q: '', cliId: null, anio: null, res: [], mods: [] };
+
+function iniEsAdmin(){ return !!(currentPerfil && currentPerfil.rol === 'admin'); }
+function iniEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function iniNorm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function iniDig(s){ return String(s || '').replace(/\D/g, ''); }
+function iniIniciales(n){ return String(n || '?').split(' ').filter(Boolean).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase(); }
+function iniClientes(){ return (typeof clients !== 'undefined' && clients) ? clients : []; }
+function iniCliente(id){ return iniClientes().find(function(c){ return c.id === id; }) || null; }
+
+var INI_SVG = {
+  chev: '<svg class="ini-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  clientes: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f0d060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2"/></svg>',
+  bitacora: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg>',
+  admin: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  config: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+  lupa: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+  flecha: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a2580" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
+};
+
+// Opciones de Bitácora / Administración / Configuración según el rol.
+function iniGrupos(){
+  var adm = iniEsAdmin();
+  var g = [];
+  g.push({ id:'bitacora', titulo:'Bitácora', sub:'Seguimiento del trabajo diario', ico:'bitacora', items: adm ? [
+    { t:'Panel de supervisión', d:'Actividades de todos los contadores', a:'bit-panel' },
+    { t:'Resumen por día', d:'Tiempos estimados vs. reales por día', a:'bit-resumen' },
+    { t:'Resumen semanal', d:'Totales por semana y contador', a:'bit-semanal' },
+    { t:'Progreso del mes', d:'Carrera y ganador del mes', a:'bit-prog' } ] : [
+    { t:'Mi día', d:'Actividades de hoy', a:'bit-hoy' },
+    { t:'Mis actividades', d:'Registro con fecha inicio y fecha final', a:'bit-mis' },
+    { t:'Registro semanal', d:'Tus totales por semana', a:'bit-semanal-c' },
+    { t:'Progreso del mes', d:'Carrera del equipo', a:'bit-prog' } ] });
+  if (adm) g.push({ id:'admin', titulo:'Administración', sub:'Solo administrador', ico:'admin', items:[
+    { t:'Usuarios y permisos', d:'Módulos y clientes asignados a cada usuario', a:'adm-usuarios' },
+    { t:'Auditoría', d:'Dashboard de contadores', a:'adm-auditoria' },
+    { t:'Cuenta de cobro', d:'Honorarios por cliente y PDF', a:'adm-cc' } ] });
+  g.push({ id:'config', titulo:'Configuración', sub:'Calendario tributario y cuenta', ico:'config', items: adm ? [
+    { t:'Calendario tributario DIAN', d:'Vencimientos de todos los clientes, filtrable por contador, mes y estado', a:'cfg-cal' },
+    { t:'Generar calendario masivo', d:'Fechas oficiales DIAN según el último dígito del NIT', a:'cfg-masivo' },
+    { t:'Mi cuenta', d:'Cambio de contraseña', a:'cfg-cuenta' } ] : [
+    { t:'Calendario tributario DIAN', d:'Vencimientos de tus clientes, por mes y estado', a:'cfg-cal' },
+    { t:'Mi cuenta', d:'Cambio de contraseña', a:'cfg-cuenta' } ] });
+  return g;
+}
+
+// Años del cliente: la misma regla de la pantalla de año (openContabilidad).
+function iniAniosCliente(id){
+  var extra = [];
+  try { extra = JSON.parse(localStorage.getItem('jnf_anos_'+id) || '[]'); } catch(e){}
+  try {
+    for (var k in localStorage){
+      if (k.indexOf('jnf_cons_'+id+'_') === 0){
+        var y = parseInt(k.split('_').pop());
+        if (!isNaN(y) && extra.indexOf(y) < 0) extra.push(y);
+      }
+    }
+  } catch(e){}
+  var anos = [2025, 2026].concat(extra).filter(function(y, i, arr){ return arr.indexOf(y) === i; });
+  return anos.sort(function(a,b){ return b - a; });
+}
+
+// Módulos visibles: el mismo filtro de permisos que usa openAnio.
+function iniModulosVisibles(){
+  if (typeof MODULES === 'undefined') return [];
+  var adm = iniEsAdmin();
+  var perms = currentPerfil && currentPerfil.modulosPermitidos;
+  return MODULES.filter(function(m){
+    if (adm) return true;
+    if (!m.active) return false;
+    if (!perms || perms.length === 0) return false;
+    if (m.id === 'estados' || m.id === 'cufe') return true;
+    return perms.indexOf(m.id) >= 0;
+  });
+}
+
+function iniRecientes(){
+  try { return JSON.parse(localStorage.getItem('jnf_inicio_recientes') || '[]'); } catch(e){ return []; }
+}
+function iniGuardarReciente(id){
+  try {
+    var r = iniRecientes().filter(function(x){ return x !== id; });
+    r.unshift(id);
+    localStorage.setItem('jnf_inicio_recientes', JSON.stringify(r.slice(0, 6)));
+  } catch(e){}
+}
+
+function inicioRender(){
+  var root = document.getElementById('ini-root');
+  if (!root) return;
+  var adm = iniEsAdmin();
+  if (_ini.cliId && !iniCliente(_ini.cliId)){ _ini.cliId = null; _ini.anio = null; }
+  var nombre = (currentPerfil && (currentPerfil.nombre || currentPerfil.email)) || '';
+  var h = '';
+  h += '<div style="margin-bottom:4px;"><div class="page-title" style="margin:0;">Hola, '+iniEsc(nombre)+'</div>'
+    +  '<div class="page-sub" style="margin:4px 0 0;">Despliega una opción para ver lo que contiene.</div></div>';
+
+  // ── CLIENTES ──
+  var abC = !!_ini.abiertos.clientes;
+  h += '<section class="ini-sec">'
+    + '<button type="button" class="ini-head'+(abC?' abierto':'')+'" aria-expanded="'+abC+'" onclick="iniToggle(\'clientes\')">'
+    + '<span class="ini-ico prin">'+INI_SVG.clientes+'</span>'
+    + '<span style="flex:1;min-width:0;"><span class="ini-tit">'+(adm?'Clientes':'Mis clientes')+'</span><span class="ini-sub">Busca un cliente y entra a sus módulos</span></span>'
+    + '<span class="ini-cnt">'+iniClientes().length+' clientes</span>'+INI_SVG.chev+'</button>';
+  if (abC){
+    h += '<div class="ini-body">';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+      + (adm ? '<button type="button" class="ini-btn ini-btn-oro" onclick="iniAccion(\'cli-agregar\')">+ Agregar cliente desde RUT</button>' : '')
+      + '<button type="button" class="ini-btn ini-btn-ol" onclick="iniAccion(\'cli-lista\')">'+(adm?'Ver todos los clientes':'Ver mis clientes')+'</button></div>';
+    var c = _ini.cliId ? iniCliente(_ini.cliId) : null;
+    if (!c){
+      h += '<div style="display:flex;flex-direction:column;gap:8px;">'
+        + '<label for="ini-buscar" style="font-size:11px;font-weight:700;color:#1a2580;">Buscar cliente por nombre o NIT</label>'
+        + '<div class="ini-buscar">'+INI_SVG.lupa
+        + '<input id="ini-buscar" type="search" autocomplete="off" placeholder="Escribe parte del nombre o del NIT" value="'+iniEsc(_ini.q)+'" oninput="iniBuscar(this.value)"></div>'
+        + '<div id="ini-res-tit" style="font-size:10px;font-weight:700;color:#4a5068;"></div>'
+        + '<div id="ini-resultados" class="ini-lista" role="listbox" aria-label="Clientes"></div></div>';
+    } else {
+      var pn = c.tipo === 'PN';
+      h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#1a2580;border-radius:12px;padding:12px 14px;">'
+        + '<span style="width:44px;height:44px;border-radius:10px;background:#c9a227;color:#1a2580;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">'+iniEsc(iniIniciales(c.razon||c.nit))+'</span>'
+        + '<div style="flex:1 1 220px;min-width:0;"><div style="font-size:15px;font-weight:800;color:#fff;">'+iniEsc(c.razon||c.nit)+'</div>'
+        + '<div style="font-size:11px;color:#c8cdea;">NIT '+iniEsc(c.nit||'')+(c.dv?'-'+iniEsc(c.dv):'')+' · '+(pn?'Persona natural':'Persona jurídica')+'</div></div>'
+        + '<button type="button" class="ini-btn" style="background:transparent;color:#f0d060;border:1.5px solid #c9a227;" onclick="iniAccion(\'cli-ficha\')">Ficha técnica</button>'
+        + '<button type="button" class="ini-btn" style="background:#fff;color:#1a2580;border:none;" onclick="iniCambiar()">Buscar otro</button></div>';
+      h += '<div style="margin-left:22px;border-left:3px solid #c9a227;padding:12px 0 4px 18px;display:flex;flex-direction:column;gap:12px;">';
+      h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;"><span class="ini-etq" style="margin-right:4px;">Año gravable</span>';
+      iniAniosCliente(c.id).forEach(function(y){
+        h += '<button type="button" class="ini-anio'+(_ini.anio===y?' sel':'')+'" aria-pressed="'+(_ini.anio===y)+'" onclick="iniAnio('+y+')">'+y+'</button>';
+      });
+      h += '<button type="button" class="ini-btn ini-btn-ol" style="min-height:42px;font-size:11px;" onclick="iniAccion(\'cli-anios\')">Otro año…</button></div>';
+      if (_ini.anio){
+        _ini.mods = iniModulosVisibles();
+        h += '<div style="display:flex;flex-direction:column;gap:8px;"><span class="ini-etq">Módulos del cliente · AG '+_ini.anio+'</span>';
+        if (!_ini.mods.length){
+          h += '<div style="font-size:12px;color:#4a5068;">No tienes módulos habilitados. Pide al administrador que te los asigne.</div>';
+        } else {
+          h += '<div class="ini-grid">';
+          _ini.mods.forEach(function(m, i){
+            var tit = m.id === 'exogena' ? 'Información Exógena AG '+_ini.anio : m.title;
+            h += '<button type="button" class="ini-op"'+(m.active?' onclick="iniAbrirModulo('+i+')"':' disabled')+'>'
+              + '<span class="ini-op-t"><span class="ini-dot"></span><span>'+iniEsc(tit)+'</span>'+(m.active?'':'<span class="ini-pronto">Próximamente</span>')+'</span>'
+              + '<span class="ini-op-d">'+iniEsc(m.desc||'')+'</span></button>';
+          });
+          h += '</div>';
+        }
+        h += '</div>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+  h += '</section>';
+
+  // ── BITÁCORA / ADMINISTRACIÓN / CONFIGURACIÓN ──
+  iniGrupos().forEach(function(g){
+    var ab = !!_ini.abiertos[g.id];
+    h += '<section class="ini-sec">'
+      + '<button type="button" class="ini-head'+(ab?' abierto':'')+'" aria-expanded="'+ab+'" onclick="iniToggle(\''+g.id+'\')">'
+      + '<span class="ini-ico">'+INI_SVG[g.ico]+'</span>'
+      + '<span style="flex:1;min-width:0;"><span class="ini-tit">'+g.titulo+'</span><span class="ini-sub">'+g.sub+'</span></span>'
+      + '<span class="ini-cnt">'+g.items.length+' opciones</span>'+INI_SVG.chev+'</button>';
+    if (ab){
+      h += '<div class="ini-body"><div class="ini-grid">';
+      g.items.forEach(function(it){
+        h += '<button type="button" class="ini-op" onclick="iniAccion(\''+it.a+'\')">'
+          + '<span class="ini-op-t"><span class="ini-dot"></span><span>'+it.t+'</span></span>'
+          + '<span class="ini-op-d">'+it.d+'</span></button>';
+      });
+      h += '</div></div>';
+    }
+    h += '</section>';
+  });
+
+  root.innerHTML = h;
+  iniRenderResultados();
+}
+window._inicioRender = window.inicioRender = inicioRender;
+
+// Solo repinta la lista de resultados (para no perder el foco al escribir).
+function iniRenderResultados(){
+  var cont = document.getElementById('ini-resultados');
+  var tit = document.getElementById('ini-res-tit');
+  if (!cont) return;
+  var lista = iniClientes();
+  var qn = iniNorm(_ini.q).trim(), qd = iniDig(_ini.q);
+  var res, titulo;
+  if (qn){
+    res = lista.filter(function(c){
+      if (iniNorm(c.razon).indexOf(qn) >= 0) return true;
+      return qd.length >= 3 && iniDig((c.nit||'')+(c.dv||'')).indexOf(qd) >= 0;
+    });
+    titulo = res.length + ' coincidencia(s)' + (res.length > 8 ? ' · se muestran 8, sigue escribiendo para afinar' : '');
+    res = res.slice(0, 8);
+  } else {
+    var rec = iniRecientes().map(iniCliente).filter(Boolean);
+    if (rec.length){ res = rec; titulo = 'Recientes'; }
+    else {
+      res = lista.slice().sort(function(a,b){ return String(a.razon||'').localeCompare(String(b.razon||'')); }).slice(0, 6);
+      titulo = lista.length ? 'Clientes' : 'Cargando clientes…';
+    }
+  }
+  _ini.res = res;
+  if (tit) tit.textContent = titulo;
+  if (!res.length){
+    cont.innerHTML = qn ? '<div style="padding:16px;font-size:12px;color:#4a5068;">Ningún cliente coincide con «'+iniEsc(_ini.q)+'». Revisa el NIT o busca por otra palabra del nombre.</div>' : '';
+    return;
+  }
+  cont.innerHTML = res.map(function(c, i){
+    var pn = c.tipo === 'PN';
+    return '<button type="button" role="option" class="ini-cli" onclick="iniElegir('+i+')">'
+      + '<span class="ini-av" style="background:'+(pn?'#f6efd6':'#e8eaf6')+';color:'+(pn?'#6a5208':'#1a2580')+';">'+iniEsc(iniIniciales(c.razon||c.nit))+'</span>'
+      + '<span style="flex:1;min-width:0;"><span style="display:block;font-size:13px;font-weight:700;color:#1a2580;">'+iniEsc(c.razon||c.nit)+'</span>'
+      + '<span style="display:block;font-size:11px;color:#4a5068;">NIT '+iniEsc(c.nit||'')+(c.dv?'-'+iniEsc(c.dv):'')+' · '+(pn?'Persona natural':'Persona jurídica')+'</span></span>'
+      + '<span style="font-size:11px;font-weight:800;color:#1a2580;">Entrar</span>'+INI_SVG.flecha+'</button>';
+  }).join('');
+}
+
+function iniToggle(id){
+  _ini.abiertos[id] = !_ini.abiertos[id];
+  inicioRender();
+  if (id === 'clientes' && _ini.abiertos.clientes && !_ini.cliId){
+    var inp = document.getElementById('ini-buscar');
+    if (inp) inp.focus();
+  }
+}
+function iniBuscar(v){ _ini.q = v; iniRenderResultados(); }
+function iniElegir(i){
+  var c = _ini.res[i];
+  if (!c) return;
+  _ini.cliId = c.id; _ini.anio = null; _ini.q = '';
+  iniGuardarReciente(c.id);
+  inicioRender();
+}
+function iniCambiar(){ _ini.cliId = null; _ini.anio = null; inicioRender(); var inp = document.getElementById('ini-buscar'); if (inp) inp.focus(); }
+function iniAnio(y){ _ini.anio = y; inicioRender(); }
+
+// Abre el módulo igual que el camino manual: primero el cliente en el año
+// elegido (openAnio deja listos cliente, año, migas y la pantalla de módulos)
+// y luego la acción del módulo.
+function iniAbrirModulo(i){
+  var m = _ini.mods[i];
+  if (!m || !m.active || !_ini.cliId || !_ini.anio) return;
+  if (typeof openAnio !== 'function') return;
+  openAnio(_ini.cliId, _ini.anio);
+  try { (new Function(m.action))(); }
+  catch(e){ console.error('[Inicio] No se pudo abrir el módulo', m.id, e); }
+}
+
+function iniAbrirCalendario(irAMasivo){
+  showScreen('clientes');
+  setTimeout(function(){
+    var panel = document.getElementById('cal-global-panel');
+    var visible = panel && panel.style.display && panel.style.display !== 'none';
+    if (!visible && typeof openCalendarioGlobal === 'function') openCalendarioGlobal();
+    else if (panel) panel.scrollIntoView({behavior:'smooth', block:'start'});
+    if (irAMasivo){
+      setTimeout(function(){
+        var mb = document.getElementById('cal-masivo-banner');
+        if (mb) mb.scrollIntoView({behavior:'smooth', block:'center'});
+      }, 300);
+    }
+  }, 80);
+}
+
+function iniAccion(a){
+  var adm = iniEsAdmin();
+  switch (a){
+    case 'cli-agregar': if (adm){ showScreen('clientes'); if (typeof openModal === 'function') openModal('add'); } break;
+    case 'cli-lista': showScreen('clientes'); break;
+    case 'cli-ficha': if (_ini.cliId && typeof openFicha === 'function') openFicha(_ini.cliId); break;
+    case 'cli-anios': if (_ini.cliId && typeof openContabilidad === 'function') openContabilidad(_ini.cliId); break;
+    case 'bit-hoy': bitacoraOpen(); bitSetTabContador('hoy'); break;
+    case 'bit-mis': bitacoraOpen(); bitSetTabContador('actividades'); break;
+    case 'bit-semanal-c': bitacoraOpen(); bitSetTabContador('semanal'); break;
+    case 'bit-panel': bitacoraOpen(); bitSetTabAdmin('actividades'); break;
+    case 'bit-resumen': bitacoraOpen(); bitSetTabAdmin('resumen'); break;
+    case 'bit-semanal': bitacoraOpen(); bitSetTabAdmin('semanal'); break;
+    case 'bit-prog':
+      bitacoraOpen();
+      setTimeout(function(){
+        var pc = document.getElementById('bit-progreso-contenido');
+        if (pc && pc.style.display === 'none') bitToggleProgreso();
+      }, 150);
+      break;
+    case 'adm-usuarios': if (adm) openAdminPanel(); break;
+    case 'adm-auditoria': if (adm) openAuditoria(); break;
+    case 'adm-cc': if (adm) ccOpen(); break;
+    case 'cfg-cal': iniAbrirCalendario(false); break;
+    case 'cfg-masivo': if (adm) iniAbrirCalendario(true); break;
+    case 'cfg-cuenta': if (typeof showCambiarPassword === 'function') showCambiarPassword(); break;
+    case 'cfg-nombre': if (typeof openEditNombreModal === 'function') openEditNombreModal(); break;
+  }
+}
+
+['iniToggle','iniBuscar','iniElegir','iniCambiar','iniAnio','iniAbrirModulo','iniAccion'].forEach(function(n){
+  window['_'+n] = window[n] = eval(n);
+});
+
+// Cuando la lista de clientes termina de cargar (o se filtra para el
+// contador), se refresca el buscador si la pantalla de Inicio está visible.
+(function(){
+  if (typeof renderClients !== 'function') return;
+  var original = renderClients;
+  window.renderClients = function(){
+    var r = original.apply(this, arguments);
+    try {
+      var sc = document.getElementById('screen-inicio');
+      if (sc && sc.style.display !== 'none'){
+        // Si el usuario está escribiendo en el buscador, solo se refresca la
+        // lista para no quitarle el cursor.
+        if (document.activeElement && document.activeElement.id === 'ini-buscar') iniRenderResultados();
+        else inicioRender();
+      }
+    } catch(e){}
+    return r;
+  };
+})();
+</script>
+
 </body>
 </html>
