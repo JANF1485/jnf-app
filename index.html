@@ -5134,7 +5134,10 @@ window._openCalendarioGlobal = window.openCalendarioGlobal = function openCalend
   var visible = panel.style.display && panel.style.display !== 'none';
   if(!visible){
     panel.style.display  = 'block';
-    if(masivo) masivo.style.display = 'flex';
+    // La generación masiva del calendario es solo del administrador;
+    // el contador ve el calendario de sus clientes pero no lo genera.
+    var esAdminCal = currentPerfil && currentPerfil.rol === 'admin';
+    if(masivo) masivo.style.display = esAdminCal ? 'flex' : 'none';
     _calGlobalLoaded = false;
     // Recargar usuarios frescos antes de poblar contadores
     if(db) loadUsuarios().then(function(){ calGlobalPoblarContadores(); });
@@ -6075,6 +6078,10 @@ window._oblRegenerarTodos = window.oblRegenerarTodos = async function oblRegener
 
 window._calMasivoRegenerarTodos = window.calMasivoRegenerarTodos = async function calMasivoRegenerarTodos(){
   var statusEl = document.getElementById('cal-masivo-status');
+  if(!(currentPerfil && currentPerfil.rol === 'admin')){
+    if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#b91c1c'; statusEl.innerHTML='❌ Solo el administrador puede generar el calendario.'; }
+    return;
+  }
   if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#92400e'; statusEl.innerHTML='⏳ Generando calendarios…'; }
   if(!db){ if(statusEl) statusEl.innerHTML='❌ Sin conexión a base de datos.'; return; }
   var actualizados = 0;
