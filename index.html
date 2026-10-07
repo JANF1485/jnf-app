@@ -2228,7 +2228,8 @@ window.addEventListener('online', function(){
           <input id="bit-progreso-hasta" type="date" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:6px 8px;">
         </div>
         <button class="btn btn-gold btn-sm" onclick="bitRenderProgresoMensual()">🔍 Verificar</button>
-        <button class="btn btn-ol btn-sm" onclick="bitRestablecerRangoProgreso()">Mes a calificar</button>
+        <button class="btn btn-ol btn-sm" onclick="bitRestablecerRangoProgreso()">Mes en curso</button>
+        <button class="btn btn-ol btn-sm" onclick="bitRangoMesAnterior()">Mes anterior</button>
       </div>
 
       <!-- Tarjeta de la carrera -->
@@ -3334,7 +3335,7 @@ window.addEventListener('online', function(){
             <option value="no_aplica">No aplica / No responsable IVA</option>
           </select>
         </div>
-        <div class="fi"><label>Dirección seccional DIAN</label><input id="f_seccional" type="text" placeholder="Santa Marta"/></div>
+        <div class="fi"><label>Dirección seccional DIAN (casilla 12: código - nombre)</label><input id="f_seccional" type="text" placeholder="Código - Nombre de la seccional"/></div>
       </div>
 
       <div class="form-sep">Responsabilidades tributarias</div>
@@ -3605,7 +3606,12 @@ function fillForm(d){
   set('f_razon',d.razon);set('f_nit',d.nit);set('f_dv',d.dv);set('f_sigla',d.sigla);
   set('f_dir',d.dir);set('f_dpto',d.dpto);set('f_ciudad',d.ciudad);set('f_cp',d.cp);
   set('f_tel',d.tel);set('f_email',d.email);set('f_ciiu',d.ciiu);set('f_ciiu2',d.ciiu2);set('f_ciiu3',d.ciiu3);set('f_ciiu4',d.ciiu4);
-  set('f_seccional',d.seccional);set('f_notas',d.notas);
+  // Seccional DIAN (casilla 12 del RUT): se registra como "CÓDIGO - NOMBRE"
+  var secc = d.seccional;
+  if(d.seccional_cod || d.seccional_nom){
+    secc = [String(d.seccional_cod||'').trim(), String(d.seccional_nom||'').trim()].filter(Boolean).join(' - ');
+  }
+  set('f_seccional',secc);set('f_notas',d.notas);
   set('f_rl_ap1',d.rl_ap1);set('f_rl_ap2',d.rl_ap2);set('f_rl_n1',d.rl_n1);
   set('f_rl_n2',d.rl_n2);set('f_rl_cc',d.rl_cc);set('f_rl_cargo',d.rl_cargo);
   if(d.tipo){ document.getElementById('f_tipo').value=d.tipo; buildRespGrid(d.tipo); }
@@ -4326,12 +4332,18 @@ async function readRUT(file){
     + 'Estructura exacta requerida: '
     + '{"razon":"NOMBRE O RAZÓN SOCIAL","nit":"SOLO DIGITOS SIN PUNTOS","dv":"DIGITO",'
     + '"tipo":"PJ o PN","dir":"DIRECCIÓN","dpto":"DEPARTAMENTO","ciudad":"MUNICIPIO",'
-    + '"tel":"TELEFONO","email":"CORREO","ciiu":"COD ACTIVIDAD","ciiu2":"",'
+    + '"tel":"TELEFONO","email":"CORREO","ciiu":"COD ACTIVIDAD PRINCIPAL","ciiu2":"COD ACTIVIDAD SECUNDARIA",'
+    + '"ciiu3":"COD OTRA ACTIVIDAD 1","ciiu4":"COD OTRA ACTIVIDAD 2",'
+    + '"seccional_cod":"CODIGO SECCIONAL","seccional_nom":"NOMBRE SECCIONAL",'
     + '"regimen":"REGIMEN TRIBUTARIO","periodo_iva":"bimestral o cuatrimestral o vacio",'
     + '"resps":["05","07"],"rl_ap1":"","rl_ap2":"","rl_n1":"","rl_n2":"","rl_cc":"","rl_cargo":""}. '
     + 'Para Persona Jurídica: razon = campo 35. '
     + 'Para Persona Natural: razon = concatenar primer apellido + segundo apellido + primer nombre + otros nombres. '
     + 'resps = array de strings con códigos de 2 dígitos del campo 53. '
+    + 'ciiu = código de 4 dígitos de la casilla 46 (actividad principal). '
+    + 'ciiu2 = código de 4 dígitos de la casilla 48 (actividad secundaria). '
+    + 'ciiu3 y ciiu4 = los dos códigos de 4 dígitos de la casilla 50 (otras actividades: código 1 y código 2). '
+    + 'seccional_cod = código numérico de la casilla 12 (Dirección seccional) y seccional_nom = el nombre de esa dirección seccional tal como aparece en el RUT. '
     + 'Campos no encontrados = cadena vacía. SOLO EL JSON, nada más.';
 
   var reader = new FileReader();
@@ -4344,7 +4356,7 @@ async function readRUT(file){
       for(var attempt = 0; attempt < 3; attempt++){
         try{
           var promptUsar = attempt < 2 ? prompt
-            : 'Extrae del RUT colombiano y responde SOLO JSON sin texto extra: {"razon":"","nit":"","dv":"","tipo":"PJ o PN","ciudad":"","dpto":"","dir":"","tel":"","email":"","ciiu":"","regimen":"","resps":[]}';
+            : 'Extrae del RUT colombiano y responde SOLO JSON sin texto extra: {"razon":"","nit":"","dv":"","tipo":"PJ o PN","ciudad":"","dpto":"","dir":"","tel":"","email":"","ciiu":"casilla 46","ciiu2":"casilla 48","ciiu3":"casilla 50 código 1","ciiu4":"casilla 50 código 2","seccional_cod":"casilla 12 código","seccional_nom":"casilla 12 nombre","regimen":"","resps":[]}';
 
           // Cada intento tiene un tiempo límite: si la IA no responde en
           // RUT_TIMEOUT_S segundos se corta y se pasa al siguiente intento,
@@ -14989,13 +15001,23 @@ function bitToggleProgreso(){
 }
 window._bitToggleProgreso = window.bitToggleProgreso = bitToggleProgreso;
 
+// "Mes en curso": rango por defecto de la carrera (avance a la fecha).
 function bitRestablecerRangoProgreso(){
+  var elD = document.getElementById('bit-progreso-desde');
+  var elH = document.getElementById('bit-progreso-hasta');
+  if (elD) elD.value = bitPrimerDiaMes();
+  if (elH) elH.value = bitUltimoDiaMes();
+  bitRenderProgresoMensual();
+}
+// "Mes anterior": el mes ya terminado, el que se premia en la tarjeta del ganador.
+function bitRangoMesAnterior(){
   var elD = document.getElementById('bit-progreso-desde');
   var elH = document.getElementById('bit-progreso-hasta');
   if (elD) elD.value = bitPrimerDiaMesCalificar();
   if (elH) elH.value = bitUltimoDiaMesCalificar();
   bitRenderProgresoMensual();
 }
+window._bitRangoMesAnterior = window.bitRangoMesAnterior = bitRangoMesAnterior;
 window._bitRestablecerRangoProgreso = window.bitRestablecerRangoProgreso = bitRestablecerRangoProgreso;
 
 function bitRenderProgresoMensual(){
@@ -15040,10 +15062,11 @@ function bitRenderProgresoMensual(){
   // La primera vez que se abre, los campos de fecha vienen vacíos —
   // se inicializan con el mes que se está calificando (el recién
   // terminado, no el mes calendario en curso) sin disparar otro render.
-  if (elD && !elD.value) elD.value = bitPrimerDiaMesCalificar();
-  if (elH && !elH.value) elH.value = bitUltimoDiaMesCalificar();
-  var desde = elD ? elD.value : bitPrimerDiaMesCalificar();
-  var hasta = elH ? elH.value : bitUltimoDiaMesCalificar();
+  // Por defecto: el mes en curso (avance a la fecha).
+  if (elD && !elD.value) elD.value = bitPrimerDiaMes();
+  if (elH && !elH.value) elH.value = bitUltimoDiaMes();
+  var desde = elD ? elD.value : bitPrimerDiaMes();
+  var hasta = elH ? elH.value : bitUltimoDiaMes();
   if (nombreMes){
     nombreMes.textContent = bitFmtFecha(desde) + ' al ' + bitFmtFecha(hasta);
   }
@@ -15057,7 +15080,7 @@ function bitRenderProgresoMensual(){
     return {uid:r.uid, nombre:r.nombre, pct:Math.round(r.score / maxScore * 100), score:r.score, aTiempo:r.aTiempo, completadas:r.completadas};
   });
   corredores = corredores.concat(bitContadoresSinPuntaje(corredores));
-  bitDibujarCarrera(cont, corredores, bitHoy() >= hasta, true, uidPropio);
+  bitDibujarCarrera(cont, corredores, bitHoy() > hasta, true, uidPropio);
 }
 
 // Publica (solo el admin) el resumen de la carrera para que los contadores
@@ -15103,6 +15126,28 @@ function bitContadoresSinPuntaje(corredores){
   });
 }
 
+// Medalla por puesto: 1.º oro, 2.º plata, 3.º bronce, 4.º en adelante cobre.
+// Dibujada con CSS (no hay emoji de medalla de cobre) para que las cuatro
+// tengan el mismo estilo: cinta azul/dorada y disco con el número del puesto.
+var BIT_MEDALLAS = [
+  { nombre:'Oro',    claro:'#fff3b0', medio:'#f0c419', oscuro:'#a87b00', texto:'#5c4300' },
+  { nombre:'Plata',  claro:'#ffffff', medio:'#c9d1db', oscuro:'#7d8794', texto:'#3b434d' },
+  { nombre:'Bronce', claro:'#f6d2a2', medio:'#cd8a3e', oscuro:'#7a4a14', texto:'#3f2405' },
+  { nombre:'Cobre',  claro:'#f7b9a0', medio:'#c0603a', oscuro:'#7a2e14', texto:'#ffffff' }
+];
+function bitMedalla(i){
+  var m = BIT_MEDALLAS[Math.min(i, 3)];
+  return '<span title="Medalla de '+m.nombre.toLowerCase()+' · puesto '+(i+1)+'" style="display:inline-flex;flex-direction:column;align-items:center;">'
+    + '<span style="display:flex;gap:1px;height:7px;">'
+    +   '<span style="width:5px;height:7px;background:#1a2580;transform:skewX(18deg);"></span>'
+    +   '<span style="width:5px;height:7px;background:#c9a227;transform:skewX(-18deg);"></span>'
+    + '</span>'
+    + '<span style="width:20px;height:20px;margin-top:-1px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+    +   'background:radial-gradient(circle at 35% 30%,'+m.claro+' 0%,'+m.medio+' 55%,'+m.oscuro+' 100%);'
+    +   'box-shadow:0 0 0 1.5px '+m.oscuro+',0 2px 4px rgba(0,0,0,.35);font-size:10px;font-weight:900;color:'+m.texto+';font-family:Montserrat,sans-serif;">'+(i+1)+'</span>'
+    + '</span>';
+}
+
 // Dibuja la pista de carrera (misma vista para admin y contadores). Cada
 // corredor trae pct (0-100 relativo al líder); la columna de puntos y
 // actividades solo se pinta para el admin.
@@ -15119,12 +15164,12 @@ function bitDibujarCarrera(cont, corredores, periodoTerminado, esAdmin, uidPropi
       var pctReal = r.pct || 0;
       var pct = Math.max(6, periodoTerminado ? pctReal : Math.min(pctReal, TOPE_SI_EN_CURSO));
       var esYo = r.uid === uidPropio;
-      var medalla = !pctReal ? (i+1)+'.' : (i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : (i+1)+'.')));
+      var medalla = bitMedalla(i);
       var retraso = (i * RETRASO_ENTRE).toFixed(2);
       var transBarra = 'width '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
       var transPunto = 'left '+DURACION+'s cubic-bezier(.45,.05,.55,.95) '+retraso+'s';
       return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">'
-        + '<div style="width:20px;text-align:center;font-size:14px;">'+medalla+'</div>'
+        + '<div style="width:28px;display:flex;justify-content:center;">'+medalla+'</div>'
         + '<div style="width:90px;font-size:10px;font-weight:800;color:#f0d060;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+bitEsc(r.nombre)+(esYo?' (tú)':'')+'</div>'
         + '<div class="bit-pista" style="flex:1;position:relative;height:30px;">'
         +   '<div style="position:absolute;left:0;right:38px;top:50%;height:3px;background:rgba(255,255,255,.2);border-radius:2px;"></div>'
