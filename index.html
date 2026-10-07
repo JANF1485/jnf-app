@@ -4349,7 +4349,7 @@ async function readRUT(file){
           // Cada intento tiene un tiempo límite: si la IA no responde en
           // RUT_TIMEOUT_S segundos se corta y se pasa al siguiente intento,
           // en vez de dejar la pantalla esperando indefinidamente.
-          var RUT_TIMEOUT_S = 60;
+          var RUT_TIMEOUT_S = 90; // el servicio puede probar hasta 3 modelos de Gemini
           var rutTxt = document.getElementById('rutProcesandoTxt');
           if(rutTxt) rutTxt.textContent = 'Leyendo RUT con IA… intento ' + (attempt+1) + ' de 3 (máx. ' + RUT_TIMEOUT_S + ' s por intento)';
           var rutCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -4377,7 +4377,8 @@ async function readRUT(file){
             throw fetchErr;
           }
           if(rutTimer) clearTimeout(rutTimer);
-          console.log('[RUT] intento ' + (attempt+1) + ': respuesta HTTP ' + resp.status + ' en ' + Math.round((Date.now()-rutT0)/1000) + ' s');
+          console.log('[RUT] intento ' + (attempt+1) + ': respuesta HTTP ' + resp.status + ' en ' + Math.round((Date.now()-rutT0)/1000) + ' s'
+            + (resp.headers.get('X-Modelo') ? ' · modelo: ' + resp.headers.get('X-Modelo') + ' (probados: ' + (resp.headers.get('X-Modelos-Intentados')||'') + ')' : ''));
 
           if(!resp.ok){
             lastErr = 'HTTP ' + resp.status;
