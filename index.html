@@ -1986,15 +1986,21 @@ window.addEventListener('online', function(){
           style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
       <div>
-        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Período</label>
-        <input id="cc-periodo" type="text" placeholder="Junio – 2026"
-          style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
-      </div>
-      <div>
         <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha de expedición</label>
         <input id="cc-fecha" type="date"
           style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:8px 10px;">
       </div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--br);">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="font-size:10px;font-weight:700;color:var(--t2);">Período — marca los meses a cobrar (se genera una cuenta por cada mes)</span>
+        <label style="font-size:10px;font-weight:700;color:var(--t2);display:flex;align-items:center;gap:6px;margin-left:auto;">Año
+          <select id="cc-periodo-anio" onchange="ccRenderTablaHonorarios()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:7px;padding:5px 8px;"></select>
+        </label>
+        <button type="button" class="btn btn-sm btn-ol" onclick="ccMarcarMeses(true)" style="font-size:10px;padding:5px 10px;">Todos</button>
+        <button type="button" class="btn btn-sm btn-ol" onclick="ccMarcarMeses(false)" style="font-size:10px;padding:5px 10px;">Ninguno</button>
+      </div>
+      <div id="cc-meses" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px;"></div>
     </div>
   </div>
 
@@ -2007,12 +2013,12 @@ window.addEventListener('online', function(){
       <input type="checkbox" id="cc-todos" onchange="ccToggleTodos()"> Seleccionar todos los clientes
     </label>
     <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">
-      Clientes (mantén Ctrl / Cmd para elegir varios)
+      Marca la casilla de cada cliente al que le vas a hacer cuenta de cobro
     </label>
     <input id="cc-buscar-cliente" type="text" placeholder="🔍 Buscar por nombre o NIT..." oninput="ccFiltrarClientes()"
       style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--bd);border-radius:9px;padding:8px 10px;margin-bottom:8px;">
-    <select id="cc-clientes" multiple size="8" onchange="ccRenderTablaHonorarios()"
-      style="width:100%;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;padding:6px;"></select>
+    <div id="cc-clientes" role="group" aria-label="Clientes"
+      style="width:100%;max-height:280px;overflow-y:auto;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:9px;background:#fff;"></div>
 
     <label style="font-size:10px;font-weight:700;color:var(--t2);display:flex;align-items:center;gap:6px;margin-top:10px;">
       <input type="checkbox" id="cc-firma" checked> Incluir firma escaneada
@@ -2037,15 +2043,16 @@ window.addEventListener('online', function(){
   <div id="cc-tabla-wrap" style="display:none;background:var(--sf);border-radius:16px;border-top:4px solid #c9a227;padding:16px 18px;margin-bottom:16px;overflow-x:auto;box-shadow:0 4px 16px rgba(26,37,128,.08);">
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--bd);margin-bottom:6px;">💰 Honorarios por cliente</div>
     <div style="font-size:10px;color:var(--t2);margin-bottom:10px;">
-      El número de cuenta se sugiere automáticamente; puedes editarlo si lo necesitas.
+      El consecutivo de cada cliente se sugiere automáticamente (el siguiente al último que se le generó) y sube de uno en uno por cada mes; puedes cambiar el inicial si lo necesitas.
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:linear-gradient(90deg,#1a2580,#0d1257);color:#fff;">
           <th style="padding:9px 10px;text-align:left;font-size:9px;">Cliente</th>
           <th style="padding:9px 10px;text-align:left;font-size:9px;">NIT</th>
-          <th style="padding:9px 10px;text-align:left;font-size:9px;">No. Cuenta</th>
-          <th style="padding:9px 10px;text-align:left;font-size:9px;">Honorarios ($)</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">Consecutivo inicial</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">Cuentas que se generarán</th>
+          <th style="padding:9px 10px;text-align:left;font-size:9px;">Honorarios por mes ($)</th>
         </tr>
       </thead>
       <tbody id="cc-tabla-body"></tbody>
@@ -4818,8 +4825,8 @@ function showApp(){
   // Asegurar que alguna pantalla quede visible
   setTimeout(function(){
     var elI = document.getElementById('screen-inicio');
-    var elC = document.getElementById('screen-clientes');
-    if(elI && elI.style.display === 'none' && elC && elC.style.display === 'none') {
+    var algunaVisible = SCREENS.some(function(sn){ var e=document.getElementById('screen-'+sn); return e && e.style.display !== 'none'; });
+    if(elI && !algunaVisible) {
       console.warn('[JNF] ninguna pantalla visible, forzando Inicio...');
       elI.style.display = '';
       if(typeof inicioRender === 'function') inicioRender();
@@ -13779,18 +13786,51 @@ function ccOpen(){
 }
 window._ccOpen = window.ccOpen = ccOpen;
 
+var CC_MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var _ccSel = {};          // clientes marcados (id -> true), se conserva al filtrar
+var _ccMesesSel = null;   // meses marcados (índice 0-11 -> true)
+
 function ccSetDefaults(){
   var f=document.getElementById('cc-fecha');
   if(f && !f.value) f.value = new Date().toISOString().slice(0,10);
-  var meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var hoy=new Date();
-  var p=document.getElementById('cc-periodo');
-  if(p && !p.value) p.value = meses[hoy.getMonth()]+' – '+hoy.getFullYear();
   var c=document.getElementById('cc-concepto');
   if(c && !c.value) c.value = 'Asesorías Contables';
   var ini=document.getElementById('cc-inicio-input');
   if(ini) ini.value = ccGetInicio();
+  // Año del período: el anterior, el actual y el siguiente
+  var selA=document.getElementById('cc-periodo-anio');
+  if(selA && !selA.options.length){
+    var y=hoy.getFullYear();
+    [y-1,y,y+1].forEach(function(a){
+      var o=document.createElement('option'); o.value=a; o.textContent=a; if(a===y) o.selected=true; selA.appendChild(o);
+    });
+  }
+  // Por defecto queda marcado el mes actual
+  if(!_ccMesesSel){ _ccMesesSel={}; _ccMesesSel[hoy.getMonth()]=true; }
+  ccRenderMeses();
 }
+
+function ccRenderMeses(){
+  var cont=document.getElementById('cc-meses');
+  if(!cont) return;
+  cont.innerHTML = CC_MESES.map(function(m,i){
+    var on=!!_ccMesesSel[i];
+    return '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;font-weight:700;'
+      +'border:1.5px solid '+(on?'#1a2580':'var(--br)')+';background:'+(on?'#eef0fb':'#fff')+';color:var(--bd);border-radius:8px;padding:7px 9px;">'
+      +'<input type="checkbox" '+(on?'checked ':'')+'onchange="ccToggleMes('+i+',this.checked)" style="width:15px;height:15px;accent-color:#1a2580;cursor:pointer;">'
+      +m+'</label>';
+  }).join('');
+}
+function ccToggleMes(i,on){ if(on) _ccMesesSel[i]=true; else delete _ccMesesSel[i]; ccRenderMeses(); ccRenderTablaHonorarios(); }
+function ccMarcarMeses(todos){ _ccMesesSel={}; if(todos) for(var i=0;i<12;i++) _ccMesesSel[i]=true; ccRenderMeses(); ccRenderTablaHonorarios(); }
+function ccGetMeses(){
+  var anio=parseInt((document.getElementById('cc-periodo-anio')||{}).value,10)||new Date().getFullYear();
+  return Object.keys(_ccMesesSel||{}).map(Number).sort(function(a,b){return a-b;}).map(function(i){
+    return { mes:i, anio:anio, texto: CC_MESES[i]+' – '+anio };
+  });
+}
+window.ccToggleMes=ccToggleMes; window.ccMarcarMeses=ccMarcarMeses;
 
 function ccDedupClientes(lista){
   function normNit(v){ return String(v||'').replace(/[^0-9]/g,''); }
@@ -13816,48 +13856,65 @@ function ccRenderListaClientes(){
   ccFiltrarClientes();
 }
 
+function ccEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function ccFiltrarClientes(){
-  var sel=document.getElementById('cc-clientes');
-  if(!sel) return;
+  var cont=document.getElementById('cc-clientes');
+  if(!cont) return;
   var q=(document.getElementById('cc-buscar-cliente')||{}).value||'';
   q=q.toLowerCase().trim();
-  var seleccionadosPrevios={};
-  Array.prototype.forEach.call(sel.options,function(o){ if(o.selected) seleccionadosPrevios[o.value]=true; });
-
   var lista=(window._ccListaCompleta||[]).filter(function(c){
     if(!q) return true;
     var nombre=(c.razon||c.nombre||'').toLowerCase();
     var nit=(c.nit||'').toLowerCase();
     return nombre.includes(q) || nit.includes(q);
   });
-  sel.innerHTML = lista.map(function(c){
-    var sel2 = seleccionadosPrevios[c.id] ? ' selected' : '';
-    return '<option value="'+c.id+'"'+sel2+'>'+(c.razon||c.nombre||'—')+' · NIT '+(c.nit||'—')+'</option>';
-  }).join('');
+  window._ccVisibles = lista;
+  if(!lista.length){
+    cont.innerHTML='<div style="padding:12px;color:var(--t3);font-size:11px;">Ningún cliente coincide con la búsqueda.</div>';
+  } else {
+    cont.innerHTML = lista.map(function(c){
+      var on=!!_ccSel[c.id];
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #eef0f7;cursor:pointer;background:'+(on?'#eef0fb':'#fff')+';">'
+        +'<input type="checkbox" class="cc-cli-chk" data-cid="'+ccEsc(c.id)+'" '+(on?'checked ':'')+'onchange="ccToggleCliente(this.getAttribute(\'data-cid\'),this.checked)" style="width:16px;height:16px;accent-color:#1a2580;cursor:pointer;flex-shrink:0;">'
+        +'<span style="flex:1;min-width:0;"><span style="font-weight:700;color:var(--bd);">'+ccEsc(c.razon||c.nombre||'—')+'</span>'
+        +' <span style="color:var(--t2);">· NIT '+ccEsc(c.nit||'—')+'</span></span></label>';
+    }).join('');
+  }
+  var todos=document.getElementById('cc-todos');
+  if(todos) todos.checked = lista.length>0 && lista.every(function(c){ return _ccSel[c.id]; });
   ccRenderTablaHonorarios();
 }
 window._ccFiltrarClientes = window.ccFiltrarClientes = ccFiltrarClientes;
 
+function ccToggleCliente(id,on){
+  if(on) _ccSel[id]=true; else delete _ccSel[id];
+  ccFiltrarClientes();
+}
+window.ccToggleCliente = ccToggleCliente;
+
+// "Seleccionar todos" marca o desmarca los clientes que se ven en la lista
+// (si hay una búsqueda escrita, solo los que coinciden).
 function ccToggleTodos(){
   var chk=document.getElementById('cc-todos');
-  var sel=document.getElementById('cc-clientes');
-  if(!sel) return;
-  for(var i=0;i<sel.options.length;i++) sel.options[i].selected = chk.checked;
-  ccRenderTablaHonorarios();
+  (window._ccVisibles||[]).forEach(function(c){ if(chk.checked) _ccSel[c.id]=true; else delete _ccSel[c.id]; });
+  ccFiltrarClientes();
 }
 
 function ccGetSeleccionados(){
-  var sel=document.getElementById('cc-clientes');
-  if(!sel) return [];
-  var ids=Array.prototype.filter.call(sel.options,function(o){return o.selected;}).map(function(o){return o.value;});
-  return (typeof clients!=='undefined'?clients:[]).filter(function(c){return ids.indexOf(c.id)>=0;});
+  return (window._ccListaCompleta||[]).filter(function(c){ return !!_ccSel[c.id]; });
 }
 
 function ccRenderTablaHonorarios(){
   var body=document.getElementById('cc-tabla-body');
   var wrap=document.getElementById('cc-tabla-wrap');
   if(!body) return;
+  // Conservar lo que el usuario ya escribió en la tabla antes de repintarla
+  var previosNum={}, previosHon={};
+  document.querySelectorAll('.cc-no-input').forEach(function(inp){ previosNum[inp.getAttribute('data-cid')]=inp.value; });
+  document.querySelectorAll('.cc-hon-input').forEach(function(inp){ previosHon[inp.getAttribute('data-cid')]=inp.value; });
   var sel=ccGetSeleccionados();
+  var meses=ccGetMeses();
   var hon=ccLoadHonorarios();
   var badge=document.getElementById('cc-badge-count');
   if(badge) badge.textContent = sel.length ? (sel.length+(sel.length===1?' seleccionado':' seleccionados')) : '';
@@ -13867,18 +13924,25 @@ function ccRenderTablaHonorarios(){
     return;
   }
   wrap.style.display='';
+  var anioNum=new Date().getFullYear();
   body.innerHTML = sel.map(function(c){
-    var val = (hon[c.id]!=null) ? hon[c.id] : 0;
-    var noCuenta = ccSugerirConsecutivo(c.id, c.razon||c.nombre);
-    return '<tr>'
-      +'<td style="padding:7px 10px;font-size:11px;">'+(c.razon||c.nombre||'—')+'</td>'
-      +'<td style="padding:7px 10px;font-size:11px;color:var(--t2);">'+(c.nit||'—')+'</td>'
+    var val = previosHon[c.id]!=null ? previosHon[c.id] : ((hon[c.id]!=null) ? hon[c.id] : 0);
+    var inicial = previosNum[c.id]!=null && previosNum[c.id]!=='' ? parseInt(previosNum[c.id],10) : ccSiguienteConsecutivo(c.id);
+    if(isNaN(inicial)||inicial<1) inicial=ccSiguienteConsecutivo(c.id);
+    var ini=ccIniciales(c.razon||c.nombre);
+    var lista = meses.length ? meses.map(function(m,k){
+      return '<div style="white-space:nowrap;"><strong>'+ccFormatoNumero(ini,inicial+k,anioNum)+'</strong> <span style="color:var(--t2);">· '+m.texto+'</span></div>';
+    }).join('') : '<span style="color:#b91c1c;font-weight:700;">Marca al menos un mes</span>';
+    return '<tr style="border-bottom:1px solid #eef0f7;vertical-align:top;">'
+      +'<td style="padding:7px 10px;font-size:11px;">'+ccEsc(c.razon||c.nombre||'—')+'</td>'
+      +'<td style="padding:7px 10px;font-size:11px;color:var(--t2);">'+ccEsc(c.nit||'—')+'</td>'
       +'<td style="padding:7px 10px;">'
-      +  '<input type="text" data-cid="'+c.id+'" class="cc-no-input" value="'+noCuenta+'" '
-      +  'style="width:120px;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:5px 8px;text-align:center;">'
+      +  '<input type="number" min="1" step="1" data-cid="'+ccEsc(c.id)+'" class="cc-no-input" value="'+inicial+'" onchange="ccRenderTablaHonorarios()" '
+      +  'style="width:80px;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:5px 8px;text-align:center;">'
       +'</td>'
+      +'<td style="padding:7px 10px;font-size:11px;">'+lista+'</td>'
       +'<td style="padding:7px 10px;">'
-      +  '<input type="number" min="0" step="1000" data-cid="'+c.id+'" class="cc-hon-input" value="'+val+'" '
+      +  '<input type="number" min="0" step="1000" data-cid="'+ccEsc(c.id)+'" class="cc-hon-input" value="'+ccEsc(val)+'" '
       +  'style="width:130px;font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:5px 8px;text-align:right;">'
       +'</td>'
       +'</tr>';
@@ -13907,22 +13971,37 @@ function ccGuardarInicio(){
 }
 window._ccGuardarInicio = window.ccGuardarInicio = ccGuardarInicio;
 
-// Sugerencia (no consume el consecutivo, solo lo propone; el usuario puede editarlo)
-function ccSugerirConsecutivo(clienteId, nombre){
-  var key = CC_SEQ_KEY_PREFIX+clienteId;
-  var guardado = localStorage.getItem(key);
-  var n = guardado!=null ? (parseInt(guardado,10)+1) : ccGetInicio();
-  return ccIniciales(nombre)+'-'+String(n).padStart(3,'0')+'-'+new Date().getFullYear();
+// Consecutivo por cliente: se guarda el último NÚMERO usado (entero) en
+// jnf_cc_seq_<id>. Formato de la cuenta: INICIALES-NNN-AÑO.
+// Antes se tomaba el último grupo de dígitos del texto "RR-002-2026", que es
+// el AÑO, y por eso quedaba guardado 2026 y la siguiente salía "RR-2027-2026".
+function ccFormatoNumero(iniciales, n, anio){
+  return iniciales+'-'+String(n).padStart(3,'0')+'-'+anio;
 }
-
-// Confirma el uso de un número de cuenta (lo que quedó en el input, editado o no)
-// y actualiza el consecutivo guardado del cliente para la próxima sugerencia.
-function ccConfirmarConsecutivo(clienteId, noCuentaUsado){
-  var m = String(noCuentaUsado||'').match(/(\d+)(?!.*\d)/);
-  if(m){
-    var n = parseInt(m[1],10);
-    localStorage.setItem(CC_SEQ_KEY_PREFIX+clienteId, String(n));
-  }
+function ccUltimoConsecutivo(clienteId){
+  var g = localStorage.getItem(CC_SEQ_KEY_PREFIX+clienteId);
+  if(g==null) return null;
+  var n = parseInt(g,10);
+  if(isNaN(n)) return null;
+  // Valores entre 1900 y 2100 son el año mal guardado por el error anterior:
+  // se ignoran y se vuelve a sugerir desde el número inicial configurado.
+  if(n>=1900 && n<=2100) return null;
+  return n;
+}
+function ccSiguienteConsecutivo(clienteId){
+  var u = ccUltimoConsecutivo(clienteId);
+  return u!=null ? u+1 : ccGetInicio();
+}
+// Se conserva por compatibilidad (la usa ccGenerarPDF si no recibe número)
+function ccSugerirConsecutivo(clienteId, nombre){
+  return ccFormatoNumero(ccIniciales(nombre), ccSiguienteConsecutivo(clienteId), new Date().getFullYear());
+}
+// Guarda el último número usado para el cliente (solo si es mayor al guardado)
+function ccConfirmarConsecutivo(clienteId, n){
+  n = parseInt(n,10);
+  if(isNaN(n)) return;
+  var u = ccUltimoConsecutivo(clienteId);
+  if(u==null || n>u) localStorage.setItem(CC_SEQ_KEY_PREFIX+clienteId, String(n));
 }
 
 // ── Generación de PDF individual ──────────────────────────
@@ -14031,42 +14110,55 @@ function ccFormatFecha(iso){
 
 async function ccGenerarTodas(){
   var sel=ccGetSeleccionados();
-  if(!sel.length){ alert('Selecciona al menos un cliente.'); return; }
+  if(!sel.length){ alert('Marca al menos un cliente.'); return; }
+  var meses=ccGetMeses();
+  if(!meses.length){ alert('Marca al menos un mes en el período.'); return; }
 
   var concepto=(document.getElementById('cc-concepto')||{}).value||'Asesorías Contables';
-  var periodo=(document.getElementById('cc-periodo')||{}).value||'';
   var fechaIso=(document.getElementById('cc-fecha')||{}).value||new Date().toISOString().slice(0,10);
   var fechaStr=ccFormatFecha(fechaIso);
   var incluirFirma = document.getElementById('cc-firma') ? document.getElementById('cc-firma').checked : true;
 
   var hon=ccLoadHonorarios();
-  var inputs=document.querySelectorAll('.cc-hon-input');
-  inputs.forEach(function(inp){
+  document.querySelectorAll('.cc-hon-input').forEach(function(inp){
     hon[inp.getAttribute('data-cid')] = parseFloat(inp.value)||0;
   });
   ccSaveHonorarios(hon);
 
-  var numeros={};
+  var iniciales={};
   document.querySelectorAll('.cc-no-input').forEach(function(inp){
-    numeros[inp.getAttribute('data-cid')] = inp.value.trim();
+    iniciales[inp.getAttribute('data-cid')] = parseInt(inp.value,10);
   });
 
+  var anioNum=new Date().getFullYear();
   var progress=document.getElementById('cc-progress');
   if(progress) progress.style.display='block';
-  var total=sel.length, i=0;
+  var total=sel.length*meses.length, i=0, generadas=0, sinValor=[];
   for(var cliente of sel){
     var valor = hon[cliente.id]||0;
-    var noCuenta = numeros[cliente.id] || ccSugerirConsecutivo(cliente.id, cliente.razon);
-    i++;
-    if(progress) progress.textContent='⏳ Generando cuenta de cobro '+i+'/'+total+' — '+(cliente.razon||cliente.nit)+'...';
-    if(valor>0){
-      ccGenerarPDF(cliente, valor, concepto, periodo, fechaStr, incluirFirma, noCuenta);
-      ccConfirmarConsecutivo(cliente.id, noCuenta);
+    if(!(valor>0)){ sinValor.push(cliente.razon||cliente.nit); i+=meses.length; continue; }
+    var n0 = iniciales[cliente.id];
+    if(isNaN(n0)||n0<1) n0 = ccSiguienteConsecutivo(cliente.id);
+    var ini = ccIniciales(cliente.razon||cliente.nombre);
+    for(var k=0;k<meses.length;k++){
+      var n = n0+k;
+      var noCuenta = ccFormatoNumero(ini, n, anioNum);
+      i++;
+      if(progress) progress.textContent='⏳ Generando cuenta de cobro '+i+'/'+total+' — '+(cliente.razon||cliente.nit)+' · '+meses[k].texto+'...';
+      ccGenerarPDF(cliente, valor, concepto, meses[k].texto, fechaStr, incluirFirma, noCuenta);
+      ccConfirmarConsecutivo(cliente.id, n);
+      generadas++;
+      await new Promise(function(r){ setTimeout(r,350); });
     }
-    await new Promise(function(r){ setTimeout(r,250); });
   }
-  if(progress) progress.textContent='✅ '+total+' cuenta'+(total>1?'s':'')+' de cobro generada'+(total>1?'s':'');
-  setTimeout(function(){ if(progress) progress.style.display='none'; },4000);
+  if(progress){
+    progress.textContent='✅ '+generadas+' cuenta'+(generadas!==1?'s':'')+' de cobro generada'+(generadas!==1?'s':'')
+      +(sinValor.length?' · Sin generar (honorarios en $0): '+sinValor.join(', '):'');
+  }
+  // Mostrar los consecutivos actualizados para la próxima vez
+  document.querySelectorAll('.cc-no-input').forEach(function(inp){ inp.value=''; });
+  ccRenderTablaHonorarios();
+  setTimeout(function(){ if(progress) progress.style.display='none'; }, sinValor.length?9000:5000);
 }
 window._ccGenerarTodas = window.ccGenerarTodas = ccGenerarTodas;
 window._ccToggleTodos = window.ccToggleTodos = ccToggleTodos;
