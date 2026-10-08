@@ -2132,45 +2132,38 @@ window.addEventListener('online', function(){
   <!-- ═══ VISTA ADMIN: PANEL DE SUPERVISIÓN ═══ -->
   <div id="bit-vista-admin" style="display:none;">
     <div class="page-title">Panel de supervisión — Bitácora</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:18px;">Actividades registradas por todos los contadores.</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:18px;">Procesos registrados por los contadores: revisión uno a uno, reporte diario y cumplimiento semanal.</div>
 
     <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--br);">
       <button id="bit-atab-actividades" onclick="bitSetTabAdmin('actividades')"
-        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Actividades</button>
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid #1a2580;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:#1a2580;cursor:pointer;">Procesos</button>
       <button id="bit-atab-resumen" onclick="bitSetTabAdmin('resumen')"
-        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Resumen por día</button>
+        style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Reporte diario</button>
       <button id="bit-atab-semanal" onclick="bitSetTabAdmin('semanal')"
         style="padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;">Resumen semanal</button>
     </div>
 
     <div id="bit-apanel-actividades">
-      <div id="bit-akpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px;"></div>
       <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <div>
-          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha</label>
-          <input type="date" id="bit-filtro-fecha" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;">
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
-          <select id="bit-filtro-contador" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:180px;"></select>
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Estado</label>
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label><select id="bit-filtro-contador" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:180px;"></select></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha inicio</label><input type="date" id="bit-proc-desde" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div><div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha final</label><input type="date" id="bit-proc-hasta" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Estado</label>
           <select id="bit-filtro-estado" onchange="bitRenderAdminActividades()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:140px;">
             <option value="">— Todos —</option>
-            <option value="completada">Completadas</option>
+            <option value="completada">Completados</option>
             <option value="pendiente">Pendientes</option>
-            <option value="atrasada">Atrasadas</option>
-          </select>
-        </div>
-        <button class="btn btn-ol btn-sm" onclick="document.getElementById('bit-filtro-fecha').value='';document.getElementById('bit-filtro-contador').value='';document.getElementById('bit-filtro-estado').value='';bitRenderAdminActividades();">Limpiar filtros</button>
+            <option value="atrasada">Atrasados</option>
+          </select></div>
+        <button class="btn btn-gold btn-sm" onclick="bitRangoAdmin('bit-proc','mes');bitRenderAdminActividades();">Mes en curso</button>
       </div>
+      <div id="bit-akpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;"></div>
       <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr style="background:var(--bd);color:#fff;">
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Fecha</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Registro</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Entrega</th>
             <th style="padding:8px 10px;text-align:left;font-size:9px;">Contador</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Título</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;">Proceso</th>
             <th style="padding:8px 10px;text-align:left;font-size:9px;">Cliente</th>
             <th style="padding:8px 10px;text-align:left;font-size:9px;">Estado</th>
             <th style="padding:8px 10px;text-align:left;font-size:9px;">Est. / Real</th>
@@ -2182,28 +2175,20 @@ window.addEventListener('online', function(){
     </div>
 
     <div id="bit-apanel-resumen" style="display:none;">
-      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;">
-        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
-        <select id="bit-filtro-contador-resumen" onchange="bitRenderAdminResumenDia()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:220px;"></select>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label><select id="bit-filtro-contador-resumen" onchange="bitRenderAdminResumenDia()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:200px;"></select></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha inicio</label><input type="date" id="bit-dia-desde" onchange="bitRenderAdminResumenDia()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div><div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha final</label><input type="date" id="bit-dia-hasta" onchange="bitRenderAdminResumenDia()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div>
+        <button class="btn btn-gold btn-sm" onclick="bitRangoAdmin('bit-dia','hoy');bitRenderAdminResumenDia();">Hoy</button>
+        <button class="btn btn-ol btn-sm" onclick="bitRangoAdmin('bit-dia','7d');bitRenderAdminResumenDia();">Últimos 7 días</button>
       </div>
-      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead><tr style="background:var(--bd);color:#fff;">
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Fecha</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Contador</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Completadas</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Estimado</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;">Real</th>
-          </tr></thead>
-          <tbody id="bit-aresumen-body"></tbody>
-        </table>
-      </div>
+      <div id="bit-adiario"></div>
     </div>
 
     <div id="bit-apanel-semanal" style="display:none;">
-      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;">
-        <label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label>
-        <select id="bit-filtro-contador-semanal" onchange="bitRenderAdminSemanal()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:220px;"></select>
+      <div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Contador</label><select id="bit-filtro-contador-semanal" onchange="bitRenderAdminSemanal()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;min-width:200px;"></select></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha inicio</label><input type="date" id="bit-sem-desde" onchange="bitRenderAdminSemanal()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div><div><label style="font-size:10px;font-weight:700;color:var(--t2);display:block;margin-bottom:4px;">Fecha final</label><input type="date" id="bit-sem-hasta" onchange="bitRenderAdminSemanal()" style="font-family:inherit;font-size:11px;border:1.5px solid var(--br);border-radius:6px;padding:7px 9px;"></div>
+        <button class="btn btn-gold btn-sm" onclick="bitRangoAdmin('bit-sem','6sem');bitRenderAdminSemanal();">Últimas 6 semanas</button>
       </div>
       <div id="bit-alista-semanal"></div>
     </div>
@@ -14743,127 +14728,189 @@ function bitRenderAdmin(){
   else bitRenderAdminSemanal();
 }
 
-function bitRenderAdminSemanal(){
-  var contadorId = (document.getElementById('bit-filtro-contador-semanal')||{}).value || '';
-  var lista = _bitState.registros.filter(function(r){ return !contadorId || r.contadorUid === contadorId; });
-  // Si hay un contador filtrado, mostramos igual que la vista del colaborador;
-  // si son "todos", agrupamos por semana + contador para no mezclar equipos.
-  var cont = document.getElementById('bit-alista-semanal');
-  if (!cont) return;
-  if (contadorId){
-    bitRenderSemanal(lista, 'bit-alista-semanal');
-    return;
-  }
-  var porSemana = {};
-  lista.forEach(function(r){
-    var key = bitSemanaDe(r.fechaCreacion) + '|' + r.contadorUid;
-    if (!porSemana[key]) porSemana[key] = {semana:bitSemanaDe(r.fechaCreacion), contador:r.contadorNombre, est:0, real:0, n:0, completadas:0};
-    porSemana[key].est += (r.tiempoEstimado||0);
-    porSemana[key].real += bitTiempoRealMin(r);
-    porSemana[key].n++;
-    if (r.estado==='completada') porSemana[key].completadas++;
-  });
-  var filas = Object.values(porSemana).sort(function(a,b){ return b.semana.localeCompare(a.semana); });
-  if (!filas.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;">Sin datos para este filtro.</div>'; return; }
-  cont.innerHTML = filas.map(function(f){
-    var maxV = Math.max(f.est, f.real, 1);
-    return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:12px 16px;margin-bottom:10px;">'
-      + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--bd);margin-bottom:8px;">'
-      + '<span>Semana '+bitFmtRangoSemana(f.semana)+' — '+bitEsc(f.contador)+'</span><span style="color:var(--t2);font-weight:600;">'+f.completadas+' / '+f.n+'</span></div>'
-      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Estimado: '+bitFmtMin(f.est)+'</div>'
-      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;margin-bottom:6px;"><div style="background:#a07c10;height:8px;border-radius:4px;width:'+Math.min(100,f.est/maxV*100)+'%;"></div></div>'
-      + '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">Real: '+bitFmtMin(f.real)+'</div>'
-      + '<div style="background:#e8eaf6;border-radius:4px;height:8px;"><div style="background:#1a2580;height:8px;border-radius:4px;width:'+Math.min(100,f.real/maxV*100)+'%;"></div></div>'
-      + '</div>';
-  }).join('');
+// ── Rangos de fecha de las pestañas del administrador ─────────
+function bitFechaISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function bitRangoAdmin(pref, tipo){
+  var elD = document.getElementById(pref+'-desde'), elH = document.getElementById(pref+'-hasta');
+  if (!elD || !elH) return;
+  var hoy = bitHoy();
+  if (tipo === 'mes'){ elD.value = bitPrimerDiaMes(); elH.value = hoy; }
+  else if (tipo === 'hoy'){ elD.value = hoy; elH.value = hoy; }
+  else if (tipo === '7d'){ elD.value = bitSumarDias(hoy, -6); elH.value = hoy; }
+  else if (tipo === '6sem'){ elD.value = bitSumarDias(bitSemanaDe(hoy), -35); elH.value = hoy; }
 }
+window._bitRangoAdmin = window.bitRangoAdmin = bitRangoAdmin;
+function bitRangoLeer(pref, tipoDefecto){
+  var elD = document.getElementById(pref+'-desde'), elH = document.getElementById(pref+'-hasta');
+  if (elD && elH && !elD.value && !elH.value) bitRangoAdmin(pref, tipoDefecto);
+  var d = elD ? elD.value : '', h = elH ? elH.value : '';
+  if (d && h && d > h){ var t = d; d = h; h = t; }
+  return { desde:d, hasta:h };
+}
+function bitEnRango(f, r){ return !!f && (!r.desde || f >= r.desde) && (!r.hasta || f <= r.hasta); }
 
+// Estado legible de un proceso (incluye si se completó a tiempo o tarde)
+function bitEstadoProceso(r){
+  if (r.estado === 'completada'){
+    if (r.fechaEntrega && r.fechaCompletada) {
+      return r.fechaCompletada <= r.fechaEntrega ? {txt:'Completado a tiempo', bg:'#dcfce7', fg:'#166534'} : {txt:'Completado tarde', bg:'#fef3c7', fg:'#8a6200'};
+    }
+    return {txt:'Completado', bg:'#dcfce7', fg:'#166534'};
+  }
+  if (bitEsAtrasada(r)) return {txt:'Atrasado', bg:'#fee2e2', fg:'#b91c1c'};
+  if (r.estado === 'en_progreso') return {txt:'En progreso', bg:'#dbeafe', fg:'#1e40af'};
+  return {txt:'Pendiente', bg:'#fef3c7', fg:'#8a6200'};
+}
+function bitChip(e){ return '<span style="background:'+e.bg+';color:'+e.fg+';font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap;">'+e.txt+'</span>'; }
+var BIT_DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+function bitNombreDia(f){ var d = new Date(f+'T00:00:00'); return BIT_DIAS[d.getDay()]+' '+bitFmtFecha(f); }
+
+// ── Pestaña 1: PROCESOS (uno a uno, por fecha inicio / final) ───
 function bitRenderAdminActividades(){
-  var fecha = (document.getElementById('bit-filtro-fecha')||{}).value || '';
   var contadorId = (document.getElementById('bit-filtro-contador')||{}).value || '';
   var estadoFiltro = (document.getElementById('bit-filtro-estado')||{}).value || '';
-
-  // Mientras no se elija un contador puntual o "Todos" explícitamente,
-  // no se carga la tabla completa — evita tener que bajar por decenas
-  // de filas cada vez que se entra a esta pestaña.
+  var r = bitRangoLeer('bit-proc', 'mes');
   var kpiEl = document.getElementById('bit-akpi');
-  var tbodyEl = document.getElementById('bit-atabla-body');
+  var tbody = document.getElementById('bit-atabla-body');
   if (!contadorId){
     if (kpiEl) kpiEl.innerHTML = '';
-    if (tbodyEl) tbodyEl.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:2.5rem;font-size:12px;">👆 Selecciona un contador o "Todos los contadores" arriba para ver sus actividades.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:2.5rem;font-size:12px;">👆 Selecciona un contador o "Todos los contadores" para ver sus procesos.</td></tr>';
     return;
   }
-
-  var lista = _bitState.registros.filter(function(r){
-    if (fecha && r.fechaCreacion !== fecha) return false;
-    if (contadorId !== 'TODOS' && r.contadorUid !== contadorId) return false;
-    return true;
-  });
-  var completadas = lista.filter(function(r){ return r.estado==='completada'; }).length;
-  var pendientes = lista.filter(function(r){ return r.estado!=='completada'; }).length;
+  var lista = _bitState.registros.filter(function(x){
+    if (contadorId !== 'TODOS' && x.contadorUid !== contadorId) return false;
+    return bitEnRango(x.fechaCreacion, r);
+  }).sort(function(a,b){ return String(b.fechaCreacion).localeCompare(String(a.fechaCreacion)); });
+  var completadas = lista.filter(function(x){ return x.estado==='completada'; }).length;
   var atrasadas = lista.filter(bitEsAtrasada).length;
-  // El filtro de Estado (Completadas/Pendientes/Atrasadas) solo afecta
-  // la tabla de abajo — los KPI de arriba siguen mostrando el desglose
-  // completo del resto de filtros (fecha/contador).
-  if (estadoFiltro === 'completada') lista = lista.filter(function(r){ return r.estado==='completada'; });
-  else if (estadoFiltro === 'atrasada') lista = lista.filter(bitEsAtrasada);
-  else if (estadoFiltro === 'pendiente') lista = lista.filter(function(r){ return r.estado!=='completada' && !bitEsAtrasada(r); });
-  var kpi = document.getElementById('bit-akpi');
-  if (kpi){
-    kpi.innerHTML = bitKpiCard('Total', lista.length, '#1a2580') +
-      bitKpiCard('Completadas', completadas, '#166534') +
+  var pendientes = lista.length - completadas - atrasadas;
+  if (kpiEl){
+    kpiEl.innerHTML = bitKpiCard('Total', lista.length, '#1a2580') +
+      bitKpiCard('Completados', completadas, '#166534') +
       bitKpiCard('Pendientes', pendientes, '#a07c10') +
-      bitKpiCard('Atrasadas', atrasadas, '#b91c1c');
+      bitKpiCard('Atrasados', atrasadas, '#b91c1c');
   }
-  var tbody = document.getElementById('bit-atabla-body');
+  if (estadoFiltro === 'completada') lista = lista.filter(function(x){ return x.estado==='completada'; });
+  else if (estadoFiltro === 'atrasada') lista = lista.filter(bitEsAtrasada);
+  else if (estadoFiltro === 'pendiente') lista = lista.filter(function(x){ return x.estado!=='completada' && !bitEsAtrasada(x); });
   if (!tbody) return;
-  if (!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:2rem;">Sin actividades para este filtro.</td></tr>'; return; }
-  tbody.innerHTML = lista.map(function(r){
-    var atrasada = bitEsAtrasada(r);
-    var real = bitTiempoRealMin(r);
-    var badgeColor = r.estado==='completada' ? '#166534' : (r.estado==='en_progreso' ? '#1e40af' : '#a07c10');
-    var badgeTxt = r.estado==='completada' ? 'Completada' : (r.estado==='en_progreso' ? 'En progreso' : 'Pendiente');
+  if (!lista.length){ tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:2rem;">Sin procesos para este filtro.</td></tr>'; return; }
+  var td = 'padding:7px 10px;font-size:11px;border-bottom:1px solid #eef0f7;';
+  tbody.innerHTML = lista.map(function(x){
+    var real = bitTiempoRealMin(x);
     return '<tr>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtFecha(r.fechaCreacion)
-      +   (r.fechaEntrega ? '<div style="font-size:9px;'+(atrasada?'color:#b91c1c;font-weight:700;':'color:var(--t3);')+'">'+(atrasada?'vencía':'vence')+' '+bitFmtFecha(r.fechaEntrega)+'</div>' : '')
-      + '</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(r.contadorNombre)+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;font-weight:700;">'+bitEsc(r.titulo)+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(r.clienteNombre||'—')+'</td>'
-      + '<td style="padding:7px 10px;font-size:10px;font-weight:700;color:'+badgeColor+';">'+badgeTxt+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(r.tiempoEstimado)+' / '+bitFmtMin(real)+'</td>'
-      + '<td style="padding:7px 10px;"><button class="btn btn-ol btn-sm" onclick="bitAbrirComentarios(\''+r.id+'\')">💬 '+((r.comentarios||[]).length)+'</button></td>'
+      + '<td style="'+td+'">'+bitFmtFecha(x.fechaCreacion)+'</td>'
+      + '<td style="'+td+'">'+(x.fechaEntrega ? bitFmtFecha(x.fechaEntrega) : '—')+'</td>'
+      + '<td style="'+td+'">'+bitEsc(x.contadorNombre)+'</td>'
+      + '<td style="'+td+'font-weight:700;">'+bitEsc(x.titulo)+(x.descripcion?'<div style="font-size:10px;font-weight:400;color:var(--t2);">'+bitEsc(x.descripcion)+'</div>':'')+'</td>'
+      + '<td style="'+td+'">'+bitEsc(x.clienteNombre||'—')+'</td>'
+      + '<td style="'+td+'">'+bitChip(bitEstadoProceso(x))+'</td>'
+      + '<td style="'+td+'white-space:nowrap;">'+bitFmtMin(x.tiempoEstimado)+' / '+(real?bitFmtMin(real):'—')+'</td>'
+      + '<td style="'+td+'"><button class="btn btn-ol btn-sm" onclick="bitAbrirComentarios(\''+x.id+'\')">💬 '+((x.comentarios||[]).length)+'</button></td>'
       + '</tr>';
   }).join('');
 }
 
+// ── Pestaña 2: REPORTE DIARIO (bloque por día y contador, con sus procesos) ──
 function bitRenderAdminResumenDia(){
+  var cont = document.getElementById('bit-adiario');
+  if (!cont) return;
   var contadorId = (document.getElementById('bit-filtro-contador-resumen')||{}).value || '';
-  var lista = _bitState.registros.filter(function(r){
-    return !contadorId || r.contadorUid === contadorId;
-  });
+  var r = bitRangoLeer('bit-dia', '7d');
   var grupos = {};
-  lista.forEach(function(r){
-    var key = r.fechaCreacion + '|' + r.contadorUid;
-    if (!grupos[key]) grupos[key] = {fecha:r.fechaCreacion, contador:r.contadorNombre, est:0, real:0, completadas:0, total:0};
-    grupos[key].est += (r.tiempoEstimado||0);
-    grupos[key].real += bitTiempoRealMin(r);
-    grupos[key].total++;
-    if (r.estado==='completada') grupos[key].completadas++;
+  _bitState.registros.forEach(function(x){
+    if (contadorId && x.contadorUid !== contadorId) return;
+    if (!bitEnRango(x.fechaCreacion, r)) return;
+    var key = x.fechaCreacion + '|' + x.contadorUid;
+    if (!grupos[key]) grupos[key] = {fecha:x.fechaCreacion, contador:x.contadorNombre, procesos:[], est:0, real:0, completadas:0};
+    var g = grupos[key];
+    g.procesos.push(x); g.est += (x.tiempoEstimado||0); g.real += bitTiempoRealMin(x);
+    if (x.estado === 'completada') g.completadas++;
   });
-  var filas = Object.values(grupos).sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
-  var tbody = document.getElementById('bit-aresumen-body');
-  if (!tbody) return;
-  if (!filas.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:2rem;">Sin datos para este filtro.</td></tr>'; return; }
-  tbody.innerHTML = filas.map(function(g){
-    return '<tr>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtFecha(g.fecha)+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitEsc(g.contador)+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+g.completadas+' / '+g.total+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(g.est)+'</td>'
-      + '<td style="padding:7px 10px;font-size:11px;">'+bitFmtMin(g.real)+'</td>'
-      + '</tr>';
+  var lista = Object.values(grupos).sort(function(a,b){ return b.fecha.localeCompare(a.fecha) || String(a.contador).localeCompare(String(b.contador)); });
+  if (!lista.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);">Sin procesos registrados en ese rango de fechas.</div>'; return; }
+  cont.innerHTML = lista.map(function(g){
+    return '<div style="background:var(--sf);border:1px solid var(--br);border-radius:12px;margin-bottom:12px;overflow:hidden;">'
+      + '<div style="background:#f5f6fc;display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:10px 14px;font-size:11px;">'
+      +   '<strong style="color:var(--bd);font-size:12px;">'+bitNombreDia(g.fecha)+' · '+bitEsc(g.contador)+'</strong>'
+      +   '<span style="color:var(--t2);">'+g.procesos.length+' proceso'+(g.procesos.length!==1?'s':'')+' · '+g.completadas+' completado'+(g.completadas!==1?'s':'')+'</span>'
+      +   '<span style="color:var(--t2);">Estimado '+bitFmtMin(g.est)+' · Real '+bitFmtMin(g.real)+'</span>'
+      + '</div>'
+      + '<div style="padding:4px 14px 10px;">'
+      + g.procesos.map(function(x){
+          var real = bitTiempoRealMin(x);
+          return '<div style="display:grid;grid-template-columns:minmax(160px,2fr) minmax(110px,1.3fr) auto minmax(90px,.8fr);gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed #e3e6f2;font-size:11px;">'
+            + '<span style="font-weight:700;color:var(--tx);">'+bitEsc(x.titulo)+'</span>'
+            + '<span style="color:var(--t2);">'+bitEsc(x.clienteNombre||'—')+'</span>'
+            + '<span>'+bitChip(bitEstadoProceso(x))+'</span>'
+            + '<span style="color:var(--t2);white-space:nowrap;">'+bitFmtMin(x.tiempoEstimado)+' / '+(real?bitFmtMin(real):'—')+'</span>'
+            + '</div>';
+        }).join('')
+      + '</div></div>';
   }).join('');
+}
+
+// ── Pestaña 3: RESUMEN SEMANAL (de lo que vencía, qué se logró) ──
+// Cada proceso se ubica en la semana de su fecha de entrega (o de registro si
+// no tiene). Logrado a tiempo / logrado tarde / no logrado (ya vencido) /
+// en plazo (aún no vence). El % se calcula sobre lo que ya venció.
+var BIT_SEM_COLORES = { tiempo:'#1f7a4d', tarde:'#d9a521', no:'#c2410c', plazo:'#c5cbe0' };
+function bitRenderAdminSemanal(){
+  var cont = document.getElementById('bit-alista-semanal');
+  if (!cont) return;
+  var contadorId = (document.getElementById('bit-filtro-contador-semanal')||{}).value || '';
+  var r = bitRangoLeer('bit-sem', '6sem');
+  var hoy = bitHoy();
+  var semanas = {};
+  _bitState.registros.forEach(function(x){
+    if (contadorId && x.contadorUid !== contadorId) return;
+    var base = x.fechaEntrega || x.fechaCreacion;
+    if (!bitEnRango(base, r)) return;
+    var k = bitSemanaDe(base);
+    if (!semanas[k]) semanas[k] = {tiempo:0, tarde:0, no:0, plazo:0};
+    if (x.estado === 'completada'){
+      if (x.fechaEntrega && x.fechaCompletada && x.fechaCompletada > x.fechaEntrega) semanas[k].tarde++;
+      else semanas[k].tiempo++;
+    } else if (base < hoy) semanas[k].no++;
+    else semanas[k].plazo++;
+  });
+  var claves = Object.keys(semanas).sort();
+  if (!claves.length){ cont.innerHTML = '<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px;background:var(--sf);border:1px solid var(--br);border-radius:var(--r);">Sin procesos con vencimiento en ese rango de fechas.</div>'; return; }
+  var maxTot = Math.max.apply(null, claves.map(function(k){ var s=semanas[k]; return s.tiempo+s.tarde+s.no+s.plazo; })) || 1;
+  var ALTO = 170;
+  var semActual = bitSemanaDe(hoy);
+  function seg(n, color, titulo){ return n ? '<div title="'+titulo+': '+n+'" style="height:'+Math.max(3, Math.round(n/maxTot*ALTO))+'px;background:'+color+';border-top:2px solid #fff;"></div>' : ''; }
+  var leyenda = [['tiempo','Logrado a tiempo'],['tarde','Logrado tarde'],['no','No logrado (vencido)'],['plazo','En plazo (aún no vence)']].map(function(l){
+    return '<span style="display:inline-flex;align-items:center;gap:5px;"><i style="display:inline-block;width:11px;height:11px;border-radius:2px;background:'+BIT_SEM_COLORES[l[0]]+';"></i>'+l[1]+'</span>';
+  }).join('');
+  var barras = claves.map(function(k){
+    var s = semanas[k], logr = s.tiempo + s.tarde, vencidos = s.tiempo + s.tarde + s.no, total = vencidos + s.plazo;
+    var pct = vencidos ? Math.round(logr / vencidos * 100) + '%' : '—';
+    var esActual = k === semActual;
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;flex-shrink:0;">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--bd);">'+pct+'</div>'
+      + '<div style="width:46px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;">'
+      +   seg(s.tiempo, BIT_SEM_COLORES.tiempo, 'Logrado a tiempo') + seg(s.tarde, BIT_SEM_COLORES.tarde, 'Logrado tarde')
+      +   seg(s.no, BIT_SEM_COLORES.no, 'No logrado') + seg(s.plazo, BIT_SEM_COLORES.plazo, 'En plazo')
+      + '</div>'
+      + '<div style="font-size:9.5px;color:var(--t2);text-align:center;height:40px;line-height:1.3;">'+bitFmtRangoSemana(k).replace(' – ','<br>– ')+(esActual?' *':'')
+      +   '<br><strong style="color:var(--tx);">'+logr+' de '+vencidos+'</strong></div>'
+      + '</div>';
+  }).join('');
+  var td = 'padding:6px 10px;font-size:11px;border-bottom:1px solid #eef0f7;text-align:center;';
+  var tabla = '<table style="width:100%;border-collapse:collapse;margin-top:10px;"><thead><tr style="background:var(--bd);color:#fff;">'
+    + ['Semana','Procesos','A tiempo','Tarde','No logrados','En plazo','Cumplimiento'].map(function(h){ return '<th style="padding:7px 10px;font-size:9px;">'+h+'</th>'; }).join('')
+    + '</tr></thead><tbody>'
+    + claves.slice().reverse().map(function(k){
+        var s = semanas[k], vencidos = s.tiempo+s.tarde+s.no;
+        return '<tr><td style="'+td+'text-align:left;">'+bitFmtRangoSemana(k)+(k===semActual?' *':'')+'</td><td style="'+td+'">'+(vencidos+s.plazo)+'</td><td style="'+td+'color:#1f7a4d;font-weight:700;">'+s.tiempo+'</td><td style="'+td+'color:#8a6200;font-weight:700;">'+s.tarde+'</td><td style="'+td+'color:#c2410c;font-weight:700;">'+s.no+'</td><td style="'+td+'">'+s.plazo+'</td><td style="'+td+'font-weight:800;">'+(vencidos?Math.round((s.tiempo+s.tarde)/vencidos*100)+'%':'—')+'</td></tr>';
+      }).join('')
+    + '</tbody></table>';
+  cont.innerHTML = '<div style="background:var(--sf);border:1px solid var(--br);border-radius:var(--r);padding:16px 18px;">'
+    + '<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:10px;color:var(--t2);margin-bottom:12px;">'+leyenda+'</div>'
+    + '<div style="overflow-x:auto;"><div style="display:flex;gap:18px;align-items:flex-end;min-height:'+(ALTO+70)+'px;padding:0 6px;border-left:1px solid #c8cce0;border-bottom:1px solid #c8cce0;width:max-content;min-width:100%;box-sizing:border-box;">'+barras+'</div></div>'
+    + '<div style="font-size:9.5px;color:var(--t2);margin-top:6px;">El porcentaje y "X de Y" se calculan sobre los procesos que ya vencieron. * Semana en curso: aún puede cambiar.</div>'
+    + tabla + '</div>';
 }
 
 // ── Comentarios (admin) ────────────────────────────────────
@@ -15343,9 +15390,9 @@ function iniGrupos(){
   var adm = iniEsAdmin();
   var g = [];
   g.push({ id:'bitacora', titulo:'Bitácora', sub:'Seguimiento del trabajo diario', ico:'bitacora', items: adm ? [
-    { t:'Panel de supervisión', d:'Actividades de todos los contadores', a:'bit-panel' },
-    { t:'Resumen por día', d:'Tiempos estimados vs. reales por día', a:'bit-resumen' },
-    { t:'Resumen semanal', d:'Totales por semana y contador', a:'bit-semanal' },
+    { t:'Procesos', d:'Revisar uno a uno, por contador y fecha inicio / final', a:'bit-panel' },
+    { t:'Reporte diario', d:'Cada día con el detalle de sus procesos', a:'bit-resumen' },
+    { t:'Resumen semanal', d:'De lo que vencía, cuánto se logró', a:'bit-semanal' },
     { t:'Progreso del mes', d:'Carrera y ganador del mes', a:'bit-prog' } ] : [
     { t:'Mi día', d:'Actividades de hoy', a:'bit-hoy' },
     { t:'Mis actividades', d:'Registro con fecha inicio y fecha final', a:'bit-mis' },
