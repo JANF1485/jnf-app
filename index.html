@@ -6922,7 +6922,8 @@ function f300mp_calcularPeriodo(anio, tipo, pCod, meses, saldoArrastre){
   return {anio,tipo,pCod,pLabel:f300mp_PERIODOS[tipo].find(function(p){return p.cod===pCod;}).label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,
     c58,c59,c66,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,nom_total};
+    sp_total,ds_total,nom_total,dc_total,v_b5,v_b19,v_exen,v_excl,dv_b5,dv_b19,dv_excl,dv_exen,
+    c_b5,c_b19,c_exen,c_excl,dc_b5,dc_b19,pesosExactos:true};
 }
 
 async function f300mp_generar(){
@@ -10418,7 +10419,7 @@ function f300_procesar(){
   window._f300Data={anio,tipo,pCod,pLabel:pObj.label,meses,
     c27,c28,c35,c39,c41,c42,c43,c50,c51,c52,c53,c54,c55,c56,c57,c84,
     c58,c59,c66,c67,c71,c72,c74,c75,c77,c79,c81,c82,c83,c84,c85,c87,c88,c89,
-    sp_total,ds_total,nom_total,dc_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,dv_b5,dv_b19,dc_b5,dc_b19,dc_excl};
+    sp_total,ds_total,nom_total,dc_total,saldo_favor_anterior,v_b5,v_b19,v_exen,v_excl,c_b5,c_b19,c_exen,c_excl,dv_b5,dv_b19,dv_excl,dv_exen,dc_b5,dc_b19,dc_excl,dc_exen,pesosExactos:true};
 
   // Render
   document.getElementById('f300-c1').textContent=anio;
@@ -12127,31 +12128,94 @@ window.efGuardar = function(){
 };
 
 window.efImportarDeclaraciones = function(){
-  if(!db||!activeClientId){alert('Sin conexi\u00f3n');return;}
+  if(!db||!activeClientId){alert('Sin conexión');return;}
   var anio=String(activeYear||new Date().getFullYear());
   var st=document.getElementById('ef-import-status');
-  if(st){st.style.display='block';st.style.background='#f0f4ff';st.style.border='1px solid #c7d0f0';st.style.color='#1a2580';st.textContent='\u23f3 Buscando '+anio+'...';}
+  if(st){st.style.display='block';st.style.background='#f0f4ff';st.style.border='1px solid #c7d0f0';st.style.color='#1a2580';st.textContent='⏳ Buscando declaraciones de '+anio+'...';}
+  function leer(raw){try{return typeof raw.data==='string'?JSON.parse(raw.data):raw.data;}catch(e){return null;}}
+  function n(v){v=parseFloat(v);return isFinite(v)?v:0;}
+  // De cada período se toma la versión guardada más reciente (hay varias versiones históricas por período)
+  function ultimaPorPeriodo(snap,campoFecha){
+    var m={};
+    snap.forEach(function(doc){
+      var raw=doc.data();var d=leer(raw);if(!d)return;
+      var p=raw.pCod||d.pCod||d.periodo||doc.id;
+      var f=String(raw.fechaLiquidacion||d[campoFecha]||d.fechaLiquidacion||'');
+      if(!m[p]||f>m[p].f) m[p]={d:d,f:f};
+    });
+    return Object.keys(m).sort().map(function(k){return m[k].d;});
+  }
   Promise.all([
     db.collection('resultados_historico').where('clienteId','==',activeClientId).where('anio','==',anio).where('tipo','==','f300').get(),
     db.collection('resultados_historico').where('clienteId','==',activeClientId).where('anio','==',anio).where('tipo','==','f350').get()
   ]).then(function(snaps){
-    var tF3={ing:0,cos:0,pers:[]},tF5={ret:0,pers:[]};
-    var p3={};
-    snaps[0].forEach(function(doc){var raw=doc.data();var d=null;try{d=typeof raw.data==='string'?JSON.parse(raw.data):raw.data;}catch(e){}if(!d)return;var p=raw.pCod||'x';if(!p3[p])p3[p]={d:d,l:d.pLabel||p};});
-    Object.values(p3).forEach(function(e){var d=e.d;tF3.ing+=(d.c27||0)+(d.c28||0)+(d.c35||0);tF3.cos+=(d.c57||0);tF3.pers.push(e.l);});
-    var p5={};
-    snaps[1].forEach(function(doc){var raw=doc.data();var d=null;try{d=typeof raw.data==='string'?JSON.parse(raw.data):raw.data;}catch(e){}if(!d)return;var p=raw.pCod||'x';if(!p5[p])p5[p]={d:d,l:d.periodoLabel||p};});
-    Object.values(p5).forEach(function(e){var d=e.d;Object.keys(d).forEach(function(k){if(k.startsWith('r_'))tF5.ret+=(parseFloat(d[k])||0);});tF5.pers.push(e.l);});
-    if(!tF3.pers.length&&!tF5.pers.length){if(st){st.style.background='#fee2e2';st.style.color='#991b1b';st.textContent='\u26a0 No hay declaraciones para '+anio;}return;}
+    var f300=ultimaPorPeriodo(snaps[0],'fechaLiquidacion');
+    var f350=ultimaPorPeriodo(snaps[1],'fecha');
+    if(!f300.length&&!f350.length){if(st){st.style.background='#fee2e2';st.style.color='#991b1b';st.textContent='⚠ No hay declaraciones guardadas para '+anio;}return;}
+    var t={ing:0,dev:0,compras:0,devCompras:0,serv:0,docSop:0,nom:0},redondeados=[],parciales=[],pers=[];
+    f300.forEach(function(d){
+      pers.push(d.pLabel||d.pCod||'');
+      if(!d.pesosExactos&&d.v_b19!==undefined) parciales.push(d.pLabel||d.pCod||'');
+      if(d.pesosExactos||d.v_b19!==undefined){
+        // Cifras exactas en pesos (bases sin IVA)
+        t.ing+=n(d.v_b5)+n(d.v_b19)+n(d.v_exen)+n(d.v_excl);
+        t.dev+=n(d.dv_b5)+n(d.dv_b19)+n(d.dv_excl)+n(d.dv_exen);
+        t.compras+=n(d.c_b5)+n(d.c_b19)+n(d.c_exen)+n(d.c_excl);
+        if(d.dc_b5!==undefined||d.dc_b19!==undefined) t.devCompras+=n(d.dc_b5)+n(d.dc_b19)+n(d.dc_excl)+n(d.dc_exen);
+        else t.devCompras+=n(d.c56);
+      } else {
+        // Versiones antiguas: solo hay casillas redondeadas a miles
+        redondeados.push(d.pLabel||d.pCod||'');
+        t.ing+=n(d.c41); t.dev+=n(d.c42);
+        t.compras+=Math.max(0,n(d.c55)-n(d.sp_total)-n(d.ds_total)-n(d.nom_total));
+        t.devCompras+=n(d.c56);
+      }
+      t.serv+=n(d.sp_total); t.docSop+=n(d.ds_total); t.nom+=n(d.nom_total);
+    });
+    // r_ar_* = autorretenciones (anticipo de renta de la propia empresa); las demás r_* = retenciones practicadas a terceros
+    var ret=0,auto=0,ultimoMes=null;
+    f350.forEach(function(d){
+      var s=0,a=0;Object.keys(d).forEach(function(k){if(k.indexOf('r_ar_')===0)a+=n(d[k]);else if(k.indexOf('r_')===0)s+=n(d[k]);});
+      ret+=s;auto+=a;ultimoMes={l:d.periodoLabel||d.periodo||'',v:s+a};
+    });
+    var ingNetos=t.ing-t.dev, comprasNetas=t.compras-t.devCompras;
     function si(id,v){var el=document.getElementById(id);if(el)el.value=Math.round(v);}
-    si('er-ing-oper',tF3.ing);si('er-costo-serv',tF3.cos);si('er-prov-imp',tF5.ret>0?tF5.ret:0);
+    if(f300.length){
+      si('er-ing-oper',ingNetos);
+      si('er-costo-vtas',comprasNetas);
+      si('er-sueldos',t.nom);
+      si('er-gasto-admon',t.serv+t.docSop);
+    }
+    // La retención del F350 NO es el impuesto de renta de la empresa: no se lleva a la provisión
     efCalcResultados();
     var res=[];
-    if(tF3.pers.length)res.push('\u2705 F300: Ingresos '+efFmt(tF3.ing)+', Costos '+efFmt(tF3.cos));
-    if(tF5.pers.length)res.push('\u2705 F350: Retenci\u00f3n '+efFmt(tF5.ret));
-    res.push('\ud83d\udca1 Revisa antes de guardar.');
+    if(f300.length){
+      res.push('✅ F300 ('+f300.length+' período'+(f300.length>1?'s':'')+'): ingresos netos '+efFmt(ingNetos)+' = gravados, exentos y excluidos '+efFmt(t.ing)+' − devoluciones '+efFmt(t.dev)+'.');
+      res.push('✅ Compras de bienes netas '+efFmt(comprasNetas)+' → Costo de ventas. Ajuste con inventario inicial y final: costo = inventario inicial + compras − inventario final.');
+      res.push('✅ Nómina '+efFmt(t.nom)+' → Sueldos. Servicios públicos '+efFmt(t.serv)+' y documento soporte '+efFmt(t.docSop)+' → Gastos de administración.');
+      var cs=document.getElementById('er-costo-serv'),csv=cs?n(String(cs.value).replace(/[^0-9.-]/g,'')):0;
+      if(csv>0) res.push('⚠ Costo de servicios tiene '+efFmt(csv)+'. La versión anterior del importador ponía allí las compras: si es ese valor, déjelo en cero para no duplicarlas.');
+      if(parciales.length) res.push('⚠ Períodos guardados antes de esta corrección: '+parciales.join(', ')+'. No traen las devoluciones de ventas excluidas y exentas ni las compras excluidas; vuelva a liquidarlos en el F300 para incluirlas.');
+      if(redondeados.length) res.push('⚠ Períodos guardados con una versión anterior, solo en miles: '+redondeados.join(', ')+'. Vuelva a liquidarlos en el F300 para tener las cifras exactas en pesos.');
+    }
+    if(f350.length){
+      res.push('ℹ F350: retenciones practicadas a terceros en el año '+efFmt(ret)+'. No se llevan a la provisión de renta: son dinero de terceros.'+(ultimoMes?' Lo que queda por pagar al cierre es la declaración del último período ('+ultimoMes.l+': '+efFmt(ultimoMes.v)+') y va en Impuestos por pagar del balance.':''));
+      if(auto>0) res.push('ℹ Autorretenciones del año '+efFmt(auto)+': son anticipo del impuesto de renta de la propia empresa. Van en Anticipos de impuestos del balance y se descuentan en la declaración de renta (F110 casilla 105).');
+    }
+    res.push('💡 Revise antes de guardar.');
     if(st){st.style.background='#f0fdf4';st.style.border='1px solid #bbf7d0';st.style.color='#065f46';st.innerHTML=res.join('<br>');}
-  }).catch(function(e){if(st){st.style.background='#fee2e2';st.style.color='#991b1b';st.textContent='\u274c Error: '+e.message;}});
+  }).catch(function(e){if(st){st.style.background='#fee2e2';st.style.color='#991b1b';st.textContent='❌ Error: '+e.message;}});
+};
+
+// Texto del marco normativo según el grupo NIIF del cliente (Ley 1314 de 2009 y DUR 2420 de 2015)
+window.efMarcoNormativo = function(){
+  var cl=(typeof clients!=='undefined'&&clients||[]).find(function(x){return x.id===activeClientId;})||{};
+  var g=String(cl.grupoNiif||cl.grupoNIIF||'');
+  var base='Los estados financieros se prepararon de conformidad con la Ley 1314 de 2009 y el Decreto Único Reglamentario 2420 de 2015 y sus modificaciones';
+  if(g==='1') return base+', Anexo 1 (Grupo 1 — NIIF plenas).';
+  if(g==='2') return base+', Anexo 2 (Grupo 2 — NIIF para las pymes).';
+  if(g==='3') return base+', Anexo 3 (Grupo 3 — Norma de información financiera para microempresas).';
+  return base+', en el marco técnico del grupo que corresponde a la entidad.';
 };
 
 window.efGenerarNotas = function(){
@@ -12162,7 +12226,7 @@ window.efGenerarNotas = function(){
   var tA=_efDatos.totalActivos||0,tP=_efDatos.totalPasivos||0,tPat=_efDatos.totalPatrimonio||0,uN=_efDatos.utilidadNeta||0;
   var notas=[
     {n:'01',t:'ENTE ECON\u00d3MICO',txt:razon+' con NIT '+nit+', domiciliada en '+(e.dir?e.dir+', ':'')+ciudad+'. CIIU: '+activ+'. Per\u00edodo: '+desde+' al '+hasta+'.'},
-    {n:'02',t:'POL\u00cdTICAS CONTABLES',txt:'Preparados seg\u00fan el Decreto 2649 de 1993 y Ley 43 de 1990. Propiedad planta y equipo al costo hist\u00f3rico. Inventarios al costo de adquisici\u00f3n. Ingresos reconocidos cuando se causan.'},
+    {n:'02',t:'BASES DE PREPARACI\u00d3N Y POL\u00cdTICAS CONTABLES',txt:efMarcoNormativo()+' Propiedades, planta y equipo al costo menos depreciaci\u00f3n acumulada. Inventarios al costo de adquisici\u00f3n. Ingresos reconocidos cuando se devengan.'},
     {n:'03',t:'DISPONIBLE',txt:'Saldo a '+hasta+': Caja '+efFmt(b.caja)+' | Bancos '+efFmt(b.bancos)+' | Total '+efFmt(b.caja+b.bancos)},
     {n:'04',t:'INVERSIONES',txt:'CDT/Bonos '+efFmt(b.invTemp)+' | Acciones y Aportes '+efFmt(b.acciones)+' | Total '+efFmt(b.invTemp+b.acciones)},
     {n:'05',t:'CUENTAS POR COBRAR',txt:b.deudores>0?'Saldo a '+hasta+': '+efFmt(b.deudores):'No hay cuentas por cobrar.'},
@@ -12172,7 +12236,7 @@ window.efGenerarNotas = function(){
     {n:'09',t:'IMPUESTOS Y OBLIGACIONES LABORALES',txt:'Impuestos por Pagar '+efFmt(b.impuestos)+' | Oblig. Lab. C.P. '+efFmt(b.labCp)+' | Oblig. Lab. L.P. '+efFmt(b.labLp)},
     {n:'10',t:'PATRIMONIO',txt:'Capital '+efFmt(b.capital)+' | Super\u00e1vit '+efFmt(b.superavit)+' | Reservas '+efFmt(b.reservas)+' | Revalorizaci\u00f3n '+efFmt(b.revalor)+' | Utilidad/P\u00e9rdida '+efFmt(uN)+' | Total '+efFmt(tPat)},
     {n:'11',t:'RESULTADO DEL EJERCICIO',txt:razon+(uN>=0?' obtuvo utilidades':' registr\u00f3 una p\u00e9rdida')+' de '+efFmt(Math.abs(uN))+'. Ingresos '+efFmt(_efDatos.totalIngresos||0)+' | Egresos '+efFmt(_efDatos.totalEgresos||0)+' | Utilidad Neta '+efFmt(uN)},
-    {n:'12',t:'REVELACIONES',txt:'Preparados por ASESOR\u00cdAS Y CONSULTOR\u00cdAS JNF S.A.S. bajo la supervisi\u00f3n del Contador P\u00fablico JAVIER ALBERTO NIEBLES FERREIRA T.P. 216055-T, de conformidad con los PCGA de Colombia.'}
+    {n:'12',t:'REVELACIONES',txt:'Preparados por ASESOR\u00cdAS Y CONSULTOR\u00cdAS JNF S.A.S. bajo la supervisi\u00f3n del Contador P\u00fablico JAVIER ALBERTO NIEBLES FERREIRA T.P. 216055-T, de conformidad con las normas de contabilidad y de informaci\u00f3n financiera aceptadas en Colombia (Ley 1314 de 2009).'}
   ];
   var cont=document.getElementById('ef-notas-container');
   if(!cont) return;
