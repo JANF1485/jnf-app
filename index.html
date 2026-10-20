@@ -17625,6 +17625,187 @@ CYR.render = function(){
 })();
 
 </script>
+<script>
+// ═══ Contabilidad NIIF y Renta · Documentos del cliente en Google Drive ═══
+// Los archivos se guardan en el Drive de la firma (JNF Clientes / NIT RAZÓN / AÑO / TIPO) a través de un
+// script de Google Apps Script publicado por el administrador. En Firestore (cyr_docs) queda solo el registro.
+(function(){
+'use strict';
+var CYR = window.CYR;
+function $(id){ return document.getElementById(id); }
+function fmt(n){ n=Math.round(n||0); return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('es-CO'); }
+function num(v){ if(typeof v==='number') return isFinite(v)?v:0; var s=String(v==null?'':v).trim(); if(!s) return 0; var neg=/^-/.test(s); s=s.replace(/[^0-9,.]/g,''); if(/,\d{1,2}$/.test(s)) s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(/[.,]/g,''); var v=parseFloat(s)||0; return neg?-v:v; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function cliente(){ return (typeof clients!=='undefined'?clients:[]).find(function(x){return x.id===CYR.cli;})||{}; }
+function esAdmin(){ return typeof currentPerfil!=='undefined' && currentPerfil && currentPerfil.rol==='admin'; }
+function usuario(){ try{ return (currentPerfil&&(currentPerfil.nombre||currentPerfil.email))||(firebase.auth().currentUser||{}).email||''; }catch(e){ return ''; } }
+function msg(c,t){ CYR.msg(c,t); }
+
+// [clave, nombre de carpeta, etiqueta de referencia, etiqueta de valor, clase para inventario]
+var TIPOS = [
+  ['extracto','Extractos bancarios','Banco y número de cuenta','Saldo final del extracto','banco'],
+  ['certificado','Certificados de ingresos y retenciones','Quien expide','Valor certificado',''],
+  ['tradicion','Certificados de tradición','Matrícula inmobiliaria','Avalúo o valor del inmueble','bien'],
+  ['tarjeta','Tarjetas de propiedad','Placa','Avalúo o valor del vehículo','bien'],
+  ['obligacion','Extractos de obligaciones financieras','Entidad y número de obligación','Saldo de la deuda','deuda'],
+  ['renta','Declaraciones de renta','Número de formulario','',''],
+  ['rut','RUT','','',''],
+  ['otro','Otros','Descripción corta','Valor','']
+];
+function tipo(k){ return TIPOS.find(function(t){return t[0]===k;})||TIPOS[TIPOS.length-1]; }
+
+CYR.drive = { cfg:null, docs:null, tipoSel:'extracto', filtroAnio:'', subiendo:false, verCfg:false };
+function cargarCfg(){
+  if(CYR.drive.cfg) return Promise.resolve(CYR.drive.cfg);
+  return db.collection('cyr_config').doc('drive').get().then(function(d){ CYR.drive.cfg = d.exists ? d.data() : {}; return CYR.drive.cfg; })
+    .catch(function(){ CYR.drive.cfg={}; return CYR.drive.cfg; });
+}
+function cargarDocs(){
+  return db.collection('cyr_docs').where('cli','==',CYR.cli).get().then(function(q){
+    var l=[]; q.forEach(function(d){ var x=d.data(); x._id=d.id; l.push(x); });
+    l.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+    CYR.drive.docs = l; return l;
+  });
+}
+function llamar(cuerpo){
+  var c = CYR.drive.cfg||{};
+  if(!c.url || !c.token) return Promise.reject(new Error('Drive no está configurado. El administrador debe pegar la dirección del script y la clave.'));
+  cuerpo.token = c.token;
+  // text/plain evita la verificación previa (CORS) que Apps Script no responde
+  return fetch(c.url, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(cuerpo), redirect:'follow' })
+    .then(function(r){ if(!r.ok) throw new Error('El script respondió HTTP '+r.status); return r.text(); })
+    .then(function(t){ var j; try{ j=JSON.parse(t); }catch(e){ throw new Error('Respuesta no válida del script. Revise que esté publicado como aplicación web con acceso para "Cualquier usuario".'); } if(!j.ok) throw new Error(j.error||'Error del script'); return j; });
+}
+function leerB64(file){ return new Promise(function(ok,ko){ var r=new FileReader(); r.onload=function(){ ok(String(r.result).split(',')[1]||''); }; r.onerror=function(){ ko(new Error('No se pudo leer '+file.name)); }; r.readAsDataURL(file); }); }
+
+// ── Pestaña ───────────────────────────────────────────────────────────
+CYR.render_docs = function(){
+  var D = CYR.drive, c = D.cfg||{}, cl = cliente();
+  if(!D.cfg || !D.docs){ if(D.cargando) return '<div class="cyr-card">Cargando documentos…</div>'; D.cargando=true; Promise.all([cargarCfg(), cargarDocs()]).then(function(){ D.cargando=false; CYR.render(); }).catch(function(e){ D.cargando=false; D.docs=[]; D.cfg=D.cfg||{}; CYR.render(); msg('er','No se pudieron cargar los documentos: '+esc(e.message)); }); return '<div class="cyr-card">Cargando documentos…</div>'; }
+  var listo = !!(c.url && c.token), t = tipo(D.tipoSel);
+  var anios = {}; D.docs.forEach(function(x){ anios[x.anio]=1; });
+  var lista = D.docs.filter(function(x){ return !D.filtroAnio || String(x.anio)===String(D.filtroAnio); });
+  var h = '<div class="cyr-card"><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-end">'
+    + '<div><div style="font-size:16px;font-weight:800;color:#1a2580">Documentos del cliente</div><div style="font-size:11px;color:#4a5068">'+esc(cl.razon||'')+' · se guardan en el Drive de la firma: JNF Clientes / '+esc((cl.nit||'')+' '+(cl.razon||''))+' / año / tipo</div></div>'
+    + (esAdmin()?'<button class="cyr-btn bl" onclick="CYR.drive.verCfg=!CYR.drive.verCfg;CYR.render()">⚙ Configurar Drive</button>':'')+'</div>'
+    + '<div id="cyr-msg" class="cyr-al inf" style="display:none;margin-top:8px"></div>';
+  if(esAdmin() && (D.verCfg || !listo)) h += panelCfg(c);
+  else if(!listo) h += '<div class="cyr-al wa" style="margin-top:8px">El administrador todavía no ha conectado el Drive de la firma.</div>';
+  if(listo){
+    h += '<div style="background:#f8f9fd;border:1px solid #e3e6f3;border-radius:12px;padding:10px 12px;margin-top:10px"><div class="cyr-sec">Subir documentos</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">'
+      + '<label style="font-size:10.5px;font-weight:700;color:#4a5068">Tipo<br><select class="cyr-inp" id="cyr-dv-tipo" onchange="CYR.drive.tipoSel=this.value;CYR.render()">'+TIPOS.map(function(x){ return '<option value="'+x[0]+'" '+(x[0]===D.tipoSel?'selected':'')+'>'+x[1]+'</option>'; }).join('')+'</select></label>'
+      + '<label style="font-size:10.5px;font-weight:700;color:#4a5068">Año<br><input class="cyr-inp" id="cyr-dv-anio" style="width:80px" value="'+CYR.anio+'"></label>'
+      + (t[2]?'<label style="font-size:10.5px;font-weight:700;color:#4a5068">'+t[2]+'<br><input class="cyr-inp" id="cyr-dv-ref" style="width:200px"></label>':'')
+      + (t[3]?'<label style="font-size:10.5px;font-weight:700;color:#4a5068">'+t[3]+'<br><input class="cyr-inp" id="cyr-dv-valor" style="width:150px"></label>':'')
+      + (t[4]==='banco'||t[4]==='deuda'?'<label style="font-size:10.5px;font-weight:700;color:#4a5068">Fecha de corte<br><input type="date" class="cyr-inp" id="cyr-dv-corte"></label>':'')
+      + '<label style="font-size:10.5px;font-weight:700;color:#4a5068;flex:1 1 200px">Observación<br><input class="cyr-inp" id="cyr-dv-desc" style="width:100%"></label>'
+      + '<button class="cyr-btn az" '+(D.subiendo?'disabled':'')+' onclick="document.getElementById(\'cyr-dv-file\').click()">'+(D.subiendo?'⏳ Subiendo…':'📤 Elegir archivos')+'</button></div>'
+      + '<input type="file" id="cyr-dv-file" multiple style="display:none" onchange="cyrDriveSubir(this)">'
+      + '<div style="font-size:10px;color:#6a7090;margin-top:4px">PDF, imágenes, Excel o Word; máximo 25 MB por archivo. El valor y la referencia alimentan el inventario de bienes y deudas.</div></div>';
+  }
+  h += inventario();
+  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 6px"><div class="cyr-sec" style="margin:0">Archivos registrados ('+lista.length+')</div><span style="flex:1"></span>'
+    + '<select class="cyr-inp" onchange="CYR.drive.filtroAnio=this.value;CYR.render()"><option value="">Todos los años</option>'+Object.keys(anios).sort().reverse().map(function(a){ return '<option '+(String(D.filtroAnio)===a?'selected':'')+'>'+a+'</option>'; }).join('')+'</select></div>'
+    + (lista.length ? '<div class="scr"><table class="cyr-t"><thead><tr><th>Año</th><th>Tipo</th><th>Archivo</th><th>Referencia</th><th class="num">Valor</th><th>Subido</th><th></th></tr></thead><tbody>'
+      + lista.map(function(x){ return '<tr><td>'+esc(x.anio)+'</td><td>'+esc(tipo(x.tipo)[1])+'</td><td><a href="'+esc(x.url)+'" target="_blank" rel="noopener" style="color:#1a2580;font-weight:700">'+esc(x.nombre)+'</a>'+(x.descripcion?'<div style="font-size:10px;color:#6a7090">'+esc(x.descripcion)+'</div>':'')+'</td>'
+        + '<td>'+esc(x.referencia||'')+(x.corte?'<div style="font-size:10px;color:#6a7090">corte '+esc(x.corte)+'</div>':'')+'</td><td class="num">'+(x.valor?fmt(x.valor):'')+'</td><td style="font-size:10.5px">'+esc((x.fecha||'').slice(0,10))+'<div style="color:#6a7090">'+esc(x.usuario||'')+'</div></td>'
+        + '<td>'+(esAdmin()?'<button class="cyr-btn bl" style="padding:4px 8px" title="Enviar a la papelera de Drive y quitar el registro" onclick="cyrDriveBorrar(\''+x._id+'\')">✕</button>':'')+'</td></tr>'; }).join('')
+      + '</tbody></table></div>' : '<div style="font-size:11px;color:#6a7090">Todavía no hay documentos para este cliente'+(D.filtroAnio?' en '+esc(D.filtroAnio):'')+'.</div>')
+    + '</div>';
+  return h;
+};
+
+function inventario(){
+  var D = CYR.drive, ult = {};
+  D.docs.forEach(function(x){ var cls=tipo(x.tipo)[4]; if(!cls || !x.valor) return; var k=x.tipo+'|'+String(x.referencia||x.nombre).toUpperCase().replace(/\s+/g,'');
+    if(!ult[k] || (x.corte||x.fecha||'') > (ult[k].corte||ult[k].fecha||'')) ult[k]=x; });
+  var g = {bien:[], deuda:[], banco:[]}; Object.keys(ult).forEach(function(k){ var x=ult[k]; g[tipo(x.tipo)[4]].push(x); });
+  if(!g.bien.length && !g.deuda.length && !g.banco.length) return '';
+  var tabla = function(t, l){ if(!l.length) return ''; var s=l.reduce(function(a,x){return a+num(x.valor);},0);
+    return '<div style="flex:1 1 300px;min-width:0"><div class="cyr-sec">'+t+'</div><table class="cyr-t"><tbody>'+l.map(function(x){ return '<tr><td>'+esc(x.referencia||x.nombre)+'<div style="font-size:10px;color:#6a7090">'+esc(tipo(x.tipo)[1])+(x.corte?' · corte '+esc(x.corte):'')+'</div></td><td class="num">'+fmt(x.valor)+'</td></tr>'; }).join('')
+      +'<tr style="font-weight:800;color:#1a2580"><td>Total</td><td class="num">'+fmt(s)+'</td></tr></tbody></table></div>'; };
+  return '<div style="margin-top:14px"><div style="font-size:13px;font-weight:800;color:#1a2580;margin-bottom:6px">Inventario de bienes y deudas (último documento de cada uno)</div><div style="display:flex;flex-wrap:wrap;gap:14px">'
+    + tabla('Bienes (inmuebles y vehículos)', g.bien) + tabla('Deudas con entidades financieras', g.deuda) + tabla('Cuentas bancarias', g.banco) + '</div></div>';
+}
+
+function panelCfg(c){
+  return '<div style="background:#fff8e1;border:1px solid #f0d060;border-radius:12px;padding:12px;margin-top:10px">'
+    + '<div class="cyr-sec">Conectar el Drive de la firma (solo administrador, una sola vez)</div>'
+    + '<ol style="font-size:11.5px;line-height:1.7;margin:0 0 8px 18px;padding:0">'
+    + '<li>Entre a <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> con la cuenta de Google de la firma y pulse <b>Nuevo proyecto</b>. Póngale de nombre «JNF Drive».</li>'
+    + '<li>Borre lo que trae el editor y pegue el contenido del archivo <b>Codigo.gs</b> que le entregué.</li>'
+    + '<li>En la línea <code>var CLAVE = \'CAMBIE-ESTA-CLAVE-POR-UNA-PROPIA\';</code> escriba una clave propia de al menos 16 caracteres, sin espacios, y guarde.</li>'
+    + '<li>Pulse <b>Implementar → Nueva implementación</b>, en el engranaje elija <b>Aplicación web</b>. Ejecutar como: <b>Yo</b>. Quién tiene acceso: <b>Cualquier usuario</b>. Pulse Implementar y autorice el acceso a Drive (si sale «Google no verificó esta app», entre por Configuración avanzada → Ir a JNF Drive).</li>'
+    + '<li>Copie la <b>URL de la aplicación web</b> (termina en <code>/exec</code>) y péguela abajo junto con la misma clave. Pulse <b>Probar y guardar</b>.</li></ol>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">'
+    + '<label style="font-size:10.5px;font-weight:700;color:#4a5068;flex:1 1 360px">URL de la aplicación web<br><input class="cyr-inp" id="cyr-dv-url" style="width:100%" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/…/exec"></label>'
+    + '<label style="font-size:10.5px;font-weight:700;color:#4a5068">Clave<br><input class="cyr-inp" id="cyr-dv-token" type="password" style="width:200px" value="'+esc(c.token||'')+'"></label>'
+    + '<button class="cyr-btn az" onclick="cyrDriveGuardarCfg()">Probar y guardar</button></div>'
+    + (c.carpetaUrl?'<div style="font-size:10.5px;margin-top:6px">✅ Conectado · carpeta raíz: <a href="'+esc(c.carpetaUrl)+'" target="_blank" rel="noopener">JNF Clientes</a></div>':'')
+    + '<div style="font-size:10px;color:#6a7090;margin-top:6px">Si más adelante cambia el código del script, use <b>Implementar → Administrar implementaciones → editar → Versión nueva</b> para conservar la misma URL.</div></div>';
+}
+
+window.cyrDriveGuardarCfg = function(){
+  var url=$('cyr-dv-url').value.trim(), token=$('cyr-dv-token').value.trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec$/.test(url)){ msg('er','La dirección debe ser la URL de la aplicación web y terminar en /exec.'); return; }
+  if(token.length<16){ msg('er','La clave debe tener al menos 16 caracteres.'); return; }
+  var prev = CYR.drive.cfg; CYR.drive.cfg = {url:url, token:token};
+  msg('inf','⏳ Probando la conexión con el script…');
+  llamar({op:'ping'}).then(function(j){
+    var c = {url:url, token:token, carpetaUrl:j.url||'', actualizado:new Date().toISOString(), por:usuario()};
+    return db.collection('cyr_config').doc('drive').set(c).then(function(){ CYR.drive.cfg=c; CYR.drive.verCfg=false; CYR.render(); msg('ok','✅ Drive conectado. Los documentos se guardarán en la carpeta JNF Clientes.'); });
+  }).catch(function(e){ CYR.drive.cfg = prev; msg('er','❌ No se pudo conectar: '+esc(e.message)); });
+};
+
+window.cyrDriveSubir = function(input){
+  var files = Array.prototype.slice.call(input.files||[]); input.value='';
+  if(!files.length) return;
+  var D=CYR.drive, cl=cliente(), t=tipo(D.tipoSel);
+  var anio = parseInt(($('cyr-dv-anio')||{}).value,10)||CYR.anio;
+  var ref = (($('cyr-dv-ref')||{}).value||'').trim(), valor = num(($('cyr-dv-valor')||{}).value), corte = ($('cyr-dv-corte')||{}).value||'', desc = (($('cyr-dv-desc')||{}).value||'').trim();
+  var grandes = files.filter(function(f){ return f.size > 25*1024*1024; });
+  if(grandes.length){ msg('er','Superan 25 MB: '+grandes.map(function(f){return esc(f.name);}).join(', ')); return; }
+  if(!cl.nit){ msg('er','El cliente no tiene NIT registrado.'); return; }
+  D.subiendo = true; CYR.render(); msg('inf','⏳ Subiendo '+files.length+' archivo(s) a Drive…');
+  var ok=0, errores=[];
+  var cadena = files.reduce(function(p, f, i){ return p.then(function(){
+    msg('inf','⏳ Subiendo '+(i+1)+' de '+files.length+': '+esc(f.name));
+    return leerB64(f).then(function(b64){
+      return llamar({op:'subir', nit:String(cl.nit)+(cl.dv?'-'+cl.dv:''), razon:cl.razon||'', anio:anio, tipo:t[1], nombre:f.name, mime:f.type||'application/octet-stream', data:b64, descripcion:[ref,desc].filter(Boolean).join(' · ')});
+    }).then(function(j){
+      var id = Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+      var reg = {cli:CYR.cli, nit:cl.nit||'', anio:anio, tipo:t[0], nombre:j.nombre||f.name, driveId:j.id, url:j.url, carpeta:j.carpeta||'', bytes:j.bytes||f.size, mime:f.type||'',
+        referencia:ref, valor:valor||0, corte:corte, descripcion:desc, fecha:new Date().toISOString(), usuario:usuario()};
+      return db.collection('cyr_docs').doc(id).set(reg).then(function(){ reg._id=id; D.docs.unshift(reg); ok++; });
+    }).catch(function(e){ errores.push(f.name+': '+e.message); });
+  }); }, Promise.resolve());
+  cadena.then(function(){
+    D.subiendo=false; CYR.render();
+    if(errores.length) msg(ok?'wa':'er',(ok?'✅ '+ok+' subido(s). ':'')+'❌ '+errores.length+' con error: '+errores.map(esc).join(' | '));
+    else msg('ok','✅ '+ok+' archivo(s) guardado(s) en Drive.');
+    try{ if(typeof audRegistrar==='function') audRegistrar('Guardar','Documentos del cliente',CYR.cli,(cl.razon||''),ok+' archivo(s) · '+t[1]+' · '+anio); }catch(e){}
+  });
+};
+
+window.cyrDriveBorrar = function(id){
+  if(!esAdmin()) return;
+  var D=CYR.drive, x=D.docs.find(function(d){return d._id===id;}); if(!x) return;
+  if(!confirm('¿Enviar «'+x.nombre+'» a la papelera de Drive y quitarlo del registro?')) return;
+  llamar({op:'eliminar', id:x.driveId}).catch(function(e){ if(!/not found|no está|No item|existe/i.test(e.message)) throw e; })
+    .then(function(){ return db.collection('cyr_docs').doc(id).delete(); })
+    .then(function(){ D.docs = D.docs.filter(function(d){return d._id!==id;}); CYR.render(); msg('ok','✅ Documento retirado (queda 30 días en la papelera de Drive).'); })
+    .catch(function(e){ msg('er','❌ No se pudo borrar: '+esc(e.message)); });
+};
+
+// Registrar pestaña (antes de Homologación) y reiniciar al abrir el módulo
+var T = CYR._tabsOrig, iH = T.findIndex(function(t){return t[0]==='homolog';});
+T.splice(iH<0?T.length:iH, 0, ['docs','Documentos del cliente']);
+var openPrev = window.openCyr;
+window.openCyr = function(){ CYR.drive.docs = null; CYR.drive.filtroAnio=''; CYR.drive.verCfg=false; openPrev(); };
+})();
+
+</script>
 
 <!-- ═══ FIN MODULO CYR ═══ -->
 </body>
