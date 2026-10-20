@@ -4034,10 +4034,10 @@ const MODULES = [
     active:true, action:'openGuardado()'
   },
   {
-    id:'docs',icon:'📁',iconBg:'#f3f4f6',
+    id:'docs',icon:'📁',iconBg:'#eef1ff',
     title:'Documentos y Soportes',
-    desc:'Gestión y archivo de documentos contables y soportes del cliente.',
-    tags:[],active:false
+    desc:'Archivo del cliente en el Drive de la firma: extractos, certificados de retención, tradición, tarjetas de propiedad, obligaciones financieras y declaraciones, con inventario de bienes y deudas.',
+    tags:['Drive','Certificados','Inventario'],active:true, action:"openCyrTab('docs')"
   },
   {
     id:'estados',icon:'📊',iconBg:'#eef1ff',
@@ -4058,10 +4058,10 @@ const MODULES = [
     tags:['CUFE','DIAN','Facturas'],active:true, action:'openCufe()'
   },
   {
-    id:'nomina',icon:'👥',iconBg:'#f3f4f6',
-    title:'Nómina',
-    desc:'Liquidación y gestión de nómina del cliente.',
-    tags:[],active:false
+    id:'nomina',icon:'👥',iconBg:'#eef1ff',
+    title:'Nómina electrónica',
+    desc:'Carga masiva de los XML de nómina electrónica y de las planillas PILA (archivo plano o PDF), totales por mes y empleado y cruce nómina contra PILA.',
+    tags:['XML DIAN','PILA','Seguridad social'],active:true, action:"openCyrTab('nomina')"
   },
 ];
 
@@ -5078,7 +5078,7 @@ var MODULOS_LIST = [
   {id:'inc',          lbl:'Declaración INC — Formulario 310'},
   {id:'docs',         lbl:'Documentos y Soportes'},
   {id:'estados',      lbl:'Estados Financieros'},
-  {id:'nomina',       lbl:'Nómina'},
+  {id:'nomina',       lbl:'Nómina electrónica'},
   {id:'obligaciones', lbl:'Obligaciones Tributarias'},
 ];
 
@@ -16012,6 +16012,8 @@ window.cyrCargarZip = function(input){
     if(l.endsWith('.rar')) return leerRar(f).then(function(data){ Object.keys(data).forEach(function(k){ ya[k]=data[k]; }); });
     return f.arrayBuffer().then(leerZip);
   })).then(function(){
+    var nomXml = xmls.filter(function(t){ return /<(\w+:)?NominaIndividual(DeAjuste)?[\s>]/.test(t) || /&lt;(\w+:)?NominaIndividual/.test(t); });
+    if(nomXml.length && CYR.nominaIncorporar) CYR.nominaIncorporar(nomXml, files.map(function(f){return f.name;}).join(', '), true);
     var docs = xmls.map(function(t){ try{ return cufeParseXML(t); }catch(e){ return null; } }).filter(Boolean);
     Object.keys(ya).forEach(function(k){ docs.push(ya[k]); });
     cyrIncorporar(docs, files.map(function(f){return f.name;}).join(', '));
@@ -16101,11 +16103,22 @@ CYR.resumenMes = resumenMes;
 function estadoCelda(m, fuente){
   var M = CYR.meses[m]; var man = (M&&M.manual)||{};
   if(fuente==='doc'){ if(!M||!(M.docs||[]).some(function(x){return x.cat!=='evento';})) return 'falta'; return resumenMes(m).reclamos.length?'dif':'ok'; }
-  if(fuente==='banco') return (man.bancos&&man.bancos.length)?'ok':'falta';
+  if(fuente==='banco') return bancoCubre(m);
   if(fuente==='nom') return man.nomina&&man.nomina.noAplica?'na':((man.nomina&&man.nomina.total>0)?'ok':'falta');
   if(fuente==='pila') return man.pila&&man.pila.noAplica?'na':((man.pila&&man.pila.total>0)?(man.pila.fechaPago?'ok':'dif'):'falta');
   return 'falta';
 }
+// Extractos por período: cada extracto se guarda en el mes de su fecha final y cubre los meses de su período
+function finMes(m){ var d=new Date(CYR.anio,m,0); return CYR.anio+'-'+(m<10?'0':'')+m+'-'+(d.getDate()<10?'0':'')+d.getDate(); }
+function iniMes(m){ return CYR.anio+'-'+(m<10?'0':'')+m+'-01'; }
+function extractos(){ var l=[]; for(var m=1;m<=12;m++){ var M=CYR.meses[m]; ((M&&M.manual&&M.manual.bancos)||[]).forEach(function(b,i){ l.push(Object.assign({mes:m, idx:i, desde:b.desde||iniMes(m), hasta:b.hasta||finMes(m)}, b)); }); } return l; }
+CYR.extractos = extractos; CYR.finMes = finMes; CYR.iniMes = iniMes;
+function bancoCubre(m){
+  var l = extractos().filter(function(b){ return b.desde<=finMes(m) && b.hasta>=iniMes(m) && b.desde!==b.hasta; });
+  if(!l.length) return 'falta';
+  return l.some(function(b){ return b.valida===false; }) ? 'dif' : 'ok';
+}
+CYR.bancoCubre = bancoCubre;
 var CEL = { ok:['✓','#e3f5ea','#1f6b45'], dif:['!','#fff3d6','#7a5a00'], falta:['＋','#fff','#8a2a1c'], na:['—','#f4f5f9','#a0a6bb'] };
 
 // ── Pestaña: Fuentes del mes ─────────────────────────────────────────────
@@ -16160,14 +16173,13 @@ function detalleMes(m){
   h += '<div id="cyr-f300-'+m+'" style="margin-top:10px"></div>';
   setTimeout(function(){ cruceF300(m); }, 0);
   // Fuentes manuales
-  var bancos = man.bancos||[];
   h += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">';
-  h += '<div style="flex:2 1 420px;min-width:0"><div class="cyr-sec">Extractos bancarios del mes</div><table class="cyr-t"><thead><tr><th>Banco y cuenta</th><th class="num">Saldo final</th><th class="num">GMF</th><th class="num">Rendimientos</th><th></th></tr></thead><tbody>'
-    + bancos.map(function(b,i){ return '<tr><td>'+esc(b.banco)+'</td><td class="num">'+fmt(b.saldo)+'</td><td class="num">'+fmt(b.gmf)+'</td><td class="num">'+fmt(b.rend)+'</td><td><button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrQuitarBanco('+m+','+i+')">✕</button></td></tr>'; }).join('')
-    + '<tr><td><input class="cyr-inp" id="cyr-b-n" placeholder="Banco ****1234" style="width:100%"></td><td><input class="cyr-inp num" id="cyr-b-s" placeholder="0" style="width:110px"></td><td><input class="cyr-inp num" id="cyr-b-g" placeholder="0" style="width:90px"></td><td><input class="cyr-inp num" id="cyr-b-r" placeholder="0" style="width:90px"></td><td><button class="cyr-btn az" onclick="cyrAgregarBanco('+m+')">＋</button></td></tr>'
-    + '</tbody></table>'+(bancos.length>1||m>1?'<div style="font-size:10px;color:#4a5068;margin-top:4px">'+(m>1?'<button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrCopiarBancos('+m+')">Traer bancos del mes anterior</button>':'')+'</div>':'')+'</div>';
+  h += '<div style="flex:2 1 520px;min-width:0">'+bancosHtml(m)+'</div>';
   var nom = man.nomina||{}, pila = man.pila||{};
-  h += '<div style="flex:1 1 300px;min-width:0"><div class="cyr-sec">Nómina y PILA del mes</div>'
+  var resNP = '';
+  if(nom.fuente==='xml') resNP += '<div class="cyr-al ok" style="margin-bottom:6px">Nómina electrónica: '+(nom.nEmp||0)+' empleado(s) · devengado '+fmt(nom.total)+' · retención '+fmt(nom.ret)+'</div>';
+  if(pila.fuente) resNP += '<div class="cyr-al '+(pila.valida===false?'wa':'ok')+'" style="margin-bottom:6px">PILA: '+((pila.planillas||[]).length)+' planilla(s) · aportes '+fmt(pila.total)+(pila.fechaPago?' · pagada '+esc(pila.fechaPago):'')+'</div>';
+  h += '<div style="flex:1 1 300px;min-width:0"><div class="cyr-sec">Nómina y PILA del mes</div>'+resNP+'<div style="display:flex;gap:6px;margin-bottom:6px"><button class="cyr-btn bl" style="padding:4px 9px" onclick="cyrTab(\'nomina\')">Nómina electrónica</button><button class="cyr-btn bl" style="padding:4px 9px" onclick="cyrTab(\'pila\')">Planillas PILA</button></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10.5px">'
     + '<label>Total devengado nómina<input class="cyr-inp num" id="cyr-n-t" value="'+(nom.total||'')+'" style="width:100%"></label>'
     + '<label>Retención por salarios<input class="cyr-inp num" id="cyr-n-r" value="'+(nom.ret||'')+'" style="width:100%"></label>'
@@ -16175,7 +16187,7 @@ function detalleMes(m){
     + '<label>Fecha de pago PILA<input class="cyr-inp" type="date" id="cyr-p-f" value="'+(pila.fechaPago||'')+'" style="width:100%"></label>'
     + '</div><label style="display:flex;gap:6px;align-items:center;font-size:10.5px;margin-top:6px"><input type="checkbox" id="cyr-n-na" '+(nom.noAplica?'checked':'')+'> El cliente no tiene empleados</label>'
     + '<button class="cyr-btn az" style="margin-top:8px" onclick="cyrGuardarNomina('+m+')">Guardar nómina y PILA</button>'
-    + '<div style="font-size:9.5px;color:#4a5068;margin-top:6px">Cuando se suban las muestras del XML de nómina y del archivo plano de la PILA, estos campos se llenarán solos.</div></div>';
+    + '<div style="font-size:9.5px;color:#4a5068;margin-top:6px">Estos campos se llenan solos al cargar los XML de nómina electrónica y las planillas PILA en sus pestañas. Digítelos solo si no tiene los archivos.</div></div>';
   h += '</div>';
   // Documentos del mes
   var docs = (M.docs||[]).filter(function(x){return x.cat!=='evento';});
@@ -16196,26 +16208,58 @@ function guardarMes(m){
   return db.collection('cyr_mes').doc(idMes(m)).set(M).then(function(){ CYR.render(); cyrMsg('ok','✅ '+MESES_L[m-1]+' guardado.'); })
     .catch(function(e){ alert('Error al guardar: '+e.message); });
 }
+function bancosHtml(m){
+  var aqui = extractos().filter(function(b){ return b.mes===m; });
+  var cubren = extractos().filter(function(b){ return b.mes!==m && b.desde<=finMes(m) && b.hasta>=iniMes(m) && b.desde!==b.hasta; });
+  var fila = function(b){ var dif = (b.saldoIni!==undefined && b.saldoIni!==null && b.saldoIni!=='') ? Math.round(num(b.saldoIni)+num(b.cred)-num(b.deb)-num(b.saldo)) : null;
+    return '<tr'+(b.valida===false?' style="background:#fde7e4"':'')+'><td>'+esc(b.banco)+(b.fuente==='ia'?' <span style="font-size:9px;color:#6a5208">IA</span>':'')+(b.archivo?' <a href="'+esc(b.archivo)+'" target="_blank" rel="noopener" style="font-size:10px">PDF</a>':'')+'</td>'
+      + '<td style="font-size:10.5px">'+(b.desde===b.hasta?'Saldo al '+esc(b.hasta):esc(b.desde)+' a '+esc(b.hasta))+'</td><td class="num">'+fmt(b.saldo)+'</td><td class="num">'+fmt(b.gmf)+'</td><td class="num">'+fmt(b.rend)+'</td><td class="num">'+fmt(b.retRend)+'</td>'
+      + '<td style="font-size:10px">'+(dif===null?'':(Math.abs(dif)<=1?'<span style="color:#1f6b45">✓ cuadra</span>':'<span style="color:#8a2a1c">✕ no cuadra por '+fmt(dif)+'</span>'))+'</td>'
+      + '<td><button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrQuitarBanco('+b.mes+','+b.idx+')">✕</button></td></tr>'; };
+  return '<div class="cyr-sec">Extractos bancarios</div>'
+    + '<div style="font-size:10px;color:#4a5068;margin-bottom:6px">Registre cada extracto con su período: si el banco lo entrega trimestral (por ejemplo, del 1 de julio al 30 de septiembre), queda guardado en el mes final y cubre los tres meses. Para un corte dentro del trimestre, registre el saldo a esa fecha (desde = hasta) tomado del portal o de un certificado.</div>'
+    + '<div class="scr"><table class="cyr-t"><thead><tr><th>Banco y cuenta</th><th>Período</th><th class="num">Saldo final</th><th class="num">GMF</th><th class="num">Rendim.</th><th class="num">Ret. rend.</th><th>Prueba</th><th></th></tr></thead><tbody>'
+    + aqui.map(fila).join('')
+    + cubren.map(function(b){ return '<tr style="color:#6a7090"><td>'+esc(b.banco)+'</td><td colspan="7" style="font-size:10.5px">Cubierto por el extracto del '+esc(b.desde)+' al '+esc(b.hasta)+' (guardado en '+MESES_L[b.mes-1]+')</td></tr>'; }).join('')
+    + '<tr><td><input class="cyr-inp" id="cyr-b-n" placeholder="Banco ****1234" style="width:100%"></td>'
+    + '<td><input type="date" class="cyr-inp" id="cyr-b-d" value="'+iniMes(m)+'" style="width:128px"><br><input type="date" class="cyr-inp" id="cyr-b-h" value="'+finMes(m)+'" style="width:128px"></td>'
+    + '<td><input class="cyr-inp num" id="cyr-b-s" placeholder="0" style="width:105px"></td><td><input class="cyr-inp num" id="cyr-b-g" placeholder="0" style="width:80px"></td><td><input class="cyr-inp num" id="cyr-b-r" placeholder="0" style="width:80px"></td><td><input class="cyr-inp num" id="cyr-b-rr" placeholder="0" style="width:80px"></td>'
+    + '<td colspan="2"><button class="cyr-btn az" onclick="cyrAgregarBanco('+m+')">＋ Agregar</button></td></tr></tbody></table></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"><button class="cyr-btn do" onclick="cyrElegirExtractos('+m+')">📄 Leer extractos PDF con IA</button>'+(m>1?'<button class="cyr-btn bl" style="padding:4px 9px" onclick="cyrCopiarBancos('+m+')">Traer bancos del mes anterior</button>':'')+'</div>'
+    + '<input type="file" id="cyr-file-ext" accept="application/pdf" multiple style="display:none" onchange="cyrLeerExtractos(this,'+m+')">'
+    + (CYR.extPendientes&&CYR.extPendientes.length? CYR.extPendientesHtml() : '');
+}
+function guardarExtracto(b){
+  var mh = parseInt(String(b.hasta).slice(5,7),10), yh = parseInt(String(b.hasta).slice(0,4),10);
+  if(yh!==CYR.anio || !(mh>=1&&mh<=12)) return Promise.reject(new Error('La fecha final del extracto ('+b.hasta+') no es del año '+CYR.anio+'.'));
+  if(b.desde>b.hasta) return Promise.reject(new Error('La fecha inicial es posterior a la final.'));
+  var M = CYR.meses[mh] || {cliId:CYR.cli, anio:CYR.anio, mes:mh, docs:[], manual:{}}; if(!M.manual) M.manual={};
+  var lista = M.manual.bancos||[], k = String(b.banco).toUpperCase().replace(/\s+/g,'');
+  var i = lista.findIndex(function(x){ return String(x.banco).toUpperCase().replace(/\s+/g,'')===k && (x.hasta||finMes(mh))===b.hasta && (x.desde||iniMes(mh))===b.desde; });
+  if(i>=0) lista[i]=b; else lista.push(b);
+  M.manual.bancos = lista; CYR.meses[mh]=M; M.actualizado=new Date().toISOString();
+  return db.collection('cyr_mes').doc(idMes(mh)).set(M);
+}
+CYR.guardarExtracto = guardarExtracto;
 window.cyrAgregarBanco = function(m){
   var n=$('cyr-b-n').value.trim(); if(!n){ alert('Escriba el banco y la cuenta.'); return; }
-  var M = CYR.meses[m] || {cliId:CYR.cli, anio:CYR.anio, mes:m, docs:[], manual:{}}; if(!M.manual) M.manual={};
-  M.manual.bancos = (M.manual.bancos||[]).concat([{banco:n, saldo:num($('cyr-b-s').value), gmf:num($('cyr-b-g').value), rend:num($('cyr-b-r').value)}]);
-  CYR.meses[m]=M; guardarMes(m);
+  var b={banco:n, desde:$('cyr-b-d').value||iniMes(m), hasta:$('cyr-b-h').value||finMes(m), saldo:num($('cyr-b-s').value), gmf:num($('cyr-b-g').value), rend:num($('cyr-b-r').value), retRend:num($('cyr-b-rr').value), fuente:'manual'};
+  guardarExtracto(b).then(function(){ CYR.render(); cyrMsg('ok','✅ Extracto guardado.'); }).catch(function(e){ alert(e.message); });
 };
 window.cyrQuitarBanco = function(m,i){ var M=CYR.meses[m]; if(!M||!M.manual) return; M.manual.bancos.splice(i,1); guardarMes(m); };
 window.cyrCopiarBancos = function(m){
-  var A = CYR.meses[m-1]; var lista = A&&A.manual&&A.manual.bancos||[];
-  if(!lista.length){ alert('El mes anterior no tiene bancos registrados.'); return; }
-  var M = CYR.meses[m] || {cliId:CYR.cli, anio:CYR.anio, mes:m, docs:[], manual:{}}; if(!M.manual) M.manual={};
-  var ya = (M.manual.bancos||[]).map(function(b){return b.banco;});
-  M.manual.bancos = (M.manual.bancos||[]).concat(lista.filter(function(b){return ya.indexOf(b.banco)<0;}).map(function(b){return {banco:b.banco,saldo:0,gmf:0,rend:0};}));
-  CYR.meses[m]=M; guardarMes(m);
+  var ant = extractos().filter(function(b){ return b.mes<m; }); if(!ant.length){ alert('No hay bancos registrados en meses anteriores.'); return; }
+  var nombres = {}; ant.forEach(function(b){ nombres[b.banco]=1; });
+  var aqui = extractos().filter(function(b){ return b.mes===m; }).map(function(b){ return b.banco; });
+  var nuevos = Object.keys(nombres).filter(function(n){ return aqui.indexOf(n)<0; });
+  if(!nuevos.length){ alert('Los bancos ya están en este mes.'); return; }
+  $('cyr-b-n').value = nuevos[0]; cyrMsg('inf','Bancos de meses anteriores: '+nuevos.map(esc).join(', ')+'. Complete el saldo y agréguelos uno por uno.');
 };
 window.cyrGuardarNomina = function(m){
   var M = CYR.meses[m] || {cliId:CYR.cli, anio:CYR.anio, mes:m, docs:[], manual:{}}; if(!M.manual) M.manual={};
   var na = $('cyr-n-na').checked;
-  M.manual.nomina = {total:num($('cyr-n-t').value), ret:num($('cyr-n-r').value), noAplica:na};
-  M.manual.pila = {total:num($('cyr-p-t').value), fechaPago:$('cyr-p-f').value||'', noAplica:na};
+  M.manual.nomina = Object.assign({}, M.manual.nomina||{}, {total:num($('cyr-n-t').value), ret:num($('cyr-n-r').value), noAplica:na});
+  M.manual.pila = Object.assign({}, M.manual.pila||{}, {total:num($('cyr-p-t').value), fechaPago:$('cyr-p-f').value||'', noAplica:na});
   CYR.meses[m]=M; guardarMes(m);
 };
 
@@ -16427,17 +16471,35 @@ function calcularSaldos(){
       }
     });
     var man = M.manual||{};
-    if(man.nomina && man.nomina.total>0){ acc('510506').mov += man.nomina.total; }
-    if(man.pila && man.pila.total>0){ acc('510569').mov += man.pila.total; }
-    (man.bancos||[]).forEach(function(b){ if(b.gmf) acc('530595').mov += b.gmf; if(b.rend) acc('421005').mov += b.rend; });
+    // Nómina: con el XML de nómina electrónica se reparte por concepto; si es digitada, va a sueldos
+    if(man.nomina && man.nomina.total>0){
+      var dn = man.nomina.detalle;
+      if(dn){ var NOMC = {basico:'510506',transporte:'510527',extras:'510515',comisiones:'510518',vacaciones:'510539',primas:'510536',cesantias:'510530',intCesantias:'510533',incapacidades:'510524',licencias:'510506',bonificaciones:'510548',auxilios:'510545',otros:'510595'};
+        var sumD=0; Object.keys(dn).forEach(function(k){ var v=num(dn[k]); if(!v) return; acc(NOMC[k]||'510595').mov += v; sumD+=v; });
+        var resto = man.nomina.total - sumD; if(Math.abs(resto)>=1) acc('510595').mov += resto; }
+      else acc('510506').mov += man.nomina.total;
+    }
+    // PILA: solo la parte del empleador es gasto (la del trabajador se descuenta en la nómina)
+    if(man.pila && man.pila.total>0){
+      var ep = man.pila.empleador;
+      if(ep){ var PC = {pension:'510570',salud:'510569',arl:'510568',ccf:'510572',icbf:'510575',sena:'510578'}; Object.keys(PC).forEach(function(k){ if(num(ep[k])) acc(PC[k]).mov += num(ep[k]); }); }
+      else if(!man.pila.soloIndependiente) acc('510569').mov += man.pila.total;
+    }
+    (man.bancos||[]).forEach(function(b){ if(b.gmf) acc('530595').mov += num(b.gmf); if(b.rend) acc('421005').mov += num(b.rend); if(b.retRend) acc('135515').mov += num(b.retRend); });
   }
   // 3) Saldos que salen de una fuente al corte (sustituyen el cálculo)
-  var Mc = CYR.meses[mesC]; var bancos = (Mc&&Mc.manual&&Mc.manual.bancos)||[];
+  // Bancos: por cada cuenta, el extracto (o saldo puntual) más reciente con fecha final hasta el corte
+  var ultimos = {};
+  (CYR.extractos?CYR.extractos():[]).forEach(function(b){ if(b.hasta>corte) return; var k=String(b.banco).toUpperCase().replace(/\s+/g,''); if(!ultimos[k] || b.hasta>ultimos[k].hasta) ultimos[k]=b; });
+  var bancos = Object.keys(ultimos).map(function(k){ return ultimos[k]; });
   if(bancos.length){
-    ['111005','112005'].forEach(function(c){ acc(c).fin=0; acc(c).fuente='Extractos de '+MESES_L[mesC-1]; });
-    bancos.forEach(function(b){ var c=/ahorro/i.test(b.banco)?'112005':'111005'; acc(c).fin += num(b.saldo); addT(c,b.banco,b.banco,num(b.saldo)); });
+    ['111005','112005'].forEach(function(c){ acc(c).fin=0; acc(c).fuente='Extractos bancarios'; });
+    bancos.forEach(function(b){ var c=/ahorro/i.test(b.banco)?'112005':'111005'; acc(c).fin += num(b.saldo); addT(c,b.banco,b.banco,num(b.saldo));
+      if(b.hasta<corte) avisos.push(['wa','El saldo de '+b.banco+' es el del '+b.hasta+' (último extracto o saldo registrado), no el del '+corte+'. Registre el saldo a la fecha de corte para que sea exacto.']);
+      if(b.valida===false) avisos.push(['er','El extracto de '+b.banco+' al '+b.hasta+' no cuadra (saldo anterior + créditos − débitos ≠ saldo final). Revíselo en Fuentes del mes.']); });
     Object.keys(cu).forEach(function(c){ if(/^11(10|20)/.test(c) && c!=='111005' && c!=='112005'){ cu[c].fin=0; cu[c].fuente='Reemplazado por extractos'; } });
-  } else avisos.push(['wa','Sin extractos de '+MESES_L[mesC-1]+': los saldos de bancos quedan con el saldo inicial más ajustes.']);
+  } else avisos.push(['wa','No hay extractos con fecha final hasta el '+corte+': los saldos de bancos quedan con el saldo inicial más ajustes.']);
+  (CYR.extractos?CYR.extractos():[]).forEach(function(b){ if(b.desde<=corte && b.hasta>corte && b.desde!==b.hasta){ var k=String(b.banco).toUpperCase().replace(/\s+/g,''); if(!ultimos[k] || ultimos[k].hasta<corte) avisos.push(['wa','El extracto de '+b.banco+' va del '+b.desde+' al '+b.hasta+' y el corte es el '+corte+': registre en Fuentes del mes el saldo de esa cuenta al '+corte+' (desde = hasta), tomado del portal del banco o de un certificado.']); } });
   var porCta = function(lista){ var o={}; (lista||[]).forEach(function(r){ var c=r.cuenta; if(!o[c]) o[c]=[]; o[c].push(r); }); return o; };
   var cxc = porCta(dc.cxc), cxp = porCta(dc.cxp);
   if((dc.cxc||[]).length){ Object.keys(cu).forEach(function(c){ if(/^13(05|30|80)/.test(c)) { cu[c].fin=0; cu[c].fuente='Plantilla CxC'; } });
@@ -16978,11 +17040,16 @@ function entradasAuto(form, S){
   } else {
     e['3M6'] = uvt();
   }
-  // Retenciones en la fuente que le practicaron al cliente (facturas de venta del año)
-  var rv=0, rs=0;
-  for(var m=1;m<=12;m++){ var M=CYR.meses[m]; if(!M) continue; (M.docs||[]).forEach(function(x){ if(x.cat!=='venta' || !x.rr) return; var cta=CYR.cuentaDe(x); if(/^4135/.test(cta)) rv+=x.rr*(x.s||1); else rs+=x.rr*(x.s||1); }); }
-  if(form==='2516'){ if(rv) e['3L531']=Math.round(rv); if(rs) e['3L532']=Math.round(rs); }
-  else { if(rv) e['3L610']=Math.round(rv); if(rs) e['3L611']=Math.round(rs); }
+  // Retenciones en la fuente: salen de los CERTIFICADOS recibidos (art. 381 E.T.), no de las facturas
+  var celRet = form==='2516' ? {ventas:'3L531',servicios:'3L532',honorarios:'3L533',rendimientos:'3L534',dividendos:'3L535',otros:'3L536',arrendamientos:'3L536',salarios:'3L536'}
+                             : {salarios:'3L609',ventas:'3L610',servicios:'3L611',honorarios:'3L612',rendimientos:'3L613',dividendos:'3L614',otros:'3L616',arrendamientos:'3L616'};
+  (CYR.certs||[]).forEach(function(c){ if(c.dir!=='recibido' || c.impuesto!=='renta' || num(c.anio)!==CYR.anio) return; var cel=celRet[c.concepto]||celRet.otros; e[cel]=(e[cel]||0)+Math.round(num(c.retenido)); });
+  // Autorretenciones (solo personas jurídicas): de los F350 guardados en la app
+  if(form==='2516') (CYR.f350auto||[]).forEach(function(a){ var cel = /vent/i.test(a.k)?'3L526':(/serv/i.test(a.k)?'3L527':(/rend|finan/i.test(a.k)?'3L528':'3L529')); e[cel]=(e[cel]||0)+Math.round(a.v); });
+  // Aportes obligatorios del propio contribuyente independiente (planillas tipo I): ingreso no constitutivo
+  if(form==='2517' && CYR.pilaIndependiente){ var pi=CYR.pilaIndependiente(), cc=((CYR.renta&&CYR.renta.opc&&CYR.renta.opc.cedula)||'K');
+    if(pi.pension) e['3'+cc+'383']=(e['3'+cc+'383']||0)+Math.round(pi.pension); if(pi.fsp) e['3'+cc+'384']=(e['3'+cc+'384']||0)+Math.round(pi.fsp);
+    if(pi.salud) e['3'+cc+'386']=(e['3'+cc+'386']||0)+Math.round(pi.salud); if(pi.arl) e['3'+cc+'387']=(e['3'+cc+'387']||0)+Math.round(pi.arl); }
   // Año anterior
   var A = (CYR.renta&&CYR.renta.ant)||{};
   var cAnt = form==='2516' ? {ant:'3L523', sf:'3L525'} : {ant:'3L607', sf:'3L608'};
@@ -17229,7 +17296,8 @@ CYR.render_decl = function(){
   h += '<div class="cyr-card" style="background:#f8f9fd;box-shadow:none;border:1px solid #e3e6f3"><div class="cyr-sec">Anticipos, saldos y retenciones</div>'
     + celdaMan('Anticipo liquidado el año anterior', c.antAnt, L, 'Viene de la pestaña Año anterior')
     + celdaMan('Saldo a favor del año anterior sin devolución ni compensación', c.sf, L)
-    + c.ret.map(function(x){ return celdaMan(x[1], x[0], L, (x[0]==='3L531'||x[0]==='3L610')?'Automático: retenciones de las facturas de venta del año':''); }).join('')
+    + retAviso()
+    + c.ret.map(function(x){ return celdaMan(x[1], x[0], L, /^3L52[6-9]$/.test(x[0])?'Automático: autorretenciones de los F350 guardados':'Automático: certificados de retención recibidos'); }).join('')
     + celdaMan('Descuentos tributarios'+(form==='2517'?' (impuestos pagados en el exterior)':''), c.desc, L)
     + (form==='2517'?celdaMan('Descuento por dividendos (art. 254-1)','3L603',L,'Automático: 19 % de los dividendos que superan 1.090 UVT'):'')
     + celdaMan('Sanciones', c.sanc, L)
@@ -17237,6 +17305,15 @@ CYR.render_decl = function(){
   h += '</div></div></div>';
   return h;
 };
+// Retenciones que aparecen en las facturas de venta pero sin certificado que las respalde
+function retAviso(){
+  var porNit={}; for(var m=1;m<=12;m++){ var M=CYR.meses[m]; if(!M) continue; (M.docs||[]).forEach(function(x){ if(x.cat==='venta' && x.rr){ porNit[x.nit]=porNit[x.nit]||{nom:x.nom,v:0}; porNit[x.nit].v+=x.rr*(x.s||1); } }); }
+  var cert={}; (CYR.certs||[]).forEach(function(c){ if(c.dir==='recibido'&&c.impuesto==='renta'&&num(c.anio)===CYR.anio){ var k=String(c.nit||'').replace(/\D/g,'').slice(0,9); cert[k]=(cert[k]||0)+num(c.retenido); } });
+  var falt = Object.keys(porNit).filter(function(n){ var k=String(n).replace(/\D/g,'').slice(0,9); return porNit[n].v>0 && !(cert[k]>0); });
+  if(!falt.length) return '';
+  var tot = falt.reduce(function(a,n){ return a+porNit[n].v; },0);
+  return '<div class="cyr-al wa" style="font-size:10.5px">Las facturas de venta indican retenciones por '+fmt(tot)+' de '+falt.length+' cliente(s) sin certificado registrado: '+falt.slice(0,6).map(function(n){ return esc(porNit[n].nom||n)+' ('+fmt(porNit[n].v)+')'; }).join(', ')+(falt.length>6?'…':'')+'. Solo se descuenta lo certificado: pida los certificados y regístrelos en la pestaña Certificados de retención.</div>';
+}
 function kpi(t,v,col){ return '<div style="flex:1 1 180px;background:#f6f7fc;border-radius:12px;padding:10px 12px"><div style="font-size:10px;font-weight:800;color:#6a5208;text-transform:uppercase;letter-spacing:.5px">'+t+'</div><div style="font-size:18px;font-weight:800;color:'+(col||'#1a2580')+'">'+fmt(v)+'</div></div>'; }
 
 window.cyrDeclPdf = function(){
@@ -17803,6 +17880,557 @@ var T = CYR._tabsOrig, iH = T.findIndex(function(t){return t[0]==='homolog';});
 T.splice(iH<0?T.length:iH, 0, ['docs','Documentos del cliente']);
 var openPrev = window.openCyr;
 window.openCyr = function(){ CYR.drive.docs = null; CYR.drive.filtroAnio=''; CYR.drive.verCfg=false; openPrev(); };
+})();
+
+</script>
+<script>
+// ═══ Contabilidad NIIF y Renta · Fase 8 ═══
+// Certificados de retención, planillas PILA (archivo plano oficial y PDF), nómina electrónica (XML DIAN),
+// lectura de extractos con IA y diagnóstico de las declaraciones de IVA (F300) e INC (F310).
+(function(){
+'use strict';
+var CYR = window.CYR;
+var MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var MESES_U = MESES_L.map(function(m){ return m.toUpperCase(); });
+function $(id){ return document.getElementById(id); }
+function fmt(n){ n=Math.round(n||0); return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('es-CO'); }
+function num(v){ if(typeof v==='number') return isFinite(v)?v:0; var s=String(v==null?'':v).trim(); if(!s) return 0; var neg=/^-/.test(s)||/^\(.*\)$/.test(s); s=s.replace(/[^0-9,.]/g,''); if(/,\d{1,2}$/.test(s)) s=s.replace(/\./g,'').replace(',','.'); else if(/\.\d{1,2}$/.test(s) && (s.match(/\./g)||[]).length===1) s=s.replace(/,/g,''); else s=s.replace(/[.,]/g,''); var v=parseFloat(s)||0; return neg?-v:v; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function cliente(){ return (typeof clients!=='undefined'?clients:[]).find(function(x){return x.id===CYR.cli;})||{}; }
+function esAdmin(){ return typeof currentPerfil!=='undefined' && currentPerfil && currentPerfil.rol==='admin'; }
+function usuario(){ try{ return (currentPerfil&&(currentPerfil.nombre||currentPerfil.email))||''; }catch(e){ return ''; } }
+function msg(c,t){ CYR.msg(c,t); }
+function nit9(n){ return String(n||'').replace(/\D/g,'').slice(0,9); }
+function esCliente(n){ var a=nit9(n), b=nit9(cliente().nit); return !!a && !!b && (a===b || a.indexOf(b)===0 || b.indexOf(a)===0); }
+function idMes(m){ return CYR.cli+'_'+CYR.anio+'_'+(m<10?'0':'')+m; }
+function mesDoc(m){ var M=CYR.meses[m] || {cliId:CYR.cli, anio:CYR.anio, mes:m, docs:[], manual:{}}; if(!M.manual) M.manual={}; CYR.meses[m]=M; return M; }
+function guardarMes(m){ var M=mesDoc(m); M.actualizado=new Date().toISOString(); return db.collection('cyr_mes').doc(idMes(m)).set(M); }
+function nuevoId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+// ── Utilidades compartidas: IA (Gemini por el proxy de la firma) y comprimidos ──
+function leerB64(file){ return new Promise(function(ok,ko){ var r=new FileReader(); r.onload=function(){ ok(String(r.result).split(',')[1]||''); }; r.onerror=function(){ ko(new Error('No se pudo leer '+file.name)); }; r.readAsDataURL(file); }); }
+function leerLatin1(file){ return new Promise(function(ok,ko){ var r=new FileReader(); r.onload=function(){ ok(String(r.result)); }; r.onerror=function(){ ko(new Error('No se pudo leer '+file.name)); }; r.readAsText(file,'ISO-8859-1'); }); }
+async function ia(b64, mime, prompt){
+  var last='';
+  for(var i=0;i<3;i++){
+    try{
+      var ctrl=typeof AbortController!=='undefined'?new AbortController():null, tm=ctrl?setTimeout(function(){ctrl.abort();},120000):null;
+      var resp=await fetch('https://jnf-proxy.asesoriasyconsultoriasjnfsas.workers.dev',{method:'POST',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:8192}})});
+      if(tm) clearTimeout(tm);
+      if(!resp.ok){ last='HTTP '+resp.status; await new Promise(function(r){setTimeout(r,1000*(i+1));}); continue; }
+      var data=await resp.json(); if(data&&data.error){ last=data.error.message||'Error'; await new Promise(function(r){setTimeout(r,1000*(i+1));}); continue; }
+      var parts=(((data.candidates||[])[0]||{}).content||{}).parts, txt=parts?parts.map(function(p){return p.text||'';}).join(''):'';
+      var m=txt.match(/\{[\s\S]*\}/); if(!m){ last='La IA no devolvió datos'; continue; }
+      return JSON.parse(m[0]);
+    }catch(e){ last = e&&e.name==='AbortError' ? 'la IA no respondió a tiempo' : (e.message||String(e)); }
+  }
+  throw new Error(last||'No se pudo leer con IA');
+}
+CYR.ia = ia;
+// Recorre archivos sueltos y ZIP (también ZIP dentro de ZIP); devuelve [{nombre, file|blob, texto?}]
+function expandir(files, ext){
+  var out=[];
+  function dentroZip(buf, ruta){
+    return cufeCargarJSZipLib().then(function(JSZip){ return JSZip.loadAsync(buf); }).then(function(zip){
+      var ps=[]; zip.forEach(function(p,en){ if(en.dir) return; var l=p.toLowerCase();
+        if(l.endsWith('.zip')) ps.push(en.async('arraybuffer').then(function(b){ return dentroZip(b, ruta+'/'+p); }));
+        else if(ext.some(function(e){ return l.endsWith(e); })) ps.push(en.async('blob').then(function(b){ out.push({nombre:p.split('/').pop(), file:new File([b], p.split('/').pop())}); })); });
+      return Promise.all(ps);
+    });
+  }
+  return Promise.all(files.map(function(f){ var l=f.name.toLowerCase();
+    if(l.endsWith('.zip')) return f.arrayBuffer().then(function(b){ return dentroZip(b, f.name); });
+    out.push({nombre:f.name, file:f}); return null; })).then(function(){ return out; });
+}
+function subirDrive(file, tipoNombre, desc){
+  var c=(CYR.drive&&CYR.drive.cfg)||{}; if(!c.url||!c.token) return Promise.resolve(null);
+  var cl=cliente();
+  return leerB64(file).then(function(b64){
+    return fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:c.token,op:'subir',nit:String(cl.nit||'')+(cl.dv?'-'+cl.dv:''),razon:cl.razon||'',anio:CYR.anio,tipo:tipoNombre,nombre:file.name,mime:file.type||'application/pdf',data:b64,descripcion:desc||''})});
+  }).then(function(r){ return r.json(); }).then(function(j){ return j&&j.ok ? j : null; }).catch(function(){ return null; });
+}
+function cargarDriveCfg(){ if(CYR.drive && CYR.drive.cfg) return Promise.resolve(); return db.collection('cyr_config').doc('drive').get().then(function(d){ if(CYR.drive) CYR.drive.cfg = d.exists?d.data():{}; }).catch(function(){}); }
+
+// ═════════════════════ 1. CERTIFICADOS DE RETENCIÓN ═════════════════════
+var CONCEPTOS = [['ventas','Compras / ventas de bienes'],['servicios','Servicios'],['honorarios','Honorarios y comisiones'],['arrendamientos','Arrendamientos'],['rendimientos','Rendimientos financieros'],['dividendos','Dividendos y participaciones'],['salarios','Pagos laborales'],['otros','Otros conceptos']];
+var IMPUESTOS = [['renta','Retención en la fuente (renta)'],['iva','Retención de IVA'],['ica','Retención de ICA']];
+function nomConc(k){ return (CONCEPTOS.find(function(c){return c[0]===k;})||['',k])[1]; }
+function nomImp(k){ return (IMPUESTOS.find(function(c){return c[0]===k;})||['',k])[1]; }
+function cargarCerts(){
+  return db.collection('cyr_cert').where('cli','==',CYR.cli).get().then(function(q){ var l=[]; q.forEach(function(d){ var x=d.data(); x._id=d.id; l.push(x); }); CYR.certsTodos=l; CYR.certs=l.filter(function(x){ return num(x.anio)===CYR.anio; }); }).catch(function(){ CYR.certsTodos=[]; CYR.certs=[]; });
+}
+function cargarF350(){
+  return db.collection('resultados_historico').where('clienteId','==',CYR.cli).where('anio','==',String(CYR.anio)).where('tipo','==','f350').get().then(function(q){
+    var ult={}; q.forEach(function(doc){ var r=doc.data(), d=null; try{ d=typeof r.data==='string'?JSON.parse(r.data):r.data; }catch(e){} if(!d) return; var p=r.pCod||d.pCod||d.periodo||''; var f=String(r.fechaLiquidacion||d.fechaLiquidacion||''); if(!ult[p]||f>ult[p].f) ult[p]={f:f,d:d}; });
+    CYR.f350recs = Object.keys(ult).map(function(k){ return ult[k].d; });
+    var auto=[]; CYR.f350recs.forEach(function(d){ Object.keys(d).forEach(function(k){ if(k.indexOf('r_ar_')===0 && num(d[k])) auto.push({k:k, v:num(d[k])}); }); });
+    CYR.f350auto = auto;
+  }).catch(function(){ CYR.f350recs=[]; CYR.f350auto=[]; });
+}
+function validarLinea(l){
+  var b=num(l.base), r=num(l.retenido), p=[];
+  if(r<=0) p.push('sin valor retenido');
+  if(l.impuesto==='renta' && b>0){ var t=r/b; if(t>0.40) p.push('tarifa implícita '+(t*100).toFixed(1)+' % (muy alta)'); if(t<0.0005) p.push('tarifa implícita muy baja'); }
+  if(l.impuesto==='ica' && b>0 && r/b>0.02) p.push('tarifa de ICA mayor a 20 por mil');
+  if(l.impuesto!=='iva' && b>0 && r>b) p.push('la retención supera la base');
+  if(!nit9(l.nit)) p.push('falta el NIT de la contraparte');
+  return p;
+}
+CYR.render_cert = function(){
+  if(!CYR.certs){ cargarCerts().then(function(){ CYR.render(); }); return '<div class="cyr-card">Cargando certificados…</div>'; }
+  var dir = CYR.certDir||'recibido', cl=cliente();
+  var lista = CYR.certs.filter(function(c){ return c.dir===dir; });
+  var tot={}; lista.forEach(function(c){ var k=c.impuesto+'|'+c.concepto; tot[k]=(tot[k]||0)+num(c.retenido); });
+  var pend = (CYR.certPend||[]).filter(function(p){ return p.dir===dir; });
+  var h='<div class="cyr-card"><div style="font-size:16px;font-weight:800;color:#1a2580">Certificados de retención · AG '+CYR.anio+'</div>'
+    + '<div style="font-size:11px;color:#4a5068;margin:4px 0 10px">'+(dir==='recibido'?'Certificados que le expidieron al cliente sus clientes, bancos y demás agentes retenedores. <b>Son la fuente de las retenciones que se restan en la declaración de renta</b> (art. 381 E.T.).':'Certificados que expidió el cliente como agente retenedor (incluido el de ingresos y retenciones de sus empleados). Se cruzan contra los F350 presentados.')+'</div>'
+    + '<div id="cyr-msg" class="cyr-al inf" style="display:none"></div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:10px">'+[['recibido','Recibidos por el cliente'],['expedido','Expedidos por el cliente']].map(function(t){ return '<button class="cyr-tab'+(dir===t[0]?' on':'')+'" onclick="CYR.certDir=\''+t[0]+'\';CYR.render()">'+t[1]+'</button>'; }).join('')+'</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"><button class="cyr-btn do" onclick="document.getElementById(\'cyr-cert-file\').click()">📄 Leer certificados PDF con IA</button><span style="font-size:10px;color:#6a7090;align-self:center">Puede elegir varios PDF o un ZIP. Cada línea se valida (tarifa implícita, base, NIT) antes de guardarse.</span></div>'
+    + '<input type="file" id="cyr-cert-file" accept="application/pdf,.zip,image/*" multiple style="display:none" onchange="cyrCertLeer(this)">';
+  if(pend.length) h += '<div class="cyr-al wa">Líneas leídas que necesitan revisión antes de guardarse:</div>'+tablaCert(pend, true);
+  h += '<div class="cyr-sec" style="margin-top:8px">Registrar a mano</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;font-size:10.5px">'
+    + '<label>NIT '+(dir==='recibido'?'del agente retenedor':'del retenido')+'<br><input class="cyr-inp" id="cc-nit" style="width:130px"></label>'
+    + '<label>Nombre<br><input class="cyr-inp" id="cc-nom" style="width:200px"></label>'
+    + '<label>Impuesto<br><select class="cyr-inp" id="cc-imp">'+IMPUESTOS.map(function(i){return '<option value="'+i[0]+'">'+i[1]+'</option>';}).join('')+'</select></label>'
+    + '<label>Concepto<br><select class="cyr-inp" id="cc-con">'+CONCEPTOS.map(function(i){return '<option value="'+i[0]+'">'+i[1]+'</option>';}).join('')+'</select></label>'
+    + '<label>Base<br><input class="cyr-inp" id="cc-base" style="width:120px"></label>'
+    + '<label>Valor retenido<br><input class="cyr-inp" id="cc-ret" style="width:110px"></label>'
+    + '<label>Período<br><input class="cyr-inp" id="cc-per" style="width:110px" value="'+CYR.anio+'"></label>'
+    + '<button class="cyr-btn az" onclick="cyrCertManual()">＋ Agregar</button></div>'
+    + '<div class="cyr-sec" style="margin-top:12px">Registrados ('+lista.length+')</div>' + (lista.length?tablaCert(lista,false):'<div style="font-size:11px;color:#6a7090">Aún no hay certificados '+(dir==='recibido'?'recibidos':'expedidos')+' para '+CYR.anio+'.</div>')
+    + (Object.keys(tot).length?'<div class="cyr-sec" style="margin-top:12px">Totales por impuesto y concepto</div><table class="cyr-t" style="max-width:560px"><tbody>'+Object.keys(tot).sort().map(function(k){ var p=k.split('|'); return '<tr><td>'+nomImp(p[0])+' · '+nomConc(p[1])+'</td><td class="num">'+fmt(tot[k])+'</td></tr>'; }).join('')+'</tbody></table>':'')
+    + cruceCert(dir) + '</div>';
+  return h;
+};
+function tablaCert(l, pend){
+  return '<div class="scr"><table class="cyr-t"><thead><tr><th>NIT</th><th>Nombre</th><th>Impuesto</th><th>Concepto</th><th class="num">Base</th><th class="num">Retenido</th><th>Período</th><th>Soporte</th><th></th></tr></thead><tbody>'
+    + l.map(function(c,i){ var obs = validarLinea(c);
+      if(pend) return '<tr style="background:#fff8e1"><td><input class="cyr-inp" style="width:110px" value="'+esc(c.nit)+'" onchange="cyrCertPend('+i+',\'nit\',this.value)"></td><td>'+esc(c.nombre)+'</td>'
+        + '<td><select class="cyr-inp" onchange="cyrCertPend('+i+',\'impuesto\',this.value)">'+IMPUESTOS.map(function(x){return '<option value="'+x[0]+'" '+(x[0]===c.impuesto?'selected':'')+'>'+x[0].toUpperCase()+'</option>';}).join('')+'</select></td>'
+        + '<td><select class="cyr-inp" onchange="cyrCertPend('+i+',\'concepto\',this.value)">'+CONCEPTOS.map(function(x){return '<option value="'+x[0]+'" '+(x[0]===c.concepto?'selected':'')+'>'+x[1]+'</option>';}).join('')+'</select></td>'
+        + '<td class="num"><input class="cyr-inp" style="width:110px;text-align:right" value="'+Math.round(num(c.base)).toLocaleString('es-CO')+'" onchange="cyrCertPend('+i+',\'base\',this.value)"></td><td class="num"><input class="cyr-inp" style="width:100px;text-align:right" value="'+Math.round(num(c.retenido)).toLocaleString('es-CO')+'" onchange="cyrCertPend('+i+',\'retenido\',this.value)"></td>'
+        + '<td>'+esc(c.periodo||'')+'</td><td style="font-size:10px;color:#8a2a1c">'+esc(obs.join('; ')||c.motivo||'')+'</td><td style="white-space:nowrap"><button class="cyr-btn az" style="padding:3px 8px" onclick="cyrCertPendOk('+i+')">Guardar</button> <button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrCertPendNo('+i+')">✕</button></td></tr>';
+      return '<tr><td>'+esc(c.nit)+'</td><td>'+esc(c.nombre)+'</td><td>'+esc(nomImp(c.impuesto))+'</td><td>'+esc(nomConc(c.concepto))+'</td><td class="num">'+fmt(c.base)+'</td><td class="num">'+fmt(c.retenido)+'</td><td>'+esc(c.periodo||'')+'</td>'
+        + '<td>'+(c.archivo?'<a href="'+esc(c.archivo)+'" target="_blank" rel="noopener">PDF</a>':'')+(c.fuente==='ia'?' <span style="font-size:9px;color:#6a5208">IA</span>':'')+'</td><td><button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrCertBorrar(\''+c._id+'\')">✕</button></td></tr>'; }).join('')
+    + '</tbody></table></div>';
+}
+function cruceCert(dir){
+  if(dir==='recibido'){
+    var fact={}; for(var m=1;m<=12;m++){ var M=CYR.meses[m]; if(!M) continue; (M.docs||[]).forEach(function(x){ if(x.cat==='venta'&&x.rr){ var k=nit9(x.nit); fact[k]=fact[k]||{nom:x.nom,v:0}; fact[k].v+=x.rr*(x.s||1); } }); }
+    var cert={}; CYR.certs.forEach(function(c){ if(c.dir==='recibido'&&c.impuesto==='renta'){ var k=nit9(c.nit); cert[k]=cert[k]||{nom:c.nombre,v:0}; cert[k].v+=num(c.retenido); } });
+    var ks = Object.keys(Object.assign({},fact,cert)); if(!ks.length) return '';
+    return '<div class="cyr-sec" style="margin-top:12px">Cruce: retención en la fuente según facturas de venta vs. certificados</div><div class="scr"><table class="cyr-t"><thead><tr><th>Cliente (agente retenedor)</th><th class="num">Según facturas</th><th class="num">Certificado</th><th class="num">Diferencia</th><th></th></tr></thead><tbody>'
+      + ks.map(function(k){ var f=(fact[k]||{}).v||0, c=(cert[k]||{}).v||0, d=c-f; return '<tr><td>'+esc(k)+' '+esc((cert[k]||fact[k]).nom||'')+'</td><td class="num">'+fmt(f)+'</td><td class="num">'+fmt(c)+'</td><td class="num">'+fmt(d)+'</td><td style="font-size:10.5px">'+(!c?'<span style="color:#8a2a1c">Falta el certificado</span>':(Math.abs(d)<=1000?'✓':'Revise: el certificado es lo que vale'))+'</td></tr>'; }).join('')
+      + '</tbody></table></div><div style="font-size:10px;color:#6a7090">Las facturas solo informan la retención; puede haber diferencias por pagos de otro año o retenciones no practicadas. En la declaración se toma lo certificado.</div>';
+  }
+  var recs = CYR.f350recs||[]; var r350=0, i350=0;
+  recs.forEach(function(d){ var s=0; Object.keys(d).forEach(function(k){ if(k.indexOf('r_')===0 && k.indexOf('r_ar_')!==0) s+=num(d[k]); }); r350 += s || num(d.c130); i350 += num(d.c134); });
+  var rc=0, ic=0; CYR.certs.forEach(function(c){ if(c.dir!=='expedido') return; if(c.impuesto==='renta') rc+=num(c.retenido); if(c.impuesto==='iva') ic+=num(c.retenido); });
+  return '<div class="cyr-sec" style="margin-top:12px">Cruce con los F350 guardados en la app ('+recs.length+' período(s))</div><table class="cyr-t" style="max-width:640px"><thead><tr><th>Impuesto</th><th class="num">Certificados expedidos</th><th class="num">Declarado en F350</th><th class="num">Diferencia</th></tr></thead><tbody>'
+    + [['Retención en la fuente (renta)',rc,r350],['Retención de IVA',ic,i350]].map(function(x){ var d=x[1]-x[2]; return '<tr><td>'+x[0]+'</td><td class="num">'+fmt(x[1])+'</td><td class="num">'+fmt(x[2])+'</td><td class="num" style="color:'+(Math.abs(d)<=1000?'#1f6b45':'#8a2a1c')+'">'+fmt(d)+'</td></tr>'; }).join('')
+    + '</tbody></table><div style="font-size:10px;color:#6a7090">Si falta algún mes del F350 en la app o algún certificado, la diferencia lo muestra. Las autorretenciones no se certifican y no entran en este cruce.</div>';
+}
+function guardarCert(c){
+  var id=nuevoId(); var reg=Object.assign({cli:CYR.cli, anio:CYR.anio, fecha:new Date().toISOString(), usuario:usuario()}, c); delete reg._id; delete reg.motivo;
+  return db.collection('cyr_cert').doc(id).set(reg).then(function(){ reg._id=id; CYR.certs.push(reg); (CYR.certsTodos=CYR.certsTodos||[]).push(reg); });
+}
+window.cyrCertManual = function(){
+  var c={dir:CYR.certDir||'recibido', nit:$('cc-nit').value.trim(), nombre:$('cc-nom').value.trim(), impuesto:$('cc-imp').value, concepto:$('cc-con').value, base:num($('cc-base').value), retenido:num($('cc-ret').value), periodo:$('cc-per').value.trim(), fuente:'manual'};
+  var obs=validarLinea(c); if(obs.length && !confirm('Revise: '+obs.join('; ')+'. ¿Guardar de todas formas?')) return;
+  guardarCert(c).then(function(){ CYR.guardarRenta&&CYR.guardarRenta(true); CYR.render(); msg('ok','✅ Certificado registrado.'); }).catch(function(e){ alert('Error: '+e.message); });
+};
+window.cyrCertBorrar = function(id){ if(!confirm('¿Quitar este certificado del registro?')) return; db.collection('cyr_cert').doc(id).delete().then(function(){ CYR.certs=CYR.certs.filter(function(c){return c._id!==id;}); CYR.guardarRenta&&CYR.guardarRenta(true); CYR.render(); }); };
+window.cyrCertPend = function(i,k,v){ var l=(CYR.certPend||[]).filter(function(p){return p.dir===(CYR.certDir||'recibido');}); var c=l[i]; if(!c) return; c[k]=(k==='base'||k==='retenido')?num(v):v; CYR.render(); };
+window.cyrCertPendOk = function(i){ var l=(CYR.certPend||[]).filter(function(p){return p.dir===(CYR.certDir||'recibido');}); var c=l[i]; if(!c) return; guardarCert(c).then(function(){ CYR.certPend.splice(CYR.certPend.indexOf(c),1); CYR.guardarRenta&&CYR.guardarRenta(true); CYR.render(); }); };
+window.cyrCertPendNo = function(i){ var l=(CYR.certPend||[]).filter(function(p){return p.dir===(CYR.certDir||'recibido');}); var c=l[i]; if(c){ CYR.certPend.splice(CYR.certPend.indexOf(c),1); CYR.render(); } };
+var PROMPT_CERT = 'Este documento es un certificado de retención colombiano (retención en la fuente, retención de IVA o retención de ICA; puede ser también un certificado bancario o el certificado de ingresos y retenciones de un empleado, formulario 220). Responde SOLO un JSON sin texto adicional, con números enteros en pesos sin puntos ni signos: {"agenteNit":"NIT de quien practicó la retención, sin dígito de verificación","agenteNombre":"","retenidoNit":"NIT o cédula a quien le retuvieron, sin DV","retenidoNombre":"","anio":"año gravable","periodo":"período que cubre, ej. 2026 o ENE-JUN 2026","lineas":[{"impuesto":"renta | iva | ica","concepto":"ventas | servicios | honorarios | arrendamientos | rendimientos | dividendos | salarios | otros","base":0,"retenido":0}]}. Una línea por cada concepto e impuesto que aparezca con su base y su valor retenido. Si es un certificado 220 de ingresos laborales usa concepto "salarios" e impuesto "renta" con base = total de ingresos brutos y retenido = valor de la retención. No inventes valores: si un dato no aparece usa 0 o "".';
+window.cyrCertLeer = async function(input){
+  var files=Array.prototype.slice.call(input.files||[]); input.value=''; if(!files.length) return;
+  await cargarDriveCfg();
+  var lista = await expandir(files, ['.pdf','.png','.jpg','.jpeg']);
+  CYR.certPend = CYR.certPend||[]; var ok=0, rev=0, err=[];
+  for(var i=0;i<lista.length;i++){
+    var f=lista[i]; msg('inf','⏳ Leyendo '+(i+1)+' de '+lista.length+': '+esc(f.nombre));
+    try{
+      var b64=await leerB64(f.file), mime=/\.pdf$/i.test(f.nombre)?'application/pdf':(/\.png$/i.test(f.nombre)?'image/png':'image/jpeg');
+      var j=await ia(b64, mime, PROMPT_CERT);
+      var dir = esCliente(j.retenidoNit) ? 'recibido' : (esCliente(j.agenteNit) ? 'expedido' : null);
+      var dv = await subirDrive(f.file, 'Certificados de ingresos y retenciones', 'Certificado de retención · '+(j.agenteNombre||''));
+      for(var li=0; li<(j.lineas||[]).length; li++){ var l=j.lineas[li];
+        var c={dir:dir||(CYR.certDir||'recibido'), nit: dir==='expedido'?String(j.retenidoNit||''):String(j.agenteNit||''), nombre: dir==='expedido'?(j.retenidoNombre||''):(j.agenteNombre||''),
+          impuesto:['renta','iva','ica'].indexOf(String(l.impuesto).toLowerCase())>=0?String(l.impuesto).toLowerCase():'renta', concepto:CONCEPTOS.some(function(x){return x[0]===l.concepto;})?l.concepto:'otros',
+          base:num(l.base), retenido:num(l.retenido), periodo:String(j.periodo||j.anio||''), fuente:'ia', archivoNombre:f.nombre, archivo:dv?dv.url:''};
+        var obs=validarLinea(c);
+        if(!dir) c.motivo='El NIT del cliente no aparece ni como agente ni como retenido';
+        if(j.anio && num(j.anio)!==CYR.anio) c.motivo='El certificado dice año '+j.anio;
+        if(obs.length || c.motivo){ CYR.certPend.push(c); rev++; }
+        else { await guardarCert(c); ok++; }
+      }
+      if(!(j.lineas||[]).length) err.push(f.nombre+': no se encontraron valores retenidos');
+    }catch(e){ err.push(f.nombre+': '+e.message); }
+  }
+  CYR.guardarRenta&&CYR.guardarRenta(true); CYR.render();
+  msg(err.length?'wa':'ok','✅ '+ok+' línea(s) guardada(s)'+(rev?' · ⚠ '+rev+' para revisar (abajo)':'')+(err.length?' · ❌ '+err.map(esc).join(' | '):''));
+};
+
+// ═════════════════════ 2. PLANILLAS PILA ═════════════════════
+var TIPOS_PLANILLA = {E:'Empleados',Y:'Independientes empresas',A:'Cotizantes con novedad de ingreso',I:'Independientes',S:'Servicio doméstico',M:'Mora',N:'Correcciones',H:'Madres sustitutas',T:'Empleados entidad beneficiaria SGP',F:'Aporte patronal faltante SGP',J:'Cumplimiento de sentencia',X:'Empresa liquidada',U:'Uso UGPP pago por terceros',K:'Estudiantes',O:'Obligaciones determinadas por la UGPP',Q:'Acuerdos de pago UGPP',B:'Piso de protección social',D:'Contribución solidaria',Z:'Cálculo actuarial por omisión',W:'Reliquidaciones por retroactivo'};
+var REVISAR_PLANILLA = 'MNUOQZJWF';
+// Archivo plano (archivo tipo 2, Resolución 2388 de 2016 y modificaciones): posiciones 1-indexadas
+function cort(l,a,b){ return l.substring(a-1,b); }
+function n(l,a,b){ var t=cort(l,a,b).trim(); if(!t) return 0; var v=parseFloat(t.replace(',','.')); return isFinite(v)?v:0; }
+function parsePlano(txt){
+  var lineas = txt.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  var enc = lineas.find(function(l){ return l.slice(0,2)==='01'; });
+  if(!enc || enc.length<330) throw new Error('No tiene el encabezado (registro tipo 1) del archivo plano de la PILA.');
+  var e = { modalidad:cort(enc,3,3), razon:cort(enc,8,207).trim(), tipoDocAport:cort(enc,208,209).trim(), nitAport:cort(enc,210,225).trim(), dv:cort(enc,226,226).trim(),
+    tipo:cort(enc,227,227).trim().toUpperCase(), planillaAsoc:cort(enc,228,237).trim(), arl:cort(enc,299,304).trim(), perPension:cort(enc,305,311).trim(), perSalud:cort(enc,312,318).trim(),
+    numero:cort(enc,319,328).trim(), fechaPago:cort(enc,329,338).trim(), nCot:parseInt(cort(enc,339,343),10)||0, valorNomina:n(enc,344,355), tipoAportante:cort(enc,356,357).trim(), operador:cort(enc,358,359).trim() };
+  if(!/^\d{4}-\d{2}$/.test(e.perPension)) throw new Error('El período de pago (posiciones 305 a 311) no tiene el formato AAAA-MM: «'+e.perPension+'».');
+  var cot = lineas.filter(function(l){ return l.slice(0,2)==='02'; }).map(function(l){
+    l = l.length<693 ? l+new Array(694-l.length).join(' ') : l;
+    return { tipoDoc:cort(l,8,9).trim(), id:cort(l,10,25).trim(), tipoCot:cort(l,26,27).trim(), subtipo:cort(l,28,29).trim(),
+      nombre:[cort(l,87,106),cort(l,107,136),cort(l,37,56),cort(l,57,86)].map(function(x){return x.trim();}).filter(Boolean).join(' '),
+      ing:cort(l,137,137).trim(), ret:cort(l,138,138).trim(), diasP:n(l,184,185), diasS:n(l,186,187), salario:n(l,192,200), integral:cort(l,201,201).trim(),
+      ibcP:n(l,202,210), ibcS:n(l,211,219), ibcA:n(l,220,228), ibcC:n(l,229,237), tarP:n(l,238,244), cotP:n(l,245,253), volAfil:n(l,254,262), volAport:n(l,263,271), totP:n(l,272,280),
+      fspSol:n(l,281,289), fspSub:n(l,290,298), tarS:n(l,308,314), cotS:n(l,315,323), upc:n(l,324,332), tarA:n(l,381,389), cotA:n(l,399,407), tarC:n(l,408,414), ccf:n(l,415,423),
+      tarSena:n(l,424,430), sena:n(l,431,439), tarIcbf:n(l,440,446), icbf:n(l,447,455), esap:n(l,463,471), men:n(l,479,487), exonerado:cort(l,506,506).trim(),
+      // Prueba de formato: si las columnas están corridas, las tarifas dejan de verse como 0.xxxxx y los días/IBC dejan de ser numéricos
+      formato: [[238,244,5],[308,314,5],[408,414,5]].every(function(f){ var t=cort(l,f[0],f[1]); return !t.trim() || /^\d\.\d+$/.test(t.trim()) && t.trim().length===t.length; })
+        && (!cort(l,381,389).trim() || /^\d\.\d{7}$/.test(cort(l,381,389)))
+        && [[184,185],[186,187],[188,189],[190,191]].every(function(f){ var t=cort(l,f[0],f[1]); return /^\d{2}$/.test(t) && +t<=30 || !t.trim(); })
+        && [[202,210],[211,219],[245,253],[272,280],[315,323]].every(function(f){ var t=cort(l,f[0],f[1]); return /^\d+$/.test(t) || !t.trim(); }) };
+  });
+  if(!cot.length) throw new Error('El archivo no trae registros de cotizantes (tipo 2).');
+  // Pruebas de estructura: el total de pensión debe ser la suma de sus partes y la cotización debe corresponder al IBC por la tarifa
+  var malos = cot.filter(function(c){ var t1 = Math.abs(c.totP-(c.cotP+c.volAfil+c.volAport))<=1; var t2 = !c.ibcP || !c.tarP || Math.abs(c.cotP - c.ibcP*c.tarP) <= 100.5; return !(t1&&t2&&c.formato); });
+  if(malos.length > Math.max(1, cot.length*0.2)) throw new Error('Los valores no cuadran en '+malos.length+' de '+cot.length+' cotizantes: la estructura del archivo no corresponde al anexo técnico vigente.');
+  var avisos=[]; if(e.nCot && e.nCot!==cot.length) avisos.push('El encabezado dice '+e.nCot+' cotizantes y el archivo trae '+cot.length+'.');
+  if(malos.length) avisos.push(malos.length+' cotizante(s) con diferencias entre IBC, tarifa y cotización de pensión.');
+  var sumIbc = cot.reduce(function(a,c){ return a+c.ibcP; },0); if(e.valorNomina && Math.abs(e.valorNomina-sumIbc)>1000 && Math.abs(e.valorNomina-cot.reduce(function(a,c){ return a+c.salario; },0))>1000) avisos.push('El valor total de la nómina del encabezado ('+fmt(e.valorNomina)+') no coincide con la suma de los cotizantes.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(e.fechaPago)) avisos.push('El archivo no trae la fecha de pago (descárguelo del operador después de pagar).');
+  var T={pension:0,fsp:0,salud:0,upc:0,arl:0,ccf:0,sena:0,icbf:0,otros:0,ibcP:0}, emp={pension:0,salud:0,arl:0,ccf:0,sena:0,icbf:0}, trab={pension:0,salud:0,fsp:0};
+  var empleador = e.tipo!=='I' && e.tipoAportante!=='2';
+  cot.forEach(function(c){
+    T.pension+=c.totP; T.fsp+=c.fspSol+c.fspSub; T.salud+=c.cotS; T.upc+=c.upc; T.arl+=c.cotA; T.ccf+=c.ccf; T.sena+=c.sena; T.icbf+=c.icbf; T.otros+=c.esap+c.men; T.ibcP+=c.ibcP;
+    if(empleador){ // parte del trabajador: 4 de los puntos de pensión y 4 de los de salud (si la tarifa de salud es 4 %, todo es del trabajador)
+      var tp = c.tarP>0 ? Math.round(c.cotP*Math.min(1,0.04/c.tarP)) : 0, ts = c.tarS>0 ? (c.tarS<=0.0401 ? c.cotS : Math.round(c.cotS*0.04/c.tarS)) : 0;
+      trab.pension+=tp+c.volAfil; trab.salud+=ts; trab.fsp+=c.fspSol+c.fspSub;
+      emp.pension+=c.cotP-tp+c.volAport; emp.salud+=c.cotS-ts; emp.arl+=c.cotA; emp.ccf+=c.ccf; emp.sena+=c.sena; emp.icbf+=c.icbf+c.esap+c.men; }
+  });
+  T.total = T.pension+T.fsp+T.salud+T.upc+T.arl+T.ccf+T.sena+T.icbf+T.otros;
+  return {fuente:'plano', enc:e, cot:cot, tot:T, empleador:empleador?emp:null, trabajador:empleador?trab:null, avisos:avisos, valida:!malos.length};
+}
+CYR.parsePlanoPila = parsePlano;
+var PROMPT_PILA = 'Este documento es una planilla de pago de aportes a seguridad social de Colombia (PILA) o su comprobante de pago, de cualquier operador (Aportes en Línea, SOI, Mi Planilla, Asopagos, Enlace Operativo, etc.). Responde SOLO un JSON sin texto adicional, valores en pesos enteros sin puntos: {"tipoPlanilla":"letra: E, I, Y, A, S, M, N, K, ...","numeroPlanilla":"","aportanteNit":"sin DV","aportanteNombre":"","periodoPension":"AAAA-MM (período de pago para sistemas diferentes a salud)","periodoSalud":"AAAA-MM","fechaPago":"AAAA-MM-DD","cotizantes":0,"pension":0,"fsp":0,"salud":0,"arl":0,"ccf":0,"sena":0,"icbf":0,"otros":0,"intereses":0,"totalPagado":0}. "pension" es el total de pensión sin fondo de solidaridad; "fsp" el fondo de solidaridad pensional; "intereses" los intereses de mora. No inventes valores: si no aparece usa 0 o "".';
+function pilaDesdeIA(j){
+  var T={pension:num(j.pension),fsp:num(j.fsp),salud:num(j.salud),upc:0,arl:num(j.arl),ccf:num(j.ccf),sena:num(j.sena),icbf:num(j.icbf),otros:num(j.otros)+num(j.intereses),ibcP:0};
+  T.total=T.pension+T.fsp+T.salud+T.arl+T.ccf+T.sena+T.icbf+T.otros;
+  var e={tipo:String(j.tipoPlanilla||'').trim().toUpperCase().slice(0,1), numero:String(j.numeroPlanilla||''), nitAport:String(j.aportanteNit||''), razon:j.aportanteNombre||'', perPension:String(j.periodoPension||''), perSalud:String(j.periodoSalud||''), fechaPago:String(j.fechaPago||''), nCot:num(j.cotizantes), tipoAportante:''};
+  var avisos=[], valida=true;
+  if(num(j.totalPagado) && Math.abs(T.total-num(j.totalPagado))>1000){ valida=false; avisos.push('La suma de los subsistemas ('+fmt(T.total)+') no coincide con el total pagado ('+fmt(j.totalPagado)+').'); }
+  if(!num(j.totalPagado)){ valida=false; avisos.push('No se pudo leer el total pagado para comprobar la lectura.'); }
+  if(!/^\d{4}-\d{2}$/.test(e.perPension)){ valida=false; avisos.push('No se pudo leer el período de cotización.'); }
+  var empleador = e.tipo && e.tipo!=='I';
+  // En el PDF no viene la parte del trabajador: se estima con las tarifas generales (4 % pensión y 4 % salud) y queda marcado
+  var emp = empleador ? {pension:Math.round(T.pension*0.75), salud:(T.sena+T.icbf)>0?Math.round(T.salud*8.5/12.5):Math.max(0,T.salud-Math.round(T.salud)), arl:T.arl, ccf:T.ccf, sena:T.sena, icbf:T.icbf+T.otros} : null;
+  if(empleador){ if((T.sena+T.icbf)===0) emp.salud = 0; avisos.push('Parte del empleador estimada (12 de 16 puntos de pensión; salud según exoneración): el PDF no trae el detalle por cotizante.'); }
+  return {fuente:'pdf', enc:e, cot:[], tot:T, empleador:emp, trabajador:null, avisos:avisos, valida:valida, estimado:empleador};
+}
+function incorporarPlanilla(p, archivo){
+  var e=p.enc, y=parseInt(e.perPension.slice(0,4),10), m=parseInt(e.perPension.slice(5,7),10);
+  if(y!==CYR.anio || !(m>=1&&m<=12)) return {estado:'otroAnio', texto:'período '+e.perPension};
+  var propio = esCliente(e.nitAport);
+  var clase = (e.tipo==='I'||e.tipoAportante==='2') ? (propio?'independiente':'contratista') : (propio?'empleador':'ajena');
+  if(clase==='ajena') return {estado:'ajena', texto:'el aportante '+e.nitAport+' no es el cliente'};
+  var M=mesDoc(m), reg={numero:e.numero||'', tipo:e.tipo, clase:clase, aportante:e.nitAport, razon:e.razon, perPension:e.perPension, perSalud:e.perSalud, fechaPago:e.fechaPago, nCot:p.cot.length||e.nCot,
+    tot:p.tot, empleador:p.empleador, trabajador:p.trabajador, avisos:p.avisos, valida:p.valida, fuente:p.fuente, estimado:!!p.estimado, archivo:archivo||'', revisar:REVISAR_PLANILLA.indexOf(e.tipo)>=0,
+    cotizantes:(p.cot||[]).map(function(c){ return {id:c.id, nombre:c.nombre, tipoCot:c.tipoCot, ibcP:c.ibcP, diasP:c.diasP, ing:c.ing, ret:c.ret}; })};
+  var lista = (clase==='contratista') ? (M.manual.pilaTerceros=M.manual.pilaTerceros||[]) : ((M.manual.pila=M.manual.pila||{}).planillas=(M.manual.pila.planillas||[]));
+  var k = reg.numero ? lista.findIndex(function(x){ return x.numero===reg.numero && x.aportante===reg.aportante; }) : -1;
+  if(k>=0) lista[k]=reg; else lista.push(reg);
+  if(clase!=='contratista') recalcularPilaMes(m);
+  return {estado:'ok', mes:m, clase:clase, reemplazo:k>=0};
+}
+function recalcularPilaMes(m){
+  var P=mesDoc(m).manual.pila; var l=P.planillas||[];
+  var emp={pension:0,salud:0,arl:0,ccf:0,sena:0,icbf:0}, ind={pension:0,fsp:0,salud:0,arl:0,ccf:0}, total=0, fecha='', valida=true, hayEmp=false, hayInd=false;
+  l.forEach(function(r){ var t=r.tot||{}; if(r.valida===false||r.revisar) valida=false; if(r.fechaPago>fecha) fecha=r.fechaPago;
+    if(r.clase==='independiente'){ hayInd=true; ind.pension+=num(t.pension); ind.fsp+=num(t.fsp); ind.salud+=num(t.salud); ind.arl+=num(t.arl); ind.ccf+=num(t.ccf); }
+    else { hayEmp=true; total+=num(t.total); Object.keys(emp).forEach(function(k){ emp[k]+=num((r.empleador||{})[k]); }); } });
+  P.fuente='archivo'; P.total=total; P.empleador=hayEmp?emp:null; P.independiente=hayInd?ind:null; P.soloIndependiente=hayInd&&!hayEmp; P.fechaPago=fecha; P.valida=valida;
+  if(hayInd && !hayEmp) P.total = ind.pension+ind.fsp+ind.salud+ind.arl+ind.ccf;
+}
+CYR.pilaIndependiente = function(){ var r={pension:0,fsp:0,salud:0,arl:0}; for(var m=1;m<=12;m++){ var P=CYR.meses[m]&&CYR.meses[m].manual&&CYR.meses[m].manual.pila; if(P&&P.independiente){ r.pension+=P.independiente.pension; r.fsp+=P.independiente.fsp; r.salud+=P.independiente.salud; r.arl+=P.independiente.arl; } } return r; };
+window.cyrPilaCargar = async function(input){
+  var files=Array.prototype.slice.call(input.files||[]); input.value=''; if(!files.length) return;
+  await cargarDriveCfg();
+  var lista = await expandir(files, ['.txt','.plano','.pla','.csv','.pdf','.dat','']);
+  var res={ok:0,rev:0,otro:0,ajena:0,err:[]}, meses={};
+  for(var i=0;i<lista.length;i++){
+    var f=lista[i]; msg('inf','⏳ Leyendo planilla '+(i+1)+' de '+lista.length+': '+esc(f.nombre));
+    try{
+      var p;
+      if(/\.pdf$/i.test(f.nombre)) p = pilaDesdeIA(await ia(await leerB64(f.file),'application/pdf',PROMPT_PILA));
+      else p = parsePlano(await leerLatin1(f.file));
+      var dv = /\.pdf$/i.test(f.nombre) ? await subirDrive(f.file,'Planillas PILA','Planilla '+(p.enc.numero||'')+' '+p.enc.perPension) : null;
+      var r = incorporarPlanilla(p, dv?dv.url:'');
+      if(r.estado==='ok'){ meses[r.mes]=1; if(p.valida===false||REVISAR_PLANILLA.indexOf(p.enc.tipo)>=0) res.rev++; else res.ok++; }
+      else if(r.estado==='otroAnio') res.otro++; else { res.ajena++; res.err.push(f.nombre+': '+r.texto); }
+    }catch(e){ res.err.push(f.nombre+': '+e.message); }
+  }
+  await Promise.all(Object.keys(meses).map(function(m){ return guardarMes(+m); }));
+  CYR.render();
+  msg(res.err.length?'wa':'ok','✅ '+res.ok+' planilla(s) incorporada(s)'+(res.rev?' · ⚠ '+res.rev+' para revisar':'')+(res.otro?' · '+res.otro+' de otro año (no se tomaron)':'')+(res.err.length?' · ❌ '+res.err.map(esc).join(' | '):''));
+};
+window.cyrPilaBorrar = function(m, num_, aport, terc){ var M=mesDoc(m); var l = terc ? (M.manual.pilaTerceros||[]) : ((M.manual.pila||{}).planillas||[]); var i=l.findIndex(function(x){ return x.numero===num_ && x.aportante===aport; }); if(i<0) return; l.splice(i,1); if(!terc) recalcularPilaMes(m); guardarMes(m).then(function(){ CYR.render(); }); };
+CYR.render_pila = function(){
+  var filas=[], terc=[];
+  for(var m=1;m<=12;m++){ var M=CYR.meses[m]; if(!M||!M.manual) continue; ((M.manual.pila||{}).planillas||[]).forEach(function(p){ filas.push([m,p]); }); (M.manual.pilaTerceros||[]).forEach(function(p){ terc.push([m,p]); }); }
+  var nomMes = function(m){ var nm=CYR.meses[m]&&CYR.meses[m].manual&&CYR.meses[m].manual.nomina; return nm&&nm.fuente==='xml'?nm:null; };
+  var h='<div class="cyr-card"><div style="font-size:16px;font-weight:800;color:#1a2580">Planillas de seguridad social (PILA) · '+CYR.anio+'</div>'
+    + '<div style="font-size:11px;color:#4a5068;margin:4px 0 10px">Suba todas las planillas del año de una vez (archivos planos, PDF o un ZIP). Cada planilla se ubica en el mes de su período de cotización de pensión. El archivo plano se lee con la estructura oficial de la Resolución 2388 de 2016 y sus modificaciones, igual para todos los operadores, y se comprueba que el IBC, la tarifa y la cotización cuadren. Los PDF se leen con IA y se comprueba que los subsistemas sumen el total pagado.</div>'
+    + '<div id="cyr-msg" class="cyr-al inf" style="display:none"></div>'
+    + '<button class="cyr-btn do" onclick="document.getElementById(\'cyr-pila-file\').click()">⬆ Subir planillas (plano, PDF o ZIP)</button><input type="file" id="cyr-pila-file" multiple style="display:none" onchange="cyrPilaCargar(this)">'
+    + '<div class="cyr-sec" style="margin-top:12px">Planillas del cliente ('+filas.length+')</div>'
+    + (filas.length?'<div class="scr"><table class="cyr-t"><thead><tr><th>Mes</th><th>Planilla</th><th>Tipo</th><th>Períodos</th><th>Pago</th><th class="num">Cotiz.</th><th class="num">Pensión+FSP</th><th class="num">Salud</th><th class="num">ARL</th><th class="num">CCF+SENA+ICBF</th><th class="num">Total</th><th class="num">Gasto empleador</th><th>Estado</th><th></th></tr></thead><tbody>'
+      + filas.map(function(x){ var m=x[0], p=x[1], t=p.tot||{}, ge=p.empleador?Object.keys(p.empleador).reduce(function(a,k){return a+num(p.empleador[k]);},0):0;
+        return '<tr'+(p.valida===false||p.revisar?' style="background:#fff8e1"':'')+'><td>'+MESES_L[m-1]+'</td><td>'+esc(p.numero||'—')+'<div style="font-size:9.5px;color:#6a7090">'+(p.fuente==='pdf'?'PDF (IA)':'Archivo plano')+'</div></td><td>'+esc(p.tipo)+' · '+esc(TIPOS_PLANILLA[p.tipo]||'')+(p.clase==='independiente'?'<div style="font-size:9.5px;color:#6a5208">Aportes propios del cliente</div>':'')+'</td>'
+          + '<td style="font-size:10.5px">Pensión '+esc(p.perPension)+'<br>Salud '+esc(p.perSalud)+'</td><td style="font-size:10.5px">'+esc(p.fechaPago||'—')+'</td><td class="num">'+(p.nCot||'')+'</td><td class="num">'+fmt(num(t.pension)+num(t.fsp))+'</td><td class="num">'+fmt(t.salud)+'</td><td class="num">'+fmt(t.arl)+'</td><td class="num">'+fmt(num(t.ccf)+num(t.sena)+num(t.icbf)+num(t.otros))+'</td><td class="num"><b>'+fmt(t.total)+'</b></td>'
+          + '<td class="num">'+(p.clase==='independiente'?'—':fmt(ge)+(p.estimado?'<div style="font-size:9px;color:#6a5208">estimado</div>':''))+'</td>'
+          + '<td style="font-size:10px">'+(p.revisar?'<span style="color:#7a5a00">Tipo '+esc(p.tipo)+': revisar su efecto</span><br>':'')+((p.avisos||[]).length?'<span style="color:#7a5a00">'+p.avisos.map(esc).join('<br>')+'</span>':'<span style="color:#1f6b45">✓ cuadra</span>')+'</td>'
+          + '<td><button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrPilaBorrar('+m+',\''+esc(p.numero)+'\',\''+esc(p.aportante)+'\',false)">✕</button></td></tr>'; }).join('')
+      + '</tbody></table></div>':'<div style="font-size:11px;color:#6a7090">Aún no hay planillas cargadas.</div>');
+  // Cruce con nómina electrónica
+  var cr=[]; for(var m=1;m<=12;m++){ var P=CYR.meses[m]&&CYR.meses[m].manual&&CYR.meses[m].manual.pila, N=nomMes(m); if(!P&&!N) continue;
+    var ibc=0, nc=0; ((P&&P.planillas)||[]).forEach(function(p){ if(p.clase==='empleador'){ ibc+=num(p.tot&&p.tot.ibcP); nc+=num(p.nCot); } });
+    cr.push([m, N?N.nEmp:0, nc, N?N.baseSalarial||0:0, ibc]); }
+  if(cr.length) h += '<div class="cyr-sec" style="margin-top:12px">Cruce PILA (empleados) contra nómina electrónica</div><div class="scr"><table class="cyr-t"><thead><tr><th>Mes</th><th class="num">Empleados en nómina</th><th class="num">Cotizantes en PILA</th><th class="num">Devengado salarial</th><th class="num">IBC pensión PILA</th><th class="num">Diferencia</th></tr></thead><tbody>'
+    + cr.map(function(r){ var d=r[4]-r[3]; return '<tr><td>'+MESES_L[r[0]-1]+'</td><td class="num">'+r[1]+'</td><td class="num">'+r[2]+'</td><td class="num">'+fmt(r[3])+'</td><td class="num">'+fmt(r[4])+'</td><td class="num" style="color:'+(Math.abs(d)<=1000?'#1f6b45':'#7a5a00')+'">'+fmt(d)+'</td></tr>'; }).join('')
+    + '</tbody></table></div><div style="font-size:10px;color:#6a7090">Una diferencia puede deberse a pagos no salariales, al límite del 40 % del art. 30 de la Ley 1393 de 2010, a incapacidades o vacaciones, o a novedades mal reportadas.</div>';
+  if(terc.length) h += '<div class="cyr-sec" style="margin-top:12px">Planillas de contratistas independientes (soporte de deducibilidad, art. 108 par. 2 E.T.)</div><div class="scr"><table class="cyr-t"><thead><tr><th>Mes</th><th>Contratista</th><th>Planilla</th><th>Período</th><th>Pago</th><th class="num">Total</th><th></th></tr></thead><tbody>'
+    + terc.map(function(x){ var p=x[1]; return '<tr><td>'+MESES_L[x[0]-1]+'</td><td>'+esc(p.aportante)+' '+esc(p.razon)+'</td><td>'+esc(p.numero)+'</td><td>'+esc(p.perPension)+'</td><td>'+esc(p.fechaPago)+'</td><td class="num">'+fmt(p.tot&&p.tot.total)+'</td><td><button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrPilaBorrar('+x[0]+',\''+esc(p.numero)+'\',\''+esc(p.aportante)+'\',true)">✕</button></td></tr>'; }).join('')+'</tbody></table></div>';
+  return h+'</div>';
+};
+
+// ═════════════════════ 3. NÓMINA ELECTRÓNICA ═════════════════════
+function desescapar(t){ if(t.indexOf('&lt;')>=0 && !/<(\w+:)?NominaIndividual/.test(t)) t=t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&'); var c=t.match(/<!\[CDATA\[([\s\S]*?NominaIndividual[\s\S]*?)\]\]>/); return c?c[1]:t; }
+function attrs(s){ var o={}; s.replace(/([\w:]+)\s*=\s*"([^"]*)"/g,function(_,k,v){ o[k.replace(/^\w+:/,'')]=v; }); return o; }
+function tagsDe(x, nombre){ var re=new RegExp('<(?:\\w+:)?'+nombre+'\\b([^>]*?)(/?)>','g'), r=[], m; while((m=re.exec(x))) r.push(attrs(m[1])); return r; }
+function texto(x, nombre){ var m=new RegExp('<(?:\\w+:)?'+nombre+'\\b[^>]*>([^<]*)</(?:\\w+:)?'+nombre+'>').exec(x); return m?m[1].trim():''; }
+function bloque(x, nombre){ var m=new RegExp('<(?:\\w+:)?'+nombre+'\\b[^>]*>([\\s\\S]*?)</(?:\\w+:)?'+nombre+'>').exec(x); return m?m[1]:''; }
+function sumA(x, nombres, campos){ var s=0; nombres.forEach(function(nm){ tagsDe(x,nm).forEach(function(a){ campos.forEach(function(c){ s+=num(a[c]); }); }); }); return s; }
+function parseNominaContenido(x){
+  var dv=bloque(x,'Devengados'), dd=bloque(x,'Deducciones');
+  var b=tagsDe(dv,'Basico')[0]||{};
+  var det={ basico:num(b.SueldoTrabajado), transporte:sumA(dv,['Transporte'],['AuxilioTransporte','ViaticoManutAlojS','ViaticoManutAlojNS']),
+    extras:sumA(dv,['HED','HEN','HRN','HEDDF','HRDDF','HENDF','HRNDF'],['Pago']), vacaciones:sumA(dv,['VacacionesComunes','VacacionesCompensadas'],['Pago']),
+    primas:sumA(dv,['Primas'],['Pago','PagoNS']), cesantias:sumA(dv,['Cesantias'],['Pago']), intCesantias:sumA(dv,['Cesantias'],['PagoIntereses']),
+    incapacidades:sumA(dv,['Incapacidad'],['Pago']), licencias:sumA(dv,['LicenciaMP','LicenciaR','LicenciaNR'],['Pago']),
+    bonificaciones:sumA(dv,['Bonificacion'],['BonificacionS','BonificacionNS']), auxilios:sumA(dv,['Auxilio'],['AuxilioS','AuxilioNS']), comisiones:0, otros:0 };
+  var rc=/<(?:\w+:)?Comision\b[^>]*>([^<]*)</g, mm; while((mm=rc.exec(dv))) det.comisiones+=num(mm[1]);
+  var dev=num(texto(x,'DevengadosTotal')), ded=num(texto(x,'DeduccionesTotal')), neto=num(texto(x,'ComprobanteTotal')), red=num(texto(x,'Redondeo'));
+  var suma=Object.keys(det).reduce(function(a,k){return a+det[k];},0); det.otros=Math.max(0, Math.round((dev-suma)*100)/100);
+  var sal=tagsDe(dd,'Salud')[0]||{}, pen=tagsDe(dd,'FondoPension')[0]||{}, fsp=tagsDe(dd,'FondoSP')[0]||{};
+  var deds={ salud:num(sal.Deduccion), pension:num(pen.Deduccion), fsp:num(fsp.DeduccionSP)+num(fsp.DeduccionSub), retencion:num(texto(dd,'RetencionFuente')) };
+  deds.otras=Math.max(0, Math.round((ded-deds.salud-deds.pension-deds.fsp-deds.retencion)*100)/100);
+  var per=tagsDe(x,'Periodo')[0]||{}, tr=tagsDe(x,'Trabajador')[0]||{};
+  var baseSal = det.basico+det.extras+det.comisiones+det.vacaciones+sumA(dv,['Bonificacion'],['BonificacionS'])+sumA(dv,['Auxilio'],['AuxilioS']);
+  return {fin:per.FechaLiquidacionFin||'', ini:per.FechaLiquidacionInicio||'', emp:tr.NumeroDocumento||'', nombre:[tr.PrimerNombre,tr.OtrosNombres,tr.PrimerApellido,tr.SegundoApellido].filter(Boolean).join(' '),
+    tipoTrab:tr.TipoTrabajador||'', dev:dev, ded:ded, neto:neto, redondeo:red, det:det, deds:deds, baseSal:baseSal, valida: !dev || Math.abs(dev-ded-neto-red)<=1 };
+}
+function parseNomina(t){
+  var x=desescapar(t);
+  var ajuste = /<(?:\w+:)?NominaIndividualDeAjuste\b/.test(x);
+  var ig=tagsDe(x,'InformacionGeneral')[0]||{}, empl=tagsDe(x,'Empleador')[0]||{};
+  var r={cune:ig.CUNE||'', tipoXML:ig.TipoXML||'', empleadorNit:empl.NIT||'', ajuste:ajuste, accion:'nuevo', pred:''};
+  if(ajuste){
+    var tn=texto(x,'TipoNota');
+    if(tn==='2' || /<(?:\w+:)?Eliminar\b/.test(x)){ var el=bloque(x,'Eliminar'); var p=tagsDe(el,'EliminandoPredecesor')[0]||{}; r.accion='eliminar'; r.pred=p.CUNEPred||''; return r; }
+    var rp=bloque(x,'Reemplazar'); var pr=tagsDe(rp,'ReemplazandoPredecesor')[0]||{}; r.accion='reemplazar'; r.pred=pr.CUNEPred||''; x = rp || x;
+    var ig2=tagsDe(x,'InformacionGeneral')[0]; if(ig2&&ig2.CUNE) r.cune=ig2.CUNE; var e2=tagsDe(x,'Empleador')[0]; if(e2&&e2.NIT) r.empleadorNit=e2.NIT;
+  }
+  return Object.assign(r, parseNominaContenido(x));
+}
+CYR.parseNomina = parseNomina;
+function recalcularNominaMes(m){
+  var N=mesDoc(m).manual.nomina; var l=(N.docs||[]).filter(function(d){ return !d.anulado; });
+  var det={}, deds={}, total=0, ret=0, base=0, emps={}, valida=true;
+  l.forEach(function(d){ total+=d.dev; ret+=num(d.deds&&d.deds.retencion); base+=num(d.baseSal); emps[d.emp]=1; if(!d.valida) valida=false;
+    Object.keys(d.det||{}).forEach(function(k){ det[k]=(det[k]||0)+num(d.det[k]); }); Object.keys(d.deds||{}).forEach(function(k){ deds[k]=(deds[k]||0)+num(d.deds[k]); }); });
+  N.fuente='xml'; N.total=Math.round(total); N.ret=Math.round(ret); N.detalle=det; N.deducciones=deds; N.nEmp=Object.keys(emps).length; N.baseSalarial=Math.round(base); N.valida=valida; N.noAplica=false;
+}
+CYR.nominaIncorporar = function(xmls, archivo, silencioso){
+  var res={ok:0,rev:0,ajustes:0,otro:0,ajena:0,err:[]}, meses={}, cune={};
+  for(var m=1;m<=12;m++){ ((CYR.meses[m]&&CYR.meses[m].manual&&CYR.meses[m].manual.nomina&&CYR.meses[m].manual.nomina.docs)||[]).forEach(function(d){ cune[d.cune]={m:m,d:d}; }); }
+  var lista = xmls.map(function(t){ try{ return parseNomina(t); }catch(e){ res.err.push(e.message); return null; } }).filter(Boolean);
+  lista.sort(function(a,b){ return (a.ajuste?1:0)-(b.ajuste?1:0); }); // primero las originales, después los ajustes
+  lista.forEach(function(r){
+    if(r.empleadorNit && !esCliente(r.empleadorNit)){ res.ajena++; return; }
+    if(r.accion==='eliminar'){ var o=cune[r.pred]; if(o){ o.d.anulado=true; o.d.nota='Eliminada por nota de ajuste'; meses[o.m]=1; res.ajustes++; } else res.err.push('Nota de eliminación de un documento que no está cargado ('+String(r.pred).slice(0,12)+'…)'); return; }
+    var y=parseInt(String(r.fin).slice(0,4),10), m=parseInt(String(r.fin).slice(5,7),10);
+    if(y!==CYR.anio || !(m>=1&&m<=12)){ res.otro++; return; }
+    if(r.accion==='reemplazar'){ var o2=cune[r.pred]; if(o2){ o2.d.anulado=true; o2.d.nota='Reemplazada por nota de ajuste'; meses[o2.m]=1; } res.ajustes++; }
+    var N=(mesDoc(m).manual.nomina=mesDoc(m).manual.nomina||{}); N.docs=N.docs||[];
+    var doc={cune:r.cune, emp:r.emp, nombre:r.nombre, ini:r.ini, fin:r.fin, dev:r.dev, ded:r.ded, neto:r.neto, det:r.det, deds:r.deds, baseSal:r.baseSal, valida:r.valida, ajuste:r.ajuste, archivo:archivo||''};
+    var k=N.docs.findIndex(function(d){ return d.cune && d.cune===r.cune; }); if(k>=0) N.docs[k]=doc; else N.docs.push(doc);
+    cune[r.cune]={m:m,d:doc}; meses[m]=1; if(r.valida) res.ok++; else res.rev++;
+  });
+  Object.keys(meses).forEach(function(m){ recalcularNominaMes(+m); });
+  return Promise.all(Object.keys(meses).map(function(m){ return guardarMes(+m); })).then(function(){
+    CYR.render();
+    var t='Nómina electrónica: '+res.ok+' documento(s)'+(res.ajustes?' · '+res.ajustes+' nota(s) de ajuste aplicada(s)':'')+(res.rev?' · ⚠ '+res.rev+' con totales que no cuadran':'')+(res.otro?' · '+res.otro+' de otro año':'')+(res.ajena?' · '+res.ajena+' de otro empleador':'')+(res.err.length?' · ❌ '+res.err.map(esc).join(' | '):'');
+    if(!silencioso || res.rev || res.err.length) msg(res.rev||res.err.length?'wa':'ok','✅ '+t);
+    return res;
+  });
+};
+window.cyrNominaCargar = async function(input){
+  var files=Array.prototype.slice.call(input.files||[]); input.value=''; if(!files.length) return;
+  msg('inf','⏳ Leyendo nómina electrónica…');
+  try{
+    var lista = await expandir(files, ['.xml']);
+    var xmls = await Promise.all(lista.map(function(f){ return f.file.text(); }));
+    xmls = xmls.filter(function(t){ return /NominaIndividual/.test(t); });
+    if(!xmls.length){ msg('wa','No se encontraron XML de nómina electrónica en los archivos elegidos.'); return; }
+    await CYR.nominaIncorporar(xmls, files.map(function(f){return f.name;}).join(', '));
+  }catch(e){ msg('er','❌ '+esc(e.message)); }
+};
+CYR.render_nomina = function(){
+  var h='<div class="cyr-card"><div style="font-size:16px;font-weight:800;color:#1a2580">Nómina electrónica · '+CYR.anio+'</div>'
+    + '<div style="font-size:11px;color:#4a5068;margin:4px 0 10px">Suba los XML de nómina electrónica del año (sueltos o en ZIP, también los que trae el ZIP de la DIAN de su extensión). Cada documento se ubica en el mes de su fecha de liquidación; las notas de ajuste reemplazan o eliminan el documento original. Se comprueba que devengados − deducciones = total pagado.</div>'
+    + '<div id="cyr-msg" class="cyr-al inf" style="display:none"></div>'
+    + '<button class="cyr-btn do" onclick="document.getElementById(\'cyr-nom-file\').click()">⬆ Subir XML de nómina (XML o ZIP)</button><input type="file" id="cyr-nom-file" accept=".xml,.zip" multiple style="display:none" onchange="cyrNominaCargar(this)">'
+    + '<div class="scr" style="margin-top:12px"><table class="cyr-t"><thead><tr><th>Mes</th><th class="num">Empleados</th><th class="num">Básico</th><th class="num">Extras y comisiones</th><th class="num">Prestaciones</th><th class="num">Otros devengos</th><th class="num">Total devengado</th><th class="num">Salud+pensión+FSP</th><th class="num">Retención</th><th class="num">Neto pagado</th><th>Estado</th></tr></thead><tbody>';
+  var T={e:0,b:0,x:0,p:0,o:0,d:0,s:0,r:0,n:0}, alguno=false;
+  for(var m=1;m<=12;m++){ var N=CYR.meses[m]&&CYR.meses[m].manual&&CYR.meses[m].manual.nomina; if(!N||N.fuente!=='xml') continue; alguno=true;
+    var d=N.detalle||{}, q=N.deducciones||{}, l=(N.docs||[]).filter(function(x){return !x.anulado;});
+    var prest=num(d.primas)+num(d.cesantias)+num(d.intCesantias)+num(d.vacaciones), ext=num(d.extras)+num(d.comisiones), otr=N.total-num(d.basico)-ext-prest, ss=num(q.salud)+num(q.pension)+num(q.fsp), neto=l.reduce(function(a,x){return a+num(x.neto);},0);
+    T.e=Math.max(T.e,N.nEmp); T.b+=num(d.basico); T.x+=ext; T.p+=prest; T.o+=otr; T.d+=N.total; T.s+=ss; T.r+=N.ret; T.n+=neto;
+    h += '<tr><td><details><summary style="cursor:pointer">'+MESES_L[m-1]+'</summary><div style="font-size:10px;margin-top:4px">'+l.map(function(x){ return esc(x.emp)+' '+esc(x.nombre)+': '+fmt(x.dev)+(x.valida?'':' ⚠')+(x.ajuste?' (ajuste)':''); }).join('<br>')+'</div></details></td><td class="num">'+N.nEmp+'</td><td class="num">'+fmt(d.basico)+'</td><td class="num">'+fmt(ext)+'</td><td class="num">'+fmt(prest)+'</td><td class="num">'+fmt(otr)+'</td><td class="num"><b>'+fmt(N.total)+'</b></td><td class="num">'+fmt(ss)+'</td><td class="num">'+fmt(N.ret)+'</td><td class="num">'+fmt(neto)+'</td><td style="font-size:10px">'+(N.valida?'<span style="color:#1f6b45">✓ cuadra</span>':'<span style="color:#8a2a1c">⚠ revisar</span>')+'</td></tr>';
+  }
+  if(!alguno) h += '<tr><td colspan="11" style="color:#6a7090">Aún no hay nómina electrónica cargada.</td></tr>';
+  else h += '<tr style="font-weight:800;color:#1a2580;background:#fff8e1"><td>Año</td><td></td><td class="num">'+fmt(T.b)+'</td><td class="num">'+fmt(T.x)+'</td><td class="num">'+fmt(T.p)+'</td><td class="num">'+fmt(T.o)+'</td><td class="num">'+fmt(T.d)+'</td><td class="num">'+fmt(T.s)+'</td><td class="num">'+fmt(T.r)+'</td><td class="num">'+fmt(T.n)+'</td><td></td></tr>';
+  h += '</tbody></table></div><div style="font-size:10px;color:#6a7090;margin-top:4px">El devengado alimenta la contabilidad por concepto (510506 sueldos, 510527 auxilio de transporte, 510515 horas extras, 510536 primas, 510530 cesantías, etc.). La retención por salarios se cruza con el F350 desde la pestaña Certificados de retención.</div></div>';
+  return h;
+};
+
+// ═════════════════════ 4. EXTRACTOS CON IA ═════════════════════
+var PROMPT_EXT = 'Este documento es un extracto bancario colombiano (cuenta de ahorros o corriente; puede ser mensual o trimestral). Responde SOLO un JSON sin texto adicional, valores en pesos sin puntos de miles (usa punto para decimales si los hay): {"banco":"nombre del banco","tipoCuenta":"ahorros o corriente","numeroCuenta":"últimos 4 dígitos","desde":"AAAA-MM-DD fecha inicial del período","hasta":"AAAA-MM-DD fecha final del período","saldoAnterior":0,"totalCreditos":0,"totalDebitos":0,"saldoFinal":0,"gmf":0,"rendimientos":0,"retencionRendimientos":0}. "gmf" es el total del gravamen a los movimientos financieros (4 x 1.000) cobrado en el período; "rendimientos" los intereses o rendimientos abonados; "retencionRendimientos" la retención en la fuente sobre esos rendimientos. Si el extracto trae resumen por mes, usa los totales de todo el período. No inventes valores.';
+window.cyrElegirExtractos = function(m){ CYR.extMes=m; var el=$('cyr-file-ext'); if(el){ el.value=''; el.click(); } };
+window.cyrLeerExtractos = async function(input, m){
+  var files=Array.prototype.slice.call(input.files||[]); input.value=''; if(!files.length) return;
+  await cargarDriveCfg();
+  CYR.extPendientes = CYR.extPendientes||[]; var ok=0, rev=0, err=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i]; msg('inf','⏳ Leyendo extracto '+(i+1)+' de '+files.length+': '+esc(f.name));
+    try{
+      var j = await ia(await leerB64(f),'application/pdf',PROMPT_EXT);
+      var dv = await subirDrive(f,'Extractos bancarios',(j.banco||'')+' '+(j.desde||'')+' a '+(j.hasta||''));
+      var b = {banco:((j.banco||'Banco')+' '+(/ahorro/i.test(j.tipoCuenta)?'ahorros':'corriente')+' ****'+String(j.numeroCuenta||'').replace(/\D/g,'').slice(-4)).trim(), desde:String(j.desde||''), hasta:String(j.hasta||''),
+        saldoIni:num(j.saldoAnterior), cred:num(j.totalCreditos), deb:num(j.totalDebitos), saldo:num(j.saldoFinal), gmf:Math.abs(num(j.gmf)), rend:Math.abs(num(j.rendimientos)), retRend:Math.abs(num(j.retencionRendimientos)), fuente:'ia', archivo:dv?dv.url:'', archivoNombre:f.name};
+      var dif = Math.round(b.saldoIni + b.cred - b.deb - b.saldo), fechasOk = /^\d{4}-\d{2}-\d{2}$/.test(b.desde) && /^\d{4}-\d{2}-\d{2}$/.test(b.hasta) && b.desde<=b.hasta;
+      if(Math.abs(dif)<=1 && fechasOk && (b.cred||b.deb||b.saldo)){ b.valida=true; await CYR.guardarExtracto(b); ok++; }
+      else { b.valida=false; b.motivo = !fechasOk ? 'No se pudo leer bien el período del extracto.' : ('Saldo anterior + créditos − débitos no da el saldo final: diferencia '+fmt(dif)+'.'); CYR.extPendientes.push(b); rev++; }
+    }catch(e){ err.push(f.name+': '+e.message); }
+  }
+  CYR.render();
+  msg(err.length||rev?'wa':'ok','✅ '+ok+' extracto(s) guardado(s) con la prueba de saldos cuadrada'+(rev?' · ⚠ '+rev+' no cuadran: corríjalos abajo antes de guardar':'')+(err.length?' · ❌ '+err.map(esc).join(' | '):''));
+};
+CYR.extPendientesHtml = function(){
+  return '<div class="cyr-al wa" style="margin-top:8px">Extractos leídos que no pasaron la prueba de saldos. Corrija las cifras contra el PDF y guarde:</div><div class="scr"><table class="cyr-t"><thead><tr><th>Banco</th><th>Desde</th><th>Hasta</th><th class="num">Saldo anterior</th><th class="num">Créditos</th><th class="num">Débitos</th><th class="num">Saldo final</th><th class="num">GMF</th><th class="num">Rendim.</th><th>Motivo</th><th></th></tr></thead><tbody>'
+    + CYR.extPendientes.map(function(b,i){ var inpt=function(k,w,t){ return '<input class="cyr-inp" style="width:'+w+'px;'+(t?'':'text-align:right')+'" value="'+esc(t?b[k]:(num(b[k])?Math.round(num(b[k])).toLocaleString('es-CO'):''))+'" onchange="cyrExtPend('+i+',\''+k+'\',this.value)">'; };
+      return '<tr style="background:#fff8e1"><td>'+inpt('banco',150,1)+'</td><td>'+inpt('desde',96,1)+'</td><td>'+inpt('hasta',96,1)+'</td><td>'+inpt('saldoIni',105)+'</td><td>'+inpt('cred',105)+'</td><td>'+inpt('deb',105)+'</td><td>'+inpt('saldo',105)+'</td><td>'+inpt('gmf',80)+'</td><td>'+inpt('rend',80)+'</td><td style="font-size:10px;color:#8a2a1c">'+esc(b.motivo||'')+'</td>'
+        + '<td style="white-space:nowrap"><button class="cyr-btn az" style="padding:3px 8px" onclick="cyrExtPendOk('+i+')">Guardar</button> <button class="cyr-btn bl" style="padding:3px 8px" onclick="cyrExtPendNo('+i+')">✕</button></td></tr>'; }).join('')
+    + '</tbody></table></div>';
+};
+window.cyrExtPend = function(i,k,v){ var b=CYR.extPendientes[i]; if(!b) return; b[k] = (k==='banco'||k==='desde'||k==='hasta') ? String(v).trim() : num(v);
+  var dif=Math.round(num(b.saldoIni)+num(b.cred)-num(b.deb)-num(b.saldo)); b.motivo = Math.abs(dif)<=1 ? 'Cuadra: puede guardar.' : 'Diferencia '+fmt(dif)+'.'; CYR.render(); };
+window.cyrExtPendOk = function(i){ var b=CYR.extPendientes[i]; if(!b) return; var dif=Math.round(num(b.saldoIni)+num(b.cred)-num(b.deb)-num(b.saldo));
+  if(Math.abs(dif)>1 && !confirm('El extracto sigue sin cuadrar por '+fmt(dif)+'. ¿Guardarlo de todas formas? Quedará marcado para revisión.')) return;
+  b.valida = Math.abs(dif)<=1; delete b.motivo; CYR.guardarExtracto(b).then(function(){ CYR.extPendientes.splice(i,1); CYR.render(); msg('ok','✅ Extracto guardado.'); }).catch(function(e){ alert(e.message); }); };
+window.cyrExtPendNo = function(i){ CYR.extPendientes.splice(i,1); CYR.render(); };
+
+// ═════════════════════ 5. DIAGNÓSTICO IVA E INC ═════════════════════
+function cargarDeclaraciones(){
+  var q = function(t){ return db.collection('resultados_historico').where('clienteId','==',CYR.cli).where('anio','==',String(CYR.anio)).where('tipo','==',t).get().then(function(s){
+    var ult={}; s.forEach(function(doc){ var r=doc.data(), d=null; try{ d=typeof r.data==='string'?JSON.parse(r.data):r.data; }catch(e){} if(!d) return; var p=r.pCod||d.pCod||''; var f=String(r.fechaLiquidacion||d.fechaLiquidacion||''); if(!ult[p]||f>ult[p].f) ult[p]={f:f,d:d}; });
+    return Object.keys(ult).map(function(k){ var d=ult[k].d; d._f=ult[k].f; return d; }); }).catch(function(){ return []; }); };
+  return Promise.all([q('f300'), q('inc')]).then(function(r){ CYR.decl={f300:r[0], inc:r[1]}; });
+}
+function mesesDe(d){ return (d.meses||[]).map(function(x){ var i=MESES_U.indexOf(String(x).toUpperCase().trim()); return i+1; }).filter(function(x){return x>0;}); }
+function docsDe(meses){
+  var r={grav:0,exen:0,excl:0,dev:0,ivaG:0,ivaDev:0,compB:0,sp:0,ds:0,ivaD:0,ri:0,incB:0,inc:0,incDevB:0,incDev:0,docs:0};
+  meses.forEach(function(m){ ((CYR.meses[m]&&CYR.meses[m].docs)||[]).forEach(function(x){ var base=x.b19+x.b5+x.ex+x.exc+x.bi;
+    if(x.cat==='venta'){ r.docs++; if(x.s<0){ r.dev+=x.b19+x.b5+x.ex+x.exc; r.ivaDev+=x.iva+x.iv5; r.incDevB+=x.bi; r.incDev+=x.inc; r.ri-=x.ri; }
+      else { r.grav+=x.b19+x.b5; r.exen+=x.ex; r.excl+=x.exc; r.ivaG+=x.iva+x.iv5; r.incB+=x.bi; r.inc+=x.inc; r.ri+=x.ri; } }
+    else if(x.cat==='compra' && x.s>0){ r.docs++; if(x.sub==='sp') r.sp+=base; else if(x.sub==='ds') r.ds+=base; else r.compB+=x.b19+x.b5+x.ex+x.exc; r.ivaD+=x.iva+x.iv5; } }); });
+  return r;
+}
+function periodosEsperados(){
+  var per = String(cliente().periodo_iva||cliente().periodicidadIva||'bimestral').toLowerCase(), nP = per==='cuatrimestral'?4:(per==='anual'?12:2), l=[];
+  for(var i=1;i<=12;i+=nP){ var ms=[]; for(var k=i;k<i+nP;k++) ms.push(k); l.push(ms); }
+  return {nombre:per, lista:l};
+}
+CYR.render_diag = function(){
+  if(!CYR.decl){ cargarDeclaraciones().then(function(){ CYR.render(); }); return '<div class="cyr-card">Consultando las declaraciones guardadas…</div>'; }
+  var hoy=new Date(), mesMax = CYR.anio<hoy.getFullYear()?12:(CYR.anio===hoy.getFullYear()?hoy.getMonth()+1:0);
+  var cargado = function(m){ return (CYR.meses[m]&&(CYR.meses[m].docs||[]).some(function(x){return x.cat==='venta'||x.cat==='compra';})); };
+  var est = function(dif, tol){ return Math.abs(dif)<=tol ? '<span style="color:#1f6b45">✓</span>' : '<span style="color:#8a2a1c;font-weight:800">'+fmt(dif)+'</span>'; };
+  var tabla = function(filas){ return '<table class="cyr-t" style="margin-top:4px"><thead><tr><th>Concepto</th><th class="num">Declarado</th><th class="num">Según documentos</th><th class="num">Diferencia</th></tr></thead><tbody>'
+    + filas.map(function(f){ return '<tr><td>'+f[0]+'</td><td class="num">'+fmt(f[1])+'</td><td class="num">'+fmt(f[2])+'</td><td class="num">'+est(f[2]-f[1], f[3]||1000)+'</td></tr>'; }).join('')+'</tbody></table>'; };
+  var resumen = [];
+  var bloqueDecl = function(nombre, d, filas, ms){
+    var faltan = ms.filter(function(m){ return !cargado(m); });
+    var difs = filas.filter(function(f){ return Math.abs(f[2]-f[1])>(f[3]||1000); }).length;
+    var st = faltan.length ? ['inf','Faltan documentos de '+faltan.map(function(m){return MESES_L[m-1];}).join(', ')] : (difs?['wa',difs+' concepto(s) con diferencia']:['ok','Coincide con los documentos']);
+    resumen.push([nombre+' '+(d.pLabel||''), st]);
+    return '<details style="border:1px solid #e3e6f3;border-radius:10px;padding:8px 10px;margin-bottom:6px"'+(difs&&!faltan.length?' open':'')+'><summary style="cursor:pointer;font-weight:800;color:#1a2580">'+nombre+' · '+esc(d.pLabel||ms.map(function(m){return MESES_L[m-1];}).join('-'))+' <span class="cyr-al '+st[0]+'" style="display:inline-block;padding:2px 8px;margin:0 0 0 6px;font-weight:700">'+st[1]+'</span></summary>'
+      + (faltan.length?'<div style="font-size:10.5px;color:#6a7090;margin-top:4px">El cruce es completo cuando estén cargados todos los meses del período; mientras tanto se muestra lo que hay.</div>':'') + tabla(filas)
+      + (d.pesosExactos?'':'<div style="font-size:10px;color:#7a5a00">Declaración guardada con una versión antigua de la app: solo trae casillas redondeadas.</div>') + '</details>';
+  };
+  var h='<div class="cyr-card"><div style="font-size:16px;font-weight:800;color:#1a2580">Diagnóstico de IVA e impuesto al consumo · '+CYR.anio+'</div>'
+    + '<div style="font-size:11px;color:#4a5068;margin:4px 0 10px">Compara cada declaración guardada en la app (F300 y F310, última versión de cada período) con los documentos electrónicos cargados de los meses que la componen. Los períodos salen de la propia declaración, sean bimestrales, cuatrimestrales o anuales. Tolerancia: $1.000 por redondeo a miles.</div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:10px"><button class="cyr-btn bl" onclick="CYR.decl=null;CYR.render()">↻ Volver a consultar</button></div>';
+  var f300 = CYR.decl.f300.slice().sort(function(a,b){ return (mesesDe(a)[0]||0)-(mesesDe(b)[0]||0); });
+  var cuerpo300 = f300.map(function(d){ var ms=mesesDe(d), r=docsDe(ms);
+    var filas = d.pesosExactos ? [
+      ['Ingresos gravados (19 % y 5 %)', num(d.v_b19)+num(d.v_b5), r.grav], ['Ingresos exentos', num(d.v_exen), r.exen], ['Ingresos excluidos', num(d.v_excl), r.excl],
+      ['Devoluciones en ventas (bases)', num(d.dv_b19)+num(d.dv_b5)+num(d.dv_exen)+num(d.dv_excl), r.dev],
+      ['IVA generado (c. 58 + 59)', num(d.c58)+num(d.c59), r.ivaG, 2000], ['IVA de devoluciones en ventas (c. 79)', num(d.c79), r.ivaDev, 1000],
+      ['Compras y gastos (bases, sin servicios públicos ni documento soporte)', num(d.c_b19)+num(d.c_b5)+num(d.c_exen)+num(d.c_excl), r.compB], ['Servicios públicos', num(d.sp_total), r.sp], ['Documento soporte', num(d.ds_total), r.ds],
+      ['IVA descontable (c. 71 + 72)', num(d.c71)+num(d.c72), r.ivaD, 2000], ['ReteIVA que le practicaron (c. 85)', num(d.c85), r.ri, 1000]
+    ] : [['Ingresos netos (casilla 43)', num(d.c43), r.grav+r.exen+r.excl-r.dev, 2000*ms.length]];
+    return bloqueDecl('F300', d, filas, ms); }).join('');
+  var inc = CYR.decl.inc.slice().sort(function(a,b){ return (mesesDe(a)[0]||0)-(mesesDe(b)[0]||0); });
+  var cuerpoInc = inc.map(function(d){ var ms=mesesDe(d), r=docsDe(ms);
+    return bloqueDecl('F310', d, [['Base del impuesto al consumo (c. 27)', num(d.c27), r.incB, 1000], ['Devoluciones de base (c. 28)', num(d.c28), r.incDevB, 1000], ['Impuesto generado (c. 48)', num(d.c48), r.inc, 1000], ['Impuesto de devoluciones (c. 49)', num(d.c49), r.incDev, 1000]], ms); }).join('');
+  // Períodos esperados sin declaración guardada
+  var pe = periodosEsperados(), sin=[];
+  pe.lista.forEach(function(ms){ if(ms[ms.length-1]>mesMax) return; var cub = f300.some(function(d){ var dm=mesesDe(d); return ms.every(function(m){ return dm.indexOf(m)>=0; }); }); var hayVentas = ms.some(function(m){ return docsDe([m]).docs>0; }); if(!cub && hayVentas) sin.push(ms); });
+  var incDocs = []; for(var m=1;m<=mesMax;m++){ if(docsDe([m]).inc) incDocs.push(m); }
+  var incSin = incDocs.filter(function(m){ return !inc.some(function(d){ return mesesDe(d).indexOf(m)>=0; }); });
+  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">'+resumen.map(function(x){ return '<span class="cyr-al '+x[1][0]+'" style="margin:0;padding:4px 10px;font-size:10.5px">'+esc(x[0])+': '+esc(x[1][1])+'</span>'; }).join('')+'</div>';
+  if(sin.length) h += '<div class="cyr-al wa">Hay documentos de venta y no hay F300 guardado en la app para: '+sin.map(function(ms){ return ms.map(function(m){return MESES_L[m-1];}).join('-'); }).join(' · ')+' (periodicidad del cliente: '+esc(pe.nombre)+'; verifique que esté bien en la ficha del cliente).</div>';
+  if(incSin.length) h += '<div class="cyr-al wa">Hay impuesto al consumo facturado sin F310 guardado en: '+incSin.map(function(m){return MESES_L[m-1];}).join(', ')+'.</div>';
+  h += '<div class="cyr-sec" style="margin-top:6px">Declaraciones de IVA (F300)</div>'+(cuerpo300||'<div style="font-size:11px;color:#6a7090">No hay F300 guardados para '+CYR.anio+'.</div>')
+    + '<div class="cyr-sec" style="margin-top:12px">Declaraciones de impuesto al consumo (F310)</div>'+(cuerpoInc||'<div style="font-size:11px;color:#6a7090">No hay F310 guardados para '+CYR.anio+'.</div>')
+    + '<div style="font-size:10px;color:#6a7090;margin-top:8px">Una diferencia indica facturas que están en el ZIP y no en el Excel con que se liquidó la declaración (o al revés), notas crédito de otro período, o documentos de otro cliente. Abra el mes en Fuentes del mes para ver las facturas.</div></div>';
+  return h;
+};
+
+// ═════════════════════ Registro de pestañas, carga y módulos ═════════════════════
+var T = CYR._tabsOrig, iE = T.findIndex(function(t){return t[0]==='grupo';});
+T.splice(iE<0?2:iE, 0, ['nomina','Nómina electrónica'], ['pila','Planillas PILA'], ['cert','Certificados de retención'], ['diag','Diagnóstico IVA e INC']);
+var openPrev = window.openCyr;
+window.openCyr = function(){
+  CYR.certs=null; CYR.certPend=[]; CYR.f350recs=null; CYR.f350auto=[]; CYR.decl=null; CYR.extPendientes=[];
+  openPrev();
+  Promise.all([cargarCerts(), cargarF350()]).then(function(){ CYR.render(); });
+};
+window.openCyrTab = function(t){ CYR.tab=t; window.openCyr(); };
 })();
 
 </script>
